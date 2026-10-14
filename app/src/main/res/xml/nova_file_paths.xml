@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="nova_recorded_audio" path="Music/rec/" />
+    <external-files-path name="nova_recorded_video" path="Movies/rec/" />
+    <files-path name="nova_internal_files" path="rec/" />
+</paths>

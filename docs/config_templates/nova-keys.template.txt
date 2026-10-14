@@ -1,0 +1,16 @@
+# NOVA keys: WHERE each one is pasted. Placeholders only. All keys are optional; NOVA works offline for local commands.
+# Paste inside the NOVA app (Settings / Setup). One key per line where several are allowed. Never put them in this repo.
+
+Gemini (main AI, several keys = automatic failover):
+  <GEMINI_KEY_1>
+  <GEMINI_KEY_2>
+Groq (fast backup AI + speech-to-text):        <GROQ_KEY>
+OpenRouter (free models, backup):              <OPENROUTER_KEY>
+GLM / Z.ai (backup, up to 3 keys):             <ZAI_KEY_1>   <ZAI_KEY_2>   <ZAI_KEY_3>
+Hugging Face / Together (free image models):   <HF_TOKEN>    <TOGETHER_KEY>      # optional
+Picovoice AccessKey (optional better wake word):<PICOVOICE_ACCESS_KEY>
+   + nova.ppn keyword file (Android) created in the Picovoice Console, copied via the app's wake-word setup
+GitHub token (only for "publish to GitHub" features): <GITHUB_TOKEN_WITH_MINIMUM_SCOPE>
+
+Keyless fallbacks exist (Pollinations and others), but their availability and limits are the provider's choice.
+Check "what is missing" at any time by saying/typing:  nova setup check

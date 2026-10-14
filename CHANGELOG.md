@@ -1,0 +1,389 @@
+# v6.97 (wip8) 5 KEY-LESS BROWSERS + LOCAL-FIRST AI + LOCK GUARD + ADAPTIVE LISTENING
+- Compile + 834 JUnit tests RUN (kotlinc 1.9.24, real org.json); phone behaviour NOT tested.
+- Browsers: WIKI, INSTANT (DuckDuckGo), WEATHER (Open-Meteo), NEWS (Google News RSS), MARKET (Frankfurter + CoinGecko); live answers never invented. Local-first on-device AI for short simple questions. BROWSERS card in the UI; test report runs by itself.
+- Connectors: honest MCP errors, Vercel teams, n8n API + webhooks (Zapier / Make / IFTTT).
+- LOCK GUARD (new, default ON, switch in BROWSERS card): locked phone = no wake word / no command, normal messages not read. Loud beep (alarm stream) + one spoken line only for: any call while the phone is silent, call from Papa/Mummy, message from Papa/Mummy (text never read). One volume-key press stops the alert (needs Accessibility), unlocking also stops it. Driving mode stays hands-free.
+- WATCH MIC (new, untested on a real watch): calling watch AI button (Bluetooth voice command) wakes NOVA and the watch mic is used over Bluetooth SCO while the phone is unlocked.
+- Adaptive listening: long sentences (10+ words) wait +0.6 s, sentences ending on "aur / ko / ki / and ..." wait +1.5 s (max 3.5 s) before NOVA answers.
+
+# v6.96 5 FREE OFFLINE AI (no key, no account) - written, NOT compiled, NOT run on a phone
+- NEW OfflinePack.kt (pure rules), OfflinePackStore.kt (HF file list + verified download), LocalBrains multi-model fallback, AutoSetup pack runner.
+- 5 on-device brains behind the built-in Qwen2.5-0.5B slot: Qwen2.5 1.5B (Alibaba), Llama 3.2 1B (Meta), InternLM2.5 1.8B (Shanghai AI Lab), SmolLM2 1.7B (Hugging Face), DeepSeek-R1 Distill 1.5B (DeepSeek). 3 Chinese + 2 world.
+- Download starts by itself after install (20 s after the service starts), Wi-Fi only, needs RAM and 1.5 GB spare storage, resumes after a break, one model at a time, respects the "auto models" switch.
+- Chat fallback: first installed model answers; if it cannot load / times out / gives empty or looping text the next installed model is tried (max 3 per answer). Busy engine or a safety refusal never starts a cascade. Command translator (LocalBrains.ask) asks ONE model only.
+- Chat templates per family (ChatML / Llama 3 / DeepSeek), stop-token + <think> cleanup (PackPrompt, PackText).
+- File name / size / sha256 are read from the Hugging Face API at download time (not pinned in code): the file is refused when size or sha256 differ or the size is outside the model's sanity range.
+- Tests: OfflinePackTest.kt (NOT RUN), tools/test_offline_pack_contract.py (PASS, static), tools/test_autosetup_contract.py updated 2 -> 3 runners.
+- Limits: no keyless ONLINE AI was added (no stable official one exists; scraping private web endpoints was refused). Image generation and speech-to-text keep their old chains: no 5-model offline fallback exists for them here.
+
+# v6.95 ROZ KA SUDHAAR (daily self-improve with approval; compile + JUnit + phone = NOT TESTED)
+- v6.95 PRO BUTTONS (same version): new final style layer `pro-v695` in ui.html: one button system (44px touch height, 14px radius, primary gradient for .a, red tone for .hdel, disabled state, focus ring) + a 450 ms tap flash on every button.sm / button.a so a tap is always visible. Presentation only. Settings accordion title for ROZ KA SUDHAAR fixed (T map).
+- BUTTON AUDIT (static + headless Chromium, fake bridge): 143 bridge calls in ui.html, 183 bridge methods in MainActivity: 0 calls without a Kotlin method. 7 ids used by JS but not in HTML are all created at runtime or guarded (cn_* connector sheet, canvas tf, badge mode). 0 JS errors at 390x844. This proves the buttons are WIRED, NOT that every action works on a phone (NOT TESTED).
+
+- NEW SelfImproveRules.kt (pure), SelfImproveStore.kt, SelfImprove.kt. Once a day, in ONE 1-hour window (owner picks the start hour, default 03:00; auto runs only inside it, max 3 per day, 20 min apart), a NON-Gemini AI (Groq / Qwen / GLM / OpenRouter with the owner's own keys; never Gemini, never the anonymous provider) gets only the installed app names + existing nicknames and suggests up to 5 nicknames ("how I say this app" -> exact app name).
+- Suggestions are PENDING only. Settings > ROZ KA SUDHAAR: HAAN applies (TeachStore alias), NAHI drops, WAPAS restores the old value or removes the alias. Default OFF. Manual button ABHI CHALAO (max 6/day, still inside the 60 min/day AI-time budget).
+- Every AI suggestion is checked: valid teach-alias, value must be an installed app, no secrets/links/digits, no duplicates, cut replies keep complete items.
+- ExtCfg.selfImprove / selfImproveHour; NovaService.selfImproveLoop (15 min check, no network unless window open); MainActivity bridge (get/apply/reject/revert/run/cfg); ui.html section.
+- Tests: SelfImproveRulesTest.kt (NOT RUN), tools/test_selfimprove_inapp_contract.py (PASS). Python contracts 55/55 PASS.
+- CI fix: tools/test_android_runtime_contract.py versionName check -> 6.95; tools/test_connectors_contract.py permission count 22 -> 23.
+
+# v6.91 EASY HELP for non-technical users
+- NEW HelpGuide.kt (pure Kotlin): 15 plain-language topics (call, WhatsApp, alarm, torch/wifi, apps, music/maps, camera, image, website, screen/agent, memory, learn, driving, recording, questions). "tum kya kar sakte ho", "help", "kaise use karu" and "kya tum website bana sakte ho" are answered LOCALLY (no AI, offline) for typed chat AND voice: NovaService.handle -> HelpGuide.isAsk/answer (lastKind help_guide). Real commands ("mummy ko call karo") and phone numbers are never hijacked.
+- The cloud AI (Gemini prompt and free-chain prompt) now gets HelpGuide.aiFacts(): what NOVA can / cannot do, so the AI answers capability questions correctly and never invents abilities.
+- ui.html: new MADAD button in chat header + popup (#helpw): every ability in simple words, TAIYAAR / SETUP CHAHIYE chip from real permission/key state, SETUP button (contacts, accessibility, notification access, keys), BOLO example button fills the chat box, search box. A NOVA reply that points to MADAD gets a POORI LIST DEKHO button. Welcome message mentions MADAD.
+- tools/test_help_contract.py keeps Kotlin topics and the popup identical (python contracts now 54/54 PASS). Playwright (390x844, 360x640): 15 cards, filter, example fills chat, 0 JS errors.
+- HelpGuideTest.kt written; HelpGuide logic was simulated in Python (all cases as expected) but Kotlin compile / JUnit = NOT RUN (no network). Device: NOT TESTED.
+
+# v6.91-wip (UI check, this account)
+- NEW tests written, NOT COMPILED / NOT RUN (no kotlinc here): AiChoiceTest, ChatHonestyTest, ProviderChainAcceptTest (SiteFollowUpTest was already in the ZIP, also not run this account).
+- Hang audit part 1: 2D orb loops `loop` and `gloop` in ui.html now skip drawing while a tab covers the orb (window.__cover); both are time-based so nothing jumps on return. Chat DOM is already capped (121 nodes, SHOWN). `tick` is only a cheap FPS meter, left alone. 
+- Hang audit (static) finished: bridge calls run on the WebView JavaBridge thread, not the Android main thread; the only Thread.sleep in MainActivity is inside a background Thread (GitHub device flow), fine. ChatSessions stores chats in SharedPreferences: every append() re-reads and re-writes the whole chat JSON with commit() (sync disk write), and the chat bridge calls (messages/open/list/search) parse it synchronously while JS waits. NOT a confirmed freeze (nothing measured, no device), so NO code change; only a candidate: move append()/commit() off the calling thread if the phone shows chat lag.
+- UI CHECK PASS (Chromium + fake bridge, 390x844 and 360x640): home, chat, AI dialog, settings render fine; #c_ai chip, radio list, fallback checkbox, SAVE work; 0 JS errors.
+- Fix: at width <=380px the bottom tab label "CONNECT" was clipped; added a small @media rule at the end of style id modern-v690.
+- python contracts 53/53 PASS. JUnit / kotlinc compile = NOT RUN (no network in this sandbox). Gradle = BLOCKED.
+- Test script note: Playwright click on #chatb is flaky if the Update Center popup (#uc) is still covering; test-script issue, not an app bug (NOT confirmed on phone).
+
+## v6.90 (IN PROGRESS - compiled, JUnit 704 OK, python contracts 53/53; new UI NOT visually checked, no new unit tests yet)
+- Chat honesty: ChatHonesty guard replaces false "add kar raha hoon / I am building" claims in text-only chat replies; honesty rule added to the Gemini and free-AI system prompts.
+- Website follow-up: "isko professional banao" right after NOVA built a site (within 30 min) now improves THAT site (SiteIntent.parseFollowUp, SiteGen.improvePrompt) instead of a fake chat claim.
+- AI picker: AiChoice (auto | gemini | a free provider) + auto-fallback toggle (ExtCfg.chatAi / chatFallback, bridge getChatAi / setChatAi, chip "AI: AUTO" + dialog in ui.html). Gemini runs first (auto/gemini), after the free chain (free AI chosen + fallback ON) or never (fallback OFF).
+- False "cannot do": phone-action pass now skips a provider that answers in prose and tries the next one (ProviderChain accept), without putting it on cooldown.
+- Hang fixes: finishTurn always releases busy (try/finally) and a 120 s watchdog frees a stuck typed turn.
+- Modern UI: ui.html style block "modern-v690" (flat surfaces, calmer accent, floating tab bar, new chat bubbles, AI picker styling).
+
+## Part 1/5 — Intelligent Contact Resolution (implementation added; build verification pending)
+- Added separate request parsing, real Android contact lookup, confidence matcher, and resolution pipeline.
+- Contact lookup reads actual ContactsContract phone rows without a display-name LIKE filter; candidates are grouped by CONTACT_ID and preferred number order is super-primary, mobile, then remaining.
+- Exact duplicate names, similar candidates, low confidence, missing names, no match, permission denial, and provider errors are handled without fabricated contact data or automatic action execution by lookup.
+- Added Hindi/Hinglish/English command variants, Devanagari transliteration for contact commands, safe reference handling ("isko" / "this person" asks for a name), retry plumbing, and contact-resolution unit/contract tests.
+- Existing call/SMS/WhatsApp entry points and permission request flow remain the integration points. A contact retry performs lookup only; the user must repeat the full command to initiate an action.
+
+# Changelog
+
+## v6.96 - 5 FREE OFFLINE AI (no key, no account) - written, NOT compiled, NOT run on a phone
+- NEW OfflinePack.kt (pure rules), OfflinePackStore.kt (HF file list + verified download), LocalBrains multi-model fallback, AutoSetup pack runner.
+- 5 on-device brains behind the built-in Qwen2.5-0.5B slot: Qwen2.5 1.5B (Alibaba), Llama 3.2 1B (Meta), InternLM2.5 1.8B (Shanghai AI Lab), SmolLM2 1.7B (Hugging Face), DeepSeek-R1 Distill 1.5B (DeepSeek). 3 Chinese + 2 world.
+- Download starts by itself after install (20 s after the service starts), Wi-Fi only, needs RAM and 1.5 GB spare storage, resumes after a break, one model at a time, respects the "auto models" switch.
+- Chat fallback: first installed model answers; if it cannot load / times out / gives empty or looping text the next installed model is tried (max 3 per answer). Busy engine or a safety refusal never starts a cascade. Command translator (LocalBrains.ask) asks ONE model only.
+- Chat templates per family (ChatML / Llama 3 / DeepSeek), stop-token + <think> cleanup (PackPrompt, PackText).
+- File name / size / sha256 are read from the Hugging Face API at download time (not pinned in code): the file is refused when size or sha256 differ or the size is outside the model's sanity range.
+- Tests: OfflinePackTest.kt (NOT RUN), tools/test_offline_pack_contract.py (PASS, static), tools/test_autosetup_contract.py updated 2 -> 3 runners.
+- Limits: no keyless ONLINE AI was added (no stable official one exists; scraping private web endpoints was refused). Image generation and speech-to-text keep their old chains: no 5-model offline fallback exists for them here.
+
+## Audit session v6.89 - fixes A-F applied, compiled and JUnit-run (Gradle/APK build BLOCKED in sandbox)
+- A: WhatsApp Business identity now reaches execution on every voice/transcript path; sendWhatsApp never falls back to the other WhatsApp (no app named = Messenger only, missing app is reported).
+- B: IntentParser negation only checks the command part, so "... kal nahi aaunga" payloads work; payloads of <=2 negation tokens ("message mat bhejo") stay blocked; original casing/punctuation restored for APP_MESSAGE.
+- C: ActionDedupe (8 s window, claimed inside the run lambda) guards call / SMS / WhatsApp; popup choice now announces the prompt/result and clears picker state.
+- D: contact picker popup + spoken choice now works for SMS and WhatsApp (per-call onChosen), not only calls.
+- E: honest wording: "call request sent", "I pressed Send; check WhatsApp for delivery".
+- F: ContactMatcher merges the same person saved twice (same name + same last-10-digit number set).
+- New tests: ActionDedupeTest, duplicate-contact merge, negation-in-payload, Business flag/casing. JUnit 704/704 OK, python contracts 53/53.
+- Stale LogicTest assertion updated (bare "call" asks for a name). Python contract strings updated.
+
+## v6.88 - remaining connector items finished
+- Voice/chat: "github file banao owner/repo path.txt content" commits a file (WRITE level + strict yes).
+- Chained steps can refer to the previous list: "github repos dikhao phir us repo ke issues dikhao", "vercel projects dikhao phir usi project ko redeploy karo" (first item of the newest list, `@last`).
+- RUN: full Kotlin compile + 671 JUnit, 49 contract scripts. NOT RUN: Gradle/APK, real provider calls, phone.
+
+## v6.87 - connectors work from chat and by voice, start to finish
+- Chat screen: new bar above the input (＋ CONNECTORS picker + quick chips for connected services). The picker opens the same permission sheet as the CONNECT tab.
+- Voice / typed: "github connect karo" runs the whole connect flow (strict yes, token page opens, token picked from the clipboard when NOVA is back in front, verified, announced). "github write on karo" / "read only" / "off karo" set the level (raising to WRITE needs a yes). Chained steps with phir / uske baad / then. Results of connector commands now arrive as chat messages.
+- RUN: full Kotlin compile + 669 JUnit (3 new), 49 contract scripts (connectors contract extended), chat bar headless with a fake bridge. NOT RUN: Gradle/APK, real provider calls, phone (checklist rows 42-46).
+
+## v6.86 - CONNECTORS (GitHub, Vercel, Netlify, Cloudflare, Supabase, Notion, Lovable, custom MCP)
+- NEW CONNECT tab: connect a service like ChatGPT's connector screen: permission sheet (what NOVA can do, READ or READ + WRITE), provider token page opens, NOVA picks the token from the clipboard, verifies it with the provider, stores it encrypted. Optional GitHub OAuth device login. Custom MCP servers (https). Details: docs/CONNECTORS.md.
+- NEW voice/chat commands for connected services; writes need level WRITE plus a yes that "skip confirmation" cannot bypass.
+- Code: ConnectorCatalog / ConnectorStore / ConnectorApi / ConnectorParse / ConnectorRules, bridge methods in MainActivity, route in NovaService, tab in ui.html. Tests: ConnectorRulesTest, ConnectorParseTest, tools/test_connectors_contract.py. `testImplementation org.json:json` added (android.jar's org.json only has throwing stubs in unit tests).
+- RUN: full Kotlin compile + 666 JUnit, 49 contract scripts, CONNECT tab headless. NOT RUN: Gradle/APK, real provider calls, phone (checklist rows 30-41).
+
+## v6.85 - build-time downloads are automatic
+- BEFORE: a local build needed `./tools/prepare_vosk_model.sh` run by hand first (bash + curl + unzip; not possible on plain Windows).
+- NOW: `gradle/vosk-model.gradle.kts` (task `prepareVoskModel`) hooks into `preBuild`: Gradle downloads, safely unzips and validates the Vosk model itself, skips if already valid, retries 3 times, mirror via `NOVA_VOSK_MODEL_URL`. The Gradle wrapper already fetches Gradle 8.7; the app already auto-downloads the Hindi pack and the offline Qwen brain. CI keeps its pre-check step.
+- RUN: task tested in an isolated Gradle project (fresh download, UP-TO-DATE skip, bad zip refused); python packaging contract. NOT RUN: full AGP build (sandbox cannot reach alphacephei.com / Google Maven), phone.
+- Not automatic on purpose: app update offers (feed) still need the owner's INSTALL tap (security rule); API keys, Picovoice key/ppn.
+
+## v6.84 - automatic setup after app open (no manual re-doing)
+- BEFORE: the first-open permission + Settings chain ran once per install (skipped/denied items never came back; permissions added by an update were never asked).
+- NOW: SetupChainRules (pure, 5 JUnit): the chain re-runs on later app opens while something is still missing (max 4 runs per SetupChainRules.VERSION; each Settings page once per run, 3 times in total; the brand autostart page once). New phone-brand autostart step. New bridge rerunSetup() + button SETUP DOBARA CHALAO in the status box. Rows 27-29 added to the real-device checklist.
+- NOT automatic on purpose / impossible: NOVA does not start the microphone by itself (owner rule since v6.39; ACTIVATE stays one tap) and Android never lets an app switch Accessibility, notification access, overlay or battery settings on: the chain only opens the right page.
+- RUN: compile + 646 JUnit, 48 contracts, headless UI 19 + 27. NOT RUN: Gradle/APK, phone.
+
+## v6.83 - Part 9 (security / logging / config) - verified in sandbox only
+- 35 JS-bridge methods: every String parameter capped (oversize keys/url/json rejected); NEW tools/test_bridge_caps_contract.py.
+- ErrLog masks e-mail, 4+ digit runs (phone / OTP) and quoted text; +2 JUnit (641 total).
+- NEW tools/ui_feature_status_check.py (headless, fake bridge, 26/26). docs/AUDIT_PART9.md. Compile OK, 641 JUnit, 47/47 contracts. NOT run: Gradle/APK, phone.
+## v6.81 (audit, edits NOT re-compiled)
+- WebView onRenderProcessGone recovery; receivers with RECEIVER_NOT_EXPORTED; Gradle wrapper; README keys section; versionName 6.80; tools/test_android_runtime_contract.py. See docs/AUDIT_v6.81.md.
+
+## v6.80 (Part 8)
+- Fix: NovaService Context.POWER_SERVICE compile error; ToolVerify.KNOWN_TOOLS includes media (found by first real compile).
+- Chat storage moved to files (ChatStore.kt) with verified, rollback-safe migration; history search, pin (max 10), rename, export to text file, delete all, context line (what the AI receives), long-chat note. Tests: ChatStoreTest, tools/ui_chat_check.py.
+
+# Changelog
+
+## v6.79 - Part 7: memory manager (screen edit/delete/search, export/import, key/token redaction, Gemini task line)
+- AUDIT (source): PersonalMemory (YAAD facts, 100 x 200 chars, SharedPreferences "nova_memory", allowBackup=false), ChatSessions (chat), LearnStore/KnowledgeMatcher (notes), AgentTaskLedger (task), ContextMemory (RAM only, 2 min, never repeats risky kinds). Findings: (1) Memory screen could only SHOW all / DELETE ALL; (2) API keys / tokens were NOT refused (only password / OTP / PIN / card / ID / bank / 6+ digits); (3) Gemini did NOT get the safe task line the backup AI gets (FallbackContext.taskLine); (4) Devanagari facts / questions never matched (Logic.norm drops every Devanagari letter); (5) the old contract check "Gemini path has no memory facts" sliced an EMPTY range (cloudFailure is defined BEFORE askCloud) so it proved nothing - fixed; (6) load+save were not atomic across the screen and voice.
+- NEW refusal reason "key": words (api key, token, access/auth token, secret/private key, seed/recovery phrase, bearer) and key-looking strings (AIza..., sk-..., gsk_, ghp_, github_pat_, hf_, xox*-, or any 24+ char letters+digits word). Applies to voice, screen add/edit, import, and relevant() (such a fact never reaches a model).
+- NEW Memory screen (ui.html, DIKHAO): search box, per-fact EDIT and HATAO, add field (JODO), count "N / 100", EXPORT (FILE) / IMPORT (FILE) (text file through the system file picker), limit + privacy line. Facts are drawn with textContent only (an imported file can never become HTML). SAB HATAO keeps its double-tap.
+- NEW bridge: getMemoryJson, memoryAdd, memoryEdit(index, expectedText, new), memoryDelete(index, expectedText), memoryExport, memoryImport (input capped 1000 chars, import file capped 80 KB / 20,000 chars / 400 lines). Edit / delete carry the old text: if a voice command changed the list meanwhile, nothing is changed ("Ye baat badal chuki hai").
+- NEW PersonalMemoryStore.update / importFrom: load + change + save under ONE lock.
+- NEW pure rules in PersonalMemory: search, removeAt, replaceAt, exportText, importText (every imported line goes through add(), so secrets / keys / long numbers are refused; file order kept; MAX_FACTS respected), screenReply, importReply.
+- CHANGE: `tokens()` transliterates Devanagari with HindiRoman, so Devanagari facts and questions can match (best effort).
+- CHANGE: Gemini (askCloud) now gets the same ONE safe task line as the backup AI (redacted summary + state, only if newer than 30 min). Gemini still gets NO personal facts (unchanged on purpose).
+- TESTS: tools/memory_cases.py + gen_memory_test.py (regenerated PersonalMemoryTest: +8 refusal rows, +6 Hindi/Hinglish retrieval rows), NEW MemoryScreenOpsTest (13 tests), tools/test_memory_contract.py extended (159 checks).
+- RUN: Python contracts (see TEST_REPORT_PART7.md). NOT RUN: Kotlin compile, JUnit, Gradle / APK, real phone (sandbox has no kotlinc / internet). `MemoryScreenOpsTest`, the new PersonalMemory functions, the bridge methods and the onActivityResult branches have NEVER been compiled.
+- NOT DONE (honest): no UI screenshot test of the new Memory screen; English question vs Hinglish fact ("what is my name" vs "mera naam shiv hai") still does not match; spoken secrets without "=" or ":" in a task summary ("password hunter2") are not redacted by AgentTaskRules.safeSummary.
+- No feature removed; no speaker recognition / voice lock; no permission or security restriction bypassed; no confirmation added back.
+
+## v6.78 - app opening: 3 silent ways, no notification, no "request" talk
+- WHY apps did not open: Android 10+ (and brand layers such as Xiaomi / Vivo / Oppo "pop-up while running in the background") block `startActivity` from a background service. The old code tried ONE way, then showed a notification and said it was not confirmed.
+- NEW `launch()`: (1) service `startActivity`, (2) the same intent from the Accessibility service (`NovaAccessibilityService.startFromService`), (3) a PendingIntent with the Android 14 background-start option; after each way it waits for the app to be in front. The notification fallback is gone (`notifyOpen` is no longer called). Already-open target apps now count as opened.
+- Result is told ONCE at the end: "<app> khul gaya", or, if Accessibility is off, "kholne ka order de diya" (no claim it opened), or, if all 3 ways failed, one sentence with the real cause and the one-time switch to turn ON.
+- HONEST LIMIT: if the phone brand blocks background pop-ups, no app can open anything until that switch is ON once; nothing here can switch it for the owner. NOT RUN: compile, JUnit, phone.
+
+## v6.77 - owner request: do the job directly, no chatter, keep going until it is finished
+- CHECKED (source): with the default settings (`skip_risky_confirm` and `skip_order_confirm` both ON) `askFirst()` runs the action at once: a call and a WhatsApp / Instagram / any-app message are done with NO yes/no. The Part 6 note that call / WhatsApp "keep a mandatory spoken yes" was WRONG for the defaults: it exists only if the owner turns those two switches OFF. Stale comments in `callTool` / `whatsappTool` / `ToolVerify.sensitive` corrected; a contract test now pins the defaults.
+- FIX the "request bheji hai par confirm nahi hua" talk after opening an app: `launch()` now waits up to ~3.6 s (was 1.5 s) for the app to come to the front, so slow apps are no longer reported as not confirmed; if it really did not open, the text is just "<app> khul nahi paya. Notification par tap karo" (no request / permission wording).
+- CHANGE agent persistence: `MAX_STEPS` 30 -> 60, `MAX_MS` 5 min -> 10 min, "stuck" retries with another way 2 -> 4. It still stops (loop caps, owner says stop, locked phone) and then says how far it got.
+- UNCHANGED on purpose: pay / buy / transfer / password / OTP / banking / wallet / UPI / installer / Settings screens stay refused (they protect the owner's money; Android also hides secure screens from Accessibility). Android's own permission dialogs (microphone, contacts, CALL_PHONE, notifications) cannot be skipped by any app: they are asked once, and after Allow NOVA calls directly.
+- RUN: Python contracts. NOT RUN: Kotlin compile, JUnit, phone (no kotlinc / internet here).
+
+## v6.76 - Part 6: agent loop hardening (verify levels, one bounded retry, honest notes, stricter AI-app send)
+- AUDIT (what each tool really verifies, from the source): torch = TorchCallback read-back; volume = AudioManager read-back; brightness = Settings read-back; media play/pause = `isMusicActive` (next/previous cannot be confirmed); open_app / url / navigate / camera / settings = foreground-package check in `launch()` or an honest "requested, not confirmed"; call = Android accepted the dial request only; alarm / timer = Android gives NO answer (text already says so); sms / whatsapp / calendar = the owner presses send / save.
+- NEW `ToolVerify.kt` (pure Kotlin): level per tool (VERIFIED / PARTIAL / HANDOFF / UNVERIFIABLE; unknown tool = UNVERIFIABLE), failure kinds read from the tools' own texts, bounded recovery, sensitive-action table, one-sentence `report(...)`.
+- NEW hook in `NovaService.runLocalTool`: ONE automatic retry, only for torch / volume / brightness when Android did not confirm (they set an explicit state, so repeating cannot do more). Never for call, WhatsApp, SMS, alarm, timer, open_app, media.
+- NEW hook `ToolVerify.finish` in `runLocalTool` and `runTool`: a success that Android cannot confirm and whose text does not already say so gets "Verify nahi hua / Not verified"; a failure gets at most one guide ("App ka naam dobara bolo, ya Play Store se install karo", or say "setup check" for a missing permission). No loops, nothing on protected screens.
+- FIX `AgentRules.check`: inside ChatGPT / Gemini the send tap was free for ANY label whose only risky word was "send" (so "Send money" / "Send file to ..." passed). It is now free only for a plain send button (`AgentRules.isAiSend`: "Send", "Send message", "Send prompt", "bhejo"). Everything else asks first. Pay / buy / password / OTP etc. stay DENY.
+- Confirmation audit: call and WhatsApp send keep their mandatory spoken yes (`askFirst(..., must = true)`, unchanged); SMS and calendar only open the compose / save screen. Nothing sensitive runs silently.
+- NEW tests: `ToolVerifyTest` (7 tests), `AgentRulesPart6Test` (6 tests: banking / payment / installer / own screen DENY, money and security words DENY, risky words CONFIRM, plain send only in AI apps), `tools/test_tool_verify_contract.py` (every dispatched tool has a level; hooks present; classify expectations match a Python port).
+- NEW docs: `docs/TEST_REPORT_PART6.md`, `docs/CONTINUATION_PART6.md`, `docs/NEXT_ACCOUNT_PROMPT_v6.76_PARTS_7_TO_10.md`. versionName 6.76 (versionCode unchanged).
+- RUN: 45/45 Python contract scripts PASS. NOT RUN: Kotlin compile, JUnit, Gradle / APK (no kotlinc, no internet here), real phone. `ToolVerify.kt`, the 2 hooks and the 2 new test classes have NEVER been compiled: run GitHub Actions first.
+- NOT DONE (honest): `ToolVerify.report(...)` exists and is tested but is not yet spoken by the agent loop (the agent's own done / fail texts already say verified / not verified); per-step verification inside the screen agent (tap / type) is unchanged; no sandbox proof that a retry helps on a real phone.
+- No feature removed; no speaker recognition / voice lock added; no permission or security restriction bypassed.
+
+## v6.75 - Part 5 finished: voice + Android control audit (4 classification bugs fixed, 181-phrase corpus, honest "cannot do" answers)
+- FIX `Logic.classify` negation: "volume kam mat karo", "torch on mat karo", "brightness kam mat karo", "volume badhao mat" used to RUN the positive command. A negation guard (mat, nahi, nahin, nhi, nai, dont, don, not, never, without, bina, mt) now sits ONLY inside the torch / volume / brightness / media / global-nav blocks; such sentences go to the AI instead. "do not disturb" is untouched (its rule is outside the guard).
+- FIX open-app: "instagram open karo", "chrome khol do", "chrome ko kholo" now open the app (`OPEN_TAIL_RE`; trailing " ko" removed). `open` / `launch` at the END need a karo-type word (karo, kar do, kardo, kar, do, dijiye, kijiye), so "is store open" is still not a command.
+- FIX `Understand.simplify`: "gaana bajao tum hi ho" was read as plain "play music" because the song title was eaten as filler words. "play music" / "pause music" are now returned only for sentences of at most 4 words; longer ones go to the AI (which can pick the song).
+- NEW `UnsupportedRules`: "cancel alarm", "alarm cancel karo", "timer cancel karo", "cancel timer" (+ delete / hatao / remove forms) get an honest answer (NOVA cannot cancel one; use the Clock app) instead of a cloud round trip. "alarm band karo" / "alarm off" are NOT touched: they stay the wake-up alarm switch.
+- NEW tests: `CommandCorpusTest` (181 English / Hindi / Hinglish phrases through `Understand.classify` + one test per fixed bug), `VoiceDiagnosisTest` (5 tests; v6.74 had none), `tools/test_command_corpus_contract.py` (re-checks the corpus against the Python port and the 4 fixes in the Kotlin source). `tools/classify_mirror.py` updated to the new logic.
+- NEW docs: `docs/VOICE_AND_BATTERY.md`, `docs/TEST_REPORT_PART5.md`, `docs/CONTINUATION_PART5.md` (now DONE), `docs/NEXT_ACCOUNT_PROMPT_v6.75_ALL_10_PARTS.md`, delta table in `docs/FEATURE_REGRESSION_v6.73.md`. versionName 6.75 (versionCode unchanged).
+- Wake false-trigger audit: no code change needed (WakeStrictTest, WakeAdaptTest, ListenGuardTest, WakeRulesTest already cover it; see VOICE_AND_BATTERY.md).
+- RUN: 44/44 Python contract scripts (incl. the new one) PASS. NOT RUN: Kotlin compile, JUnit (no kotlinc and no internet in this sandbox), Gradle / APK, a real phone. The v6.74 Kotlin files (`VoiceDiagnosis.kt`, `UnsupportedRules.kt`) and everything in this entry have NEVER been compiled: run GitHub Actions first.
+- No feature removed; no speaker recognition / voice lock added; no permission or security restriction bypassed.
+
+## v6.73 - Part 4: build gate (sandbox compile + JUnit), regression sweep, build docs
+- RUN: real kotlinc 1.9.24 compile of all 115 main files = 0 errors (stubs for third-party jars, AOSP android-34 jar); JUnit 571/571 PASS (first run of the Parts 1-3 tests); 43/43 Python contract scripts PASS; skill packs, JS, XML, UI<->Bridge (122/122) checks PASS; no secrets in the tree.
+- NOT RUN: Gradle/AGP build and APK (Android SDK and Google/Maven repos are unreachable from the sandbox), real phone.
+- FIX (test only): `LogicTest.papaCallRoutesLocallyWithoutCloudKey` expected null for "call of duty kholo"; the generic "<app> kholo" rule opens the app, so the test now expects `open_app` (still never a call). Comment fix in `WavPcm.kt` (no voice-lock mention).
+- NEW: `tools/run_all_checks.sh` (the right way to run the Python checks; `unittest discover` gives false errors), CI step for it, `.gitignore`, `docs/config_templates/` (placeholders only), extra sandbox stubs in `tools/local_stubs/extra/`, `docs/FEATURE_REGRESSION_v6.73.md`, `docs/TEST_REPORT_PART4.md`, `docs/CONTINUATION_PART4.md`; `docs/BUILD.md` rewritten. versionName 6.73 (versionCode unchanged).
+- No feature removed; no speaker recognition / voice lock added.
+
+## v6.72 - Part 3 of the master prompt: agent task memory after a restart, long jobs remember their start, interrupted jobs are reported
+- AUDIT (agent): the task ledger kept only the summary, state, step count, last checkpoint and the LAST step message. After a restart the owner-requested safe resume re-planned from the current screen but the model did not know what was already done; and during a long job the model saw only the last 10 actions. A model switch mid-task was already fine (every step prompt carries task + action history). A restart used to mark the job interrupted silently.
+- NEW: every finished step saves a privacy-safe progress line (`AgentTaskRules.progressLine`: step number, action name, app name only for open_app, ok / FAILED, screen changed or not; never typed text and never a screen label). The ledger keeps the newest 12 lines / 900 characters; a safe resume copies them and the new run starts with them ("before the interruption"). Old ledger records without the field still load.
+- NEW: the agent prompt now has an EARLIER ACTIONS part (older actions in short, up to 1,200 characters, newest of the old kept) next to the last 10 actions, so a long job keeps its own start.
+- NEW: when a restart cut a job short, the owner gets one notification with the exact resume status ("resume last task" is offered only when it is provably safe). Nothing is ever replayed automatically.
+- Unchanged on purpose: resume is owner-only, latest interrupted task only, only if every recorded action was repeat-safe, within the original deadline; the verifier, the DENY/CONFIRM safety checks, the stall retry of v6.68.
+- One existing contract check was updated on purpose (`test_agent_task_ledger_contract.py`: the `recordStep` call now also passes the progress line); the privacy rule it protects is checked again in `test_agent_restore_contract.py`.
+- Typed-chat memory limit (open question of Part 2): already solved in v6.71 (the AI gets the whole stored chat), so no owner decision is needed.
+- Checked (RUN): `tools/test_agent_restore_contract.py` (14 checks), all 43 Python contract tests. NOT RUN: Kotlin compile / Gradle, JUnit (new `AgentProgressTest`, 9 tests), a real interrupted job on a phone.
+
+## v6.71 - the AI gets the FULL current chat, not only the last 6 messages
+- Owner request: the AI must know the whole history. Before: Gemini and the backup AIs saw only the last 6 messages (`Logic.HISTORY_MAX`) and nothing after 2 quiet minutes.
+- Now the model gets the whole CURRENT chat from the chat store (v6.69), as much as the model can take: Gemini up to 120,000 characters, free providers up to 12,000 characters (small context windows). Each message is kept up to 1,500 characters; two messages in a row from one side are joined (nothing is dropped to make the roles alternate).
+- If a chat is longer than the budget, the OLDEST messages are left out (never the newest) and the free-chain system prompt says so.
+- The 2-minute memory limit no longer applies to the stored chat, so an old chat opened from HISTORY, or a long typed chat, keeps its context. NEW CHAT still starts with an empty history (nothing old is mixed in); saved memory (YAAD) is separate.
+- The offline model (small context) still gets only the last 2 turns; the project cannot send it more.
+- A chat now stores up to 500 messages (was 200).
+- Not touched: safety checks, verifier, speed work, UI, no speaker recognition / voice lock.
+- Checked (RUN): `tools/test_fallback_context_contract.py` (22 checks), all 42 Python contract tests. NOT RUN: Kotlin compile / Gradle, JUnit (new `fullWindow` tests in `FallbackContextTest`), real provider calls, a real phone. Whether a given free provider accepts 12,000 characters was not tested; the chain moves to the next model if one refuses.
+
+## v6.70 - Part 2 of the master prompt: backup AI keeps the conversation + task, clear missing-config report
+- AUDIT: Gemini key / model fallback already reuses the same request (history, system prompt, facts). The free chain (Groq, OpenRouter, GLM, Pollinations) and the offline model got ONLY the last sentence: no conversation, no task. The agent's own fallback (`agentChain`) already carries the task prompt and step history, and stays as it was.
+- NEW `FallbackContext.kt` (pure): the newest 6 turns (max 300 characters each, alternating user / assistant, starting with the user) and one redacted line about the latest phone task (only when it is under 30 minutes old; a task that finished without verification is never called "verified").
+- `FreeProviders.buildBody` and `ProviderChain.run` take optional `turns` (default empty = the old body, old callers and tests unchanged). `runFreeChain` and the free phone-action pass now send the turns; the chain system prompt also gets the task line. Roles are limited to user / assistant.
+- The offline model gets the last 2 turns (`LocalChat.buildPrompt(..., earlier)`).
+- A backup answer (free chain or offline model) is now remembered in the conversation, so the next question, whoever answers it, continues the same thread. Old turns (older than 2 minutes) are not sent, same rule as Gemini.
+- NEW `ConfigReport.kt` (pure): say or type "nova setup check" / "kya missing hai" / "missing keys" / "kya setup baaki hai". It is answered on the phone from the REAL state (keys saved, microphone, Accessibility, notification access, overlay, offline model) and lists what is not configured. It says "configured", never "working": a saved key can still be wrong or out of quota.
+- The agent now says clearly "no AI key is configured, add one in Setup" when a job needs an AI and none exists (before: "no answer right now (failure kind)").
+- Not touched: safety checks, verifier, speed work of v6.68, chat sessions of v6.69, UI. No speaker recognition / voice lock / enrollment.
+- Checked (RUN): `tools/test_fallback_context_contract.py` (18 checks) and all 42 Python contract tests. NOT RUN: Kotlin compile / Gradle (no compiler or network here), the new JUnit files `FallbackContextTest`, `ConfigReportTest`, `FreeProvidersTurnsTest`, and any real phone or real provider call.
+
+## v6.69 - Part 1 of the master prompt: chat sessions (New Chat, chat ids, history, resume)
+- NEW `ChatSessionRules.kt` (pure rules) + `ChatSessions.kt` (private on-phone store "nova_chats"): every chat has its own id, title and messages (max 30 chats, 200 messages each, 2000 characters per message). Only the owner's lines and NOVA's answers are kept; status lines and keys never.
+- Every chat line now goes through `NovaService.emit()` and is saved even when the app screen is closed.
+- Chat screen: NAYI CHAT button, HISTORY list (open an old chat, delete with a second tap), the current chat comes back after an app restart.
+- NEW CHAT clears the running model context only; saved memory (YAAD) and notes stay. An opened old chat gives the model back only its newest turns (max 10 messages / 3000 characters). Switching is refused while NOVA is working.
+- Not touched: all speech, agent, safety, memory, wake and UI parts. No speaker recognition / voice lock / enrollment (as the owner asked).
+- Checked (RUN): `tools/test_chat_sessions_contract.py` (18 checks), all 41 Python contract tests, JS syntax of all 17 script blocks of ui.html, and a headless-browser run of the new chat screen with a fake store (8 checks, screenshots looked right). NOT RUN: Kotlin compile / Gradle (no compiler or network here), the new JUnit file `ChatSessionRulesTest.kt`, anything on a real phone.
+
+## v6.68 - faster jobs, fewer half-finished jobs
+- SPEED: after every agent action NOVA no longer sleeps a fixed 0.5-1.8 s. New `agentSettle()` waits only until the screen has changed and then stopped changing (two equal reads), min 100-400 ms, max 0.7-3.5 s. Fast apps go on at once; slow apps get up to the old time or a bit more, so the next step never reads a half-loaded screen. Same for the local tap / scroll commands (`doTap`, `scrollCmd`).
+- SPEED: slow AI calls no longer hold a job for up to 45 s. `postFallback(json, readCapMs, deadlineMs)`: planning 10 s / 16 s, each agent step 16 s / 32 s, final check 12 s / 20 s, then the next key / model / free provider answers. Chat and other callers keep the old 25 s / 45 s.
+- COMPLETE: a stalled job (same action 3 times, screen unchanged) is no longer dropped at once. NOVA tells the model "do not repeat, try another way" and retries up to 2 times, then stops.
+- COMPLETE: the independent result check may send the job back for repair up to 3 times (was 2) while time is left; "done" is still never accepted without that check.
+- HONEST: when a job stops early ("too many steps", "stuck") the spoken / chat sentence now says the last thing that worked, so "adhura" is clear.
+- Not touched: safety checks (DENY / CONFIRM / protected screens), the independent verifier, the planning call for long jobs, wake / popup rules.
+- Checked (RUN): new `tools/test_fast_complete_contract.py` (13 checks) and all 40 Python contract tests pass. NOT RUN: kotlinc / Gradle compile (no compiler and no network in this sandbox), JUnit, any phone test. Speed numbers are not measured; they must be timed on the phone.
+
+## v6.67 - in-app jobs (chat, YouTube) + questions in the middle of a job
+- NEW agent action `ask_wait`: NOVA speaks a question, listens, and the SAME job continues with the answer (old `ask` still ends the job). `kind:"choice"` = short answer or list number, `kind:"text"` = dictated message (longer listening). Max 3 per job; silence is asked once more, then the job stops. Code: `AgentRules` (parse/check/`numberFrom`/`answerLine`), `NovaService.agentAskAnswer` + a branch in `processAnswer` (`agentAnsPending`).
+- NEW routing `AgentRules.isAppJob`: "chat open karo rahul", "instagram par chat open karo aman ki", "youtube pe lofi chalao", "mera channel kholo", "video pause karo" (only if no local command exists). The old "<app> par <name> ko message <text>" WhatsApp route is NOT touched (`WhatsAppCommandRules` wins). AI-chat words, recording, call, screen, gallery are excluded.
+- NEW playbooks in the agent system prompt: chat (open app, search name, ONE match opens, SEVERAL similar names = "Kaun sa? 1 .., 2 .." up to 7, owner says 1-7 in Hindi/English or the name, ask the message ONCE, type it, tap Send only if the task said send/bhejo) and YouTube (search + play, pause/play on the open video, channel, my channel / my videos; never Subscribe/Join/Buy/ads).
+- Number words 1-9 in Hindi/English/ordinals ("do", "teesra wala", "number paanch", "seventh") -> `numberFrom`; a full name or a long sentence gives none.
+- Popup (card) now stays while a job runs (`hudHide` waits for `agentRunning`) and closes by itself after the job; it still never opens without the wake word.
+- Short app jobs skip the planning call (`fastJob`).
+- FIX found by the checks: "whatsapp par chat open karo rahul" would have been sent by the old WhatsApp flow as a message with the text "chat open karo rahul". It is now an open-chat job; "whatsapp rahul ko message bhejo hello" keeps the old flow.
+- Question time: a job's question waits 60 s (`pendingTtl`), card may stay up to 120 s while a job runs. "chat clear / band karo" and a bare "message ..." are not app jobs. New row "Apps ke andar kaam (chat, YouTube)" in the home status list.
+- Checked (RUN): (1) the 52 pure Kotlin files compile with kotlinc 1.9.24 and a main() with 30 checks passes, new and old behaviour. (2) the WHOLE app (incl. NovaService, MainActivity, FeatureStatus) was compiled against android.jar API 34 from github.com/Sable/android-platforms: NO error in NovaService / AgentRules / FeatureStatus / MainActivity (a deliberate test error in NovaService WAS reported, so the file is really analysed). The only errors left are files that need libraries missing here (WorkManager, coroutines, llama, Porcupine, R): they build fine in Gradle. (3) 39 Python contract tests pass (new: `tools/test_inapp_jobs_contract.py`). NOT RUN: Gradle, JUnit (new tests are in `AgentRulesTest`), any phone test.
+
+## v6.66 - no voice lock, no screen-lock gate
+- REMOVED: the "locked phone takes no new task" rule (PhoneLock.kt, lockedPhoneAllows, its row in the feature list, README line). NOVA now hears and acts on anybody's voice, locked or open. There is no voice recognition or enrolment anywhere.
+- Kept (Android limit, not a NOVA rule): screen-driving jobs (tap/scroll in other apps) still say so if the phone is locked, because Android cannot be driven on a lock screen. The voice command "screen lock karo" is also kept.
+- NOT compiled, NOT phone-tested.
+
+## v6.65 - one UI for weak and strong phones
+- NEW: `Android.getTier()` (DeviceTier: RAM / cores / Android version) tells the page LOW / MID / HIGH before anything draws. LOW = light mode for good + orb at half size; MID = full look allowed but orb at 75 % size, 30 fps, canvases capped at 2x; HIGH = unchanged. The existing automatic jank governor stays on top of it. No feature or layout was changed. Browser preview falls back to `?tier=low|mid|high`.
+- Checked in headless Chromium (software GL, so speed numbers are only indicative): no JS errors, no external requests, no sideways scroll at 360x640 and 412x915. NOT compiled, NOT phone-tested.
+
+## v6.64 - chat is silent by default
+- CHANGE: typed chat replies are no longer spoken. Settings has a new switch "CHAT ke jawab bolkar bhi sunao" (default OFF). Every NOVA chat message has a speaker icon: tap it and that message is spoken once (NOVA's voice when ACTIVATED, otherwise the phone's own TTS). Microphone / wake-word replies are unchanged.
+- CLEAN: last "voice lock" wording removed from the hearing self test (speaker recognition / voice lock / face / pattern were already removed in v6.51).
+- Audit: see `docs/FEATURE_AUDIT_v6.64.md` (static checks RUN, build and phone tests NOT RUN). New `tools/test_chat_voice_contract.py`.
+
+## v6.63 - Gemini listening hardened
+- Listening chain was already: offline Vosk -> Groq (if key) -> Gemini (owner's key, multi key/model failover) -> offline Hindi pack. Kept as is.
+- NEW: `ListenGuard.cleanCloudTranscript` cleans Gemini's text: "[silence]", "(inaudible)", "Transcript:" labels and an echoed instruction become "" instead of reaching the command parser. Unit tests added (GeminiTranscriptTest) + `tools/test_gemini_listen_contract.py`. Gemini text still can never approve a yes/no. NOT compiled, NOT phone-tested.
+
+## v6.62 - permission chain
+- First open permission chain now also opens "Install unknown apps" (used by the in-app update). Re-runs once on update; only missing items open, each once. Android cannot grant permissions at install time, so this one-time guided chain on first open is the closest possible. NOT compiled, NOT phone-tested.
+- Wake behaviour unchanged: NOVA starts only after ACTIVATE and wakes only when a sentence opens with "nova" / "hey nova".
+
+## v6.61 - static review fixes (NOT compiled, NOT phone-tested)
+- FIX: 68 x `catch (_: ...)` replaced with `catch (ignored: ...)` in 15 files (invalid in Kotlin 1.9.24, would break the Gradle build).
+- FIX: removed `!!` in VideoRecordService (local `outFile` val instead of `temp!!`).
+- FIX: stale `test_agent_plan_contract.py` check updated to the current `agentRun` code (fastJob).
+- FIX: FileProvider no longer shares the whole app files folder, only `rec/` (recordings).
+- IMPROVE: 112 silent empty `catch` blocks now write the reason into ErrLog (Settings error list) instead of hiding it. Cleanup/release catches left silent on purpose.
+- CI: workflow can be started by hand and now uploads the debug APK (`nova-apk`) and the test report.
+- Docs: README version 6.55 -> 6.61. Python contract tests 35/35 PASS. Gradle build / Kotlin tests / phone: NOT RUN.
+
+## v6.59 — offline Vosk model packaging fix
+- Added `tools/prepare_vosk_model.sh` to download the official Vosk small English model over HTTPS and validate every file required by NOVA before packaging.
+- Updated GitHub Actions to prepare the model before running Gradle unit tests and assembling the debug APK.
+- Updated local build instructions; the model remains outside the source ZIP to avoid embedding a large third-party binary.
+- Kept the optional Porcupine setup unchanged: owner-provided Picovoice AccessKey and `nova.ppn` remain required; existing Vosk fallback is preserved.
+- Preserved v6.57 lead-routing files/tests and the v6.58 call-intent changes.
+- Version bump: 6.58 → 6.59; default versionCode 17 → 18.
+
+## v6.58 — offline contact-call intent (2026-10-13)
+
+- FIX: explicit phrases such as “Papa ko call karo” and “call Papa” are now parsed as a local call intent, so they do not require Gemini/free-provider availability merely to understand the command.
+- Safety tightened per owner requirement: calls now always require an explicit spoken confirmation even if the optional “skip ordinary confirmations” setting is enabled. Contact resolution still requires the existing contacts permission; Android dialer / CALL_PHONE permission flow remains in `callTool`. No call is initiated by the intent parser itself.
+- Preserved v6.57 lead-intent routing guard and its regression coverage unchanged.
+- Added Kotlin regression coverage for “Papa ko call karo”, “nova call papa”, “phone papa”, and negative/ambiguous inputs.
+- Validation: repository Python contract scripts pass (34/34). Kotlin/Gradle build and Kotlin unit tests were not executable in this environment; real-phone call, wake/popup, and live Gemini tests remain NOT TESTED.
+
+## v6.57 — lead-intent routing guard (2026-10-13)
+
+- Added an explicit lead-acquisition intent guard before the website builder route. Requests such as “mere shop ke liye leads lao” now receive an honest lead-workflow response instead of silently being treated as a website task.
+- The response clearly states the actual current capability: NOVA can capture owner-selected public business listings and draft outreach; this build does not independently crawl/search the web for new leads.
+- Added unit-test coverage for lead-vs-website intent separation.
+- Bumped Android version code/name for this patch.
+- Validation: 34/34 repository Python contract tests pass. Android/Kotlin compilation and device-level Gemini/wake-word/popup/call tests were not verified in this environment; do not treat them as passed.
+
+# Changelog
+
+Build/test status for every entry below v6.38 is "not compiled on Android, not phone-tested" unless stated.
+
+## 6.56
+- NEW: optional Porcupine wake word (Picovoice). Settings > PORCUPINE WAKE WORD: paste AccessKey, pick the custom nova.ppn (Android), ACTIVATE again. Vosk stays as automatic fallback: no key / no file / wrong .ppn / any error / any runtime failure = old Vosk wake. Dependency ai.picovoice:porcupine-android:3.0.2 (version NOT verified from here: if CI cannot resolve it, change the number). Removed the unused androidx.biometric dependency (left from face lock). Picovoice free plan = personal use only; selling NOVA needs their commercial plan. NOT compiled, NOT phone-tested.
+- Self-tuning wake: every false wake in a row makes the next wake need a 25 % louder voice (max 2x); a real command resets it; it relaxes after 10 quiet minutes (WakeAdapt). Phone tiers LOW / MID / HIGH (DeviceTier): a LOW phone (under 3 GB RAM, under 6 cores) no longer auto-downloads the 491 MB offline model. NOT compiled, NOT phone-tested.
+
+## 6.55
+- FIX: NOVA waking without being called. (1) The wake word must now OPEN the sentence ("nova ..." / "hey nova"); "nova" guessed in the middle of TV / other people's talk no longer wakes it. (2) A partial wake result must hold for 4 results (~0.4 s, was 2); a final result still counts at once. (3) Wake must be louder (peak >= 1100 and 3.5x room noise, was 900 / 3x). (4) Cooldown after a turn 3 s (was 1.5 s). (5) The "Phone locked" refusal is shown in the chat only and never spoken, so a false wake can no longer talk by itself.
+- Voice recognition, voice lock, pattern lock and face lock: already removed in 6.48/6.51; leftover wording in SelfTest, ListenGuard, README and Logic comments cleaned. The "unlock" voice command is only a stub that says unlocking was removed.
+- NOT compiled, NOT phone-tested. Wake thresholds are tuned by reasoning, not on a phone: if NOVA now misses a soft "nova", lower WAKE_CONFIRM_HITS to 3 or the 1100 peak in NovaService (one number each).
+
+## 6.54
+- Owner request: manifest now declares CALL_PHONE and QUERY_ALL_PACKAGES. With CALL_PHONE allowed NOVA places the call itself (ACTION_CALL); without it the dialer opens and NOVA asks for the permission once. Android always needs that one Allow tap: an app cannot grant it to itself.
+- NEW: delete a sent auto reply (WhatsApp: Delete for everyone, Instagram: Unsend) by voice ("reply delete karo") or the DELETE KARO button in the history. Uses Accessibility, only inside an open conversation, only the bubble whose text equals NOVA's reply, never "Delete for me"; checks on screen and writes "deleted" / "delete failed" + reason into the history. Depends on the apps' own screens: NOT phone-tested.
+- NEW agent actions: screenshot (Android's own screenshot action, saved to the gallery) and zoom_in / zoom_out (two-finger pinch). Still refused on protected screens (bank, payment, settings, installer). "Open any app and do <task>" already ran through the task agent (open_app + tap / long_tap / type / scroll); the planner prompt now knows the two new actions.
+- NOT compiled, NOT phone-tested.
+
+## 6.53
+- Owner request: AUTO REPLY. A new WhatsApp / Instagram (Message Mode apps) message gets the owner's own reply text at once, without asking; NOVA tells the owner afterwards. Works through the notification's Reply button, also when NOVA is not ACTIVATED.
+- Limits kept: never groups, never code/OTP/password messages, never notifications without a Reply button; max 1 reply per sender per 10 min, 3 per hour, 80 per day in total. Business watch (WaBiz) keeps its own rules while it is running.
+- NEW: bell icon with unread badge on the home page opens a HISTORY of everything NOVA did by itself (sent / failed / skipped + why); SAAF KARO clears it. Settings: AUTO REPLY box (switch + reply text). Stored only on the phone, newest 300.
+- NOT done: deleting a sent message (see HANDOFF). Reply text is fixed, not AI-written. NOT compiled, NOT phone-tested.
+
+## 6.52
+- Owner request: SCREEN MONITORING now defaults to ON (still needs the Accessibility permission, still local only). MESSAGE MODE now defaults to ON with WhatsApp, WhatsApp Business and Instagram selected (one-time upgrade; if the owner turns it OFF later that stays OFF). Replies are still sent only after the owner's spoken yes. NOVA still starts only after ACTIVATE. Status: NOT compiled, NOT phone-tested.
+
+## 6.51
+- REMOVED: speaker recognition / owner-only voice, voice unlock, pattern unlock/setup, face gate, voice enrolment, and the voice-model download. Files deleted: VoiceLock, OnnxSpeaker, SpeakerRules, VoiceFaceRules, VoiceEngineRules, Fbank, FaceGate, PatternUnlock, PatternSetupActivity (+ their tests). The onnxruntime dependency is gone. Anybody's voice is accepted when the phone is open.
+- NEW rule (PhoneLock.kt + `NovaService.lockedPhoneAllows`): when the phone is LOCKED NOVA can still hear and speak, but takes NO new task. Already running work continues: the answer to a running job's question, "stop", and the wake-alarm OFF still work. Otherwise NOVA says so (at most once every 8 s).
+- Settings UI: voice/face boxes and the Pattern row removed; the QWEN download button (`am_brain`) is back in MODEL DOWNLOAD (it had been dropped by mistake). Auto-Heal no longer refetches a voice model.
+- Contract tests updated (voice-flow, feature-status, autosetup, ai-rank). Status: python contract tests pass; NOT compiled (no Gradle here), NOT phone-tested. Old saved voiceprint/ONNX files on a phone are simply unused.
+
+## 6.50
+- Chat: new "phone voice typing" button (system speech, same engine as the keyboard mic); the typed text box stays. Placeholder says so.
+- Floating card made smaller (316x148 dp, was 380x190), reply max 2 lines.
+- 3D orb is not drawn while a full-screen panel or the setup popup covers it (saves GPU).
+
+## 6.49
+- Gemini keys: UI now has KEY 1 (main) + KEY 2 and KEY 3 (fallbacks); failover order was already supported by the backend.
+- Smooth start: app starts in the light-effects mode and upgrades to full effects after ~7 s of smooth frames; removed the 3 heaviest backdrop blurs; model/disk work delayed until after the first frames (AutoSetup 1.5 s, voice model 5 s, offline AI 9 s).
+- Fixes: `!!` in wake alarm code; stale contract tests (voice lock always ON, androidx.core pin).
+
+## 6.48
+- REMOVED: locked-phone auto-unlock (pattern). NOVA never unlocks the phone; voice "unlock" now only says so; battery SOS no longer tries to unlock.
+- Owner-only voice check now applies ONLY while the phone is locked. When the phone is open, any voice may give a command (after the wake word).
+
+## 6.47
+- LlamaBrain rewritten for llamacpp-kotlin 0.1.0 API (was written for a newer API: LLMEvent, callback load, stopPrediction). Compiles against an API stub; NOT run on a phone.
+
+## 6.46
+- First real Kotlin compile fixes from CI: missing Context import (MainActivity), whatsappTool result `.msg` (NovaService), expression-body `return` (VoiceLock.saveProfile).
+
+## 6.45
+- Build fix: force androidx.core/core-ktx to 1.13.1 (transitive 1.15.0 required compileSdk 35 and failed CI).
+
+## 6.43
+- Wake alarm: active only 06:00–12:00; rings repeatedly until OFF (DISMISS = 1 min snooze); 20‑minute auto-stop and unlock-stops-alarm removed.
+- Docs reorganized: README, CHANGELOG, `docs/` (BUILD, ARCHITECTURE), history moved to `docs/archive/`.
+
+## 6.42
+- Fix `ChatText` JSON field regex (over-matched past closing quote).
+- Fix `WhatsAppCommandRules` recipient casing.
+- Verified with kotlinc: 55 pure-Kotlin files, 521 JUnit tests pass.
+
+## 6.41
+- Morning greeting + today's jobs, 25‑minute lead alarms, wake alarm (WakeRules).
+- Tests: BatteryRulesTest, ScheduledDaysTest, WakeRulesTest.
+
+## 6.40
+- Schedule: weekdays bitmask, priority, note; voice commands and *MERA SCHEDULE* UI.
+
+## 6.39
+- Battery alerts (50/40/30/20/10 %) and ≤5 % WhatsApp SOS to Papa/Mummy.
+
+## 6.38
+- No auto-start (BootReceiver only restores reminders). Owner-only voice lock; locked-phone voice unlock via pattern.
+
+Older history: [docs/PROGRESS.md](docs/PROGRESS.md) and [docs/archive/](docs/archive/).
+
+## PART 2/5 — Contact selection and safe call flow
+- Added an accessible Android contact-choice dialog for ambiguous/similar/low-confidence call matches, showing actual contact names and masked phone suffixes.
+- Touch selection passes the selected real candidate to a call-confirmation path; it does not call a guessed candidate.
+- Added voice-choice matching against only the currently displayed real candidates; ambiguous/unrelated answers do not select a contact.
+- Added a one-at-a-time guard for selected-contact call execution and reports actual Android call exceptions.
+- Automated unit tests cover exact voice choice, ambiguous first-name choice, and unrelated voice choice. Real Android/device tests remain pending.
+
+## PART 3/5 — Centralized intent parser and command routing foundation
+- Added side-effect-free `IntentParser` for contact lookup, call, generic message, WhatsApp message, app-specific call/message, open-app, and ambiguous/low-confidence requests, with English/Hindi/Hinglish phrasing support.
+- Added `CommandRouter` route plans separating application identity from action and describing contact/app/capability/clarification/confirmation stages. Added a deterministic in-flight claim/release primitive for duplicate-execution prevention by future handlers.
+- Integrated a conservative clarification preflight in `NovaService`; it intercepts only low-confidence requests when existing deterministic handlers do not already own them. Existing contact, WhatsApp, app launch, permission, confirmation, and result handlers remain authoritative.
+- Added `IntentParserTest` for call/message/open-app intent, Hindi/Hinglish variants, app-specific routing, ambiguous/negated commands, stage separation, duplicate guard, and safe fallback.
+- Verification: relevant Python regression/contract checks passed. Gradle unit tests and Android build could not run because Gradle 8.7 is not cached and network DNS to `services.gradle.org` is unavailable. Real-device verification remains deferred until all five parts are complete.
