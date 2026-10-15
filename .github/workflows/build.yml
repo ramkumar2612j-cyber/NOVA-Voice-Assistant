@@ -19,6 +19,21 @@ jobs:
           java-version: '17'
       - name: Set versionCode above older installs (run number + 2000)
         run: echo "NOVA_VERSION_CODE=$((2000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - name: Fixed signing key (only if the repo secrets exist; otherwise the normal throwaway debug key is used)
+        env:
+          KS_B64: ${{ secrets.NOVA_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.NOVA_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.NOVA_KEY_ALIAS }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ] && [ -n "$KS_ALIAS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/nova.jks"
+            echo "NOVA_KEYSTORE_PATH=$RUNNER_TEMP/nova.jks" >> "$GITHUB_ENV"
+            echo "NOVA_KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "NOVA_KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+            echo "Signing: fixed key"
+          else
+            echo "Signing: throwaway debug key (secrets not set)"
+          fi
       - name: Install Android SDK 34
         run: |
           yes | sdkmanager --licenses > /dev/null || true

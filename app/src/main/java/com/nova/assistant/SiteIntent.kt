@@ -20,6 +20,25 @@ object SiteIntent {
 
     const val MAX_RAW = 8000
 
+    // "fake / scam / hack" are only soft block words: a brief that FORBIDS them ("no fake API integrations", "fake buttons mat banana") is not a harmful request.
+    private val SOFT_BLOCK = setOf("fake", "scam", "hack", "hacking")
+    private val NEG_NEAR = setOf("no", "not", "never", "mat", "nahi", "nahin", "nhi", "avoid", "without", "bina", "dont", "don", "nahi")
+
+    /** True when the sentence really asks for something harmful (adult / phishing, or a non-negated fake / scam / hack). */
+    fun isBlocked(t: List<String>): Boolean {
+        for (i in t.indices) {
+            val w = t[i]
+            if (w !in BLOCK) continue
+            if (w !in SOFT_BLOCK) return true
+            val from = maxOf(0, i - 3)
+            val to = minOf(t.size - 1, i + 4)
+            var negated = false
+            for (j in from..to) if (j != i && t[j] in NEG_NEAR) negated = true
+            if (!negated) return true
+        }
+        return false
+    }
+
     /** v7.0: a long, detailed brief ("Build a world-class ... website ... photos ... images ...") is still a build request when the build verb and the website noun
      *  are in its first 40 words. Words like photo/image inside the brief no longer make another feature steal it. */
     private fun parseLong(text: String, t: List<String>): Parsed? {
@@ -27,7 +46,7 @@ object SiteIntent {
         val head = t.take(40)
         if (head.none { it in VERBS } || head.none { it in NOUNS }) return null
         if (head.take(6).any { it in setOf("kholo", "khol", "open", "whatsapp", "call", "delete", "hatao", "bhejo", "send", "share") }) return null
-        val blocked = t.any { it in BLOCK }
+        val blocked = isBlocked(t)
         val keep = head.filter { it !in VERBS && it !in NOUNS && it !in FILLER }
         val subject = keep.take(8).joinToString(" ").let { if (it.length < 3) "website" else it }
         return Parsed(subject, blocked, text.trim().take(MAX_RAW))
@@ -91,10 +110,9 @@ object SiteIntent {
             if (w in NOUNS) noun = true
         }
         if (!verb || !noun) return null
-        var blocked = false
+        val blocked = isBlocked(t)
         val keep = ArrayList<String>()
         for (w in t) {
-            if (w in BLOCK) blocked = true
             if (w in VERBS || w in NOUNS || w in FILLER) continue
             keep.add(w)
         }

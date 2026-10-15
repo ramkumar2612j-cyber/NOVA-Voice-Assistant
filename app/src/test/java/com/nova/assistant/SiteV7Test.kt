@@ -54,4 +54,12 @@ class SiteV7Test {
         assertFalse(SiteDesign.ownerChoseLook("dental clinic website"))
         assertTrue(SiteDesign.brief("white background site", 1).contains("ONLY layout"))
     }
+
+    @Test fun negatedFakeWordIsNotBlockedButRealFakeIs() {
+        val ok = SiteIntent.parse("nova ek dental clinic ki luxury website banao, no fake API integrations, fake buttons mat banana")
+        assertNotNull(ok)
+        assertFalse(ok!!.blocked)
+        assertTrue(SiteIntent.parse("nova fake id wali website banao")!!.blocked)
+        assertTrue(SiteIntent.parse("nova porn website banao")!!.blocked)
+    }
 }
