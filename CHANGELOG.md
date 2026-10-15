@@ -22,6 +22,14 @@
 - Website jobs start with a "Samjha: subject, style, photos, new/edit" line (SiteSummary.kt).
 - MADAD "questions" topic updated. Tests: RichChatTest, WebContextTest, NovaV73Test, tools/test_rich_chat_contract.py (compile + JUnit still to be run on GitHub Actions).
 
+# wip13 (music commands)
+- NEW MusicCatalog.kt: key-less song catalogue (iTunes Search, titles + artists only) used just to tell similar songs apart. Offline = skipped.
+- CHANGED NovaService music flow: musicBegin -> (similar songs? popup/voice choice) -> musicPlay -> verifyPlayback. Success is reported only when the music app's own media session (Notification access ON) shows the song playing; otherwise NOT_PLAYING / PLAYING_OTHER / PLAYING_UNCONFIRMED / CANNOT_TELL are said honestly.
+- NEW: a different music app is never tried by itself. NOVA asks "<app> par try karun?" (real yes/no, not skippable) and only then tries it.
+- NEW: songChoiceListener popup in MainActivity ("Kaun sa gaana?") plus spoken pick (number or name).
+- RESTORED: .github/workflows/build.yml (was missing from wip12 zip; recreated from docs/BUILD.md; fixes tools/test_vosk_model_packaging.py).
+- NEW tests: MusicPlayRulesTest (extended), MusicCatalogTest, tools/test_music_play_contract.py. Kotlin was NOT compiled in the sandbox (no kotlinc, no network): first real compile is GitHub Actions.
+
 # v6.97 (wip8) 5 KEY-LESS BROWSERS + LOCAL-FIRST AI + LOCK GUARD + ADAPTIVE LISTENING
 - Compile + 834 JUnit tests RUN (kotlinc 1.9.24, real org.json); phone behaviour NOT tested.
 - Browsers: WIKI, INSTANT (DuckDuckGo), WEATHER (Open-Meteo), NEWS (Google News RSS), MARKET (Frankfurter + CoinGecko); live answers never invented. Local-first on-device AI for short simple questions. BROWSERS card in the UI; test report runs by itself.

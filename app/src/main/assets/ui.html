@@ -77,12 +77,14 @@ button.icb.off{opacity:.45}
 #gl{position:relative;z-index:2}
 .greet{align-self:stretch;padding:10px 14px;border-radius:14px;border-left:3px solid #2fb8ff;background:linear-gradient(90deg,rgba(47,184,255,.18),rgba(47,184,255,.03));animation:rise .6s both}
 .greet b{display:block;font-weight:600;font-size:14px;color:#dff3ff;letter-spacing:1px}.greet span{display:block;font-size:13px;margin-top:2px;min-height:17px}.greet i{display:block;font-style:normal;font-size:10px;letter-spacing:2px;color:#58b8ff;text-transform:uppercase;margin-top:4px}
-.dr{position:fixed;top:0;bottom:0;width:50.6%;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 58px,rgba(124,92,255,.14) 58px 60px),linear-gradient(90deg,#0b1424,#2b3c5c 45%,#09101e);transition:transform .38s cubic-bezier(.7,0,.3,1)}
-#dr1{left:0;transform:translateX(-101%);border-right:2px solid #35F2C2;box-shadow:inset -14px 0 34px rgba(53,242,194,.4)}
-#dr2{right:0;transform:translateX(101%);border-left:2px solid #35F2C2;box-shadow:inset 14px 0 34px rgba(53,242,194,.4)}
+.dr{position:fixed;top:0;bottom:0;width:50.6%;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 58px,rgba(111,123,255,.14) 58px 60px),linear-gradient(90deg,#0b1424,#2b3c5c 45%,#09101e);transition:transform .38s cubic-bezier(.7,0,.3,1)}
+#dr1{left:0;transform:translateX(-101%);border-right:2px solid #2fd8ff;box-shadow:inset -14px 0 34px rgba(47,216,255,.4)}
+#dr2{right:0;transform:translateX(101%);border-left:2px solid #2fd8ff;box-shadow:inset 14px 0 34px rgba(47,216,255,.4)}
 .shut .dr{transform:none;pointer-events:auto}
 #uc{position:fixed;inset:0;z-index:60;display:none;background:rgba(2,5,14,.82);overflow-y:auto}
 #uc.on{display:block}
+#uc.compact.on{display:flex;align-items:flex-end;background:rgba(2,5,14,.45)}
+#uc.compact .ucb{width:100%;max-width:560px;margin:0 auto;max-height:62%;overflow-y:auto;border-radius:24px 24px 0 0!important}
 .ucb{margin:calc(env(safe-area-inset-top,0px) + 14px) 12px calc(env(safe-area-inset-bottom,0px) + 18px);padding:18px 16px 16px;border-radius:20px;background:linear-gradient(180deg,#0e1c38,#060c1b);border:1px solid #2fb8ff;box-shadow:0 0 30px rgba(47,184,255,.3);animation:unfold .45s cubic-bezier(.2,1.2,.4,1) both}
 .ucb h3{font-weight:400;letter-spacing:5px;font-size:15px;color:var(--c1);text-shadow:0 0 12px var(--c1)}
 .ucb .ver{font-size:11px;opacity:.6;margin-top:4px;letter-spacing:1px}
@@ -111,19 +113,19 @@ button.icb.off{opacity:.45}
 #intro.on{display:block}
 #fx{position:absolute;inset:0;width:100%;height:100%}
 #cap{position:absolute;left:18px;top:calc(env(safe-area-inset-top,0px) + 18px);color:#dff3ff;text-transform:uppercase;letter-spacing:2px}
-#cap b{display:block;font-weight:600;font-size:14px}#cap span{display:block;font-size:11px;color:#35F2C2;margin-top:3px;letter-spacing:1px}
+#cap b{display:block;font-weight:600;font-size:14px}#cap span{display:block;font-size:11px;color:#2fd8ff;margin-top:3px;letter-spacing:1px}
 #spl{position:absolute;left:0;right:0;top:46%;transform:translateY(-50%);text-align:center;opacity:0;pointer-events:none}
-#spl .ring{width:170px;height:170px;margin:0 auto;border-radius:50%;border:3px solid #35F2C2;box-shadow:0 0 30px #7C5CFF,inset 0 0 30px rgba(53,242,194,.4);display:flex;align-items:center;justify-content:center;animation:ringp 2s ease-in-out infinite}
-#spl b{font-size:34px;font-weight:600;letter-spacing:2px;color:#eaf7ff;text-shadow:0 0 16px #35F2C2}
-#spl p{margin-top:34px;font-size:11px;letter-spacing:5px;color:#35F2C2}
-@keyframes ringp{50%{box-shadow:0 0 52px #35F2C2,inset 0 0 40px rgba(53,242,194,.6)}}
+#spl .ring{width:170px;height:170px;margin:0 auto;border-radius:50%;border:3px solid #2fd8ff;box-shadow:0 0 30px #6f7bff,inset 0 0 30px rgba(47,216,255,.4);display:flex;align-items:center;justify-content:center;animation:ringp 2s ease-in-out infinite}
+#spl b{font-size:34px;font-weight:600;letter-spacing:2px;color:#eaf7ff;text-shadow:0 0 16px #2fd8ff}
+#spl p{margin-top:34px;font-size:11px;letter-spacing:5px;color:#2fd8ff}
+@keyframes ringp{50%{box-shadow:0 0 52px #2fd8ff,inset 0 0 40px rgba(47,216,255,.6)}}
 #ldr{position:absolute;left:12%;right:12%;bottom:calc(env(safe-area-inset-bottom,0px) + 46px);text-align:center;font-size:12px;letter-spacing:3px;color:#cfeaff;pointer-events:none}
 #ldt{margin-bottom:12px}
-.bar{height:6px;border-radius:6px;background:rgba(53,242,194,.15);position:relative}
-.bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#7C5CFF,#35F2C2);box-shadow:0 0 14px #35F2C2}
+.bar{height:6px;border-radius:6px;background:rgba(47,216,255,.15);position:relative}
+.bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#6f7bff,#2fd8ff);box-shadow:0 0 14px #2fd8ff}
 .bar em{position:absolute;right:0;top:-22px;font-style:normal;font-size:11px}
-#tsd{margin-top:16px;font-size:10px;letter-spacing:5px;color:#35F2C2}
-#hint{position:absolute;right:16px;top:calc(env(safe-area-inset-top,0px) + 20px);font-size:9px;letter-spacing:2px;color:#35F2C2;display:none;animation:blink 1.2s infinite}
+#tsd{margin-top:16px;font-size:10px;letter-spacing:5px;color:#2fd8ff}
+#hint{position:absolute;right:16px;top:calc(env(safe-area-inset-top,0px) + 20px);font-size:9px;letter-spacing:2px;color:#2fd8ff;display:none;animation:blink 1.2s infinite}
 @keyframes blink{50%{opacity:.2}}
 
 .row{flex-wrap:wrap;justify-content:center}
@@ -207,73 +209,14 @@ html.lowfx .f{clip-path:none}
 #hist .hi small{display:block;opacity:.7;margin-bottom:3px}
 #hist .hi.sent b,#hist .hi.deleted b{color:#37e08a}#hist .hi.failed b,#hist .hi.skipped b,#hist .hi.delete_failed b{color:#ffb020}
 </style>
-<style id="theme-v2">
-/* THEME-V2: holographic glass look, same cyan / blue / violet palette as the floating card. Colours and shapes only: no ids, no scripts. */
-:root{--c1:#27e1ff;--c2:#2f7bff;--c3:#a35cff;--ink:#eaf2ff;--mut:#8fa3c8;--glass:rgba(14,22,56,.62);--line:rgba(80,150,255,.28);--grad:linear-gradient(90deg,#27e1ff,#2f7bff 55%,#a35cff)}
-html,body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:radial-gradient(120% 70% at 50% 0%,#12206a 0%,#080f33 45%,#04061a 100%)}
-body:before{background:radial-gradient(60% 40% at 85% 12%,rgba(163,92,255,.22),transparent 70%),radial-gradient(55% 40% at 10% 60%,rgba(39,225,255,.10),transparent 70%),linear-gradient(rgba(80,150,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(80,150,255,.035) 1px,transparent 1px);background-size:auto,auto,40px 40px,40px 40px}
-#app,.wrap{max-width:560px;margin:0 auto}
-.logo{font-weight:600;letter-spacing:10px;background:linear-gradient(90deg,#eaf8ff,#a9cbff 50%,#dcc0ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 12px rgba(47,123,255,.7))}
-#dot{background:#35e0a0;box-shadow:0 0 10px #35e0a0;-webkit-text-fill-color:initial}
-button.icb{border-radius:14px;border:1px solid var(--line);background:var(--glass);box-shadow:0 0 0 1px rgba(255,255,255,.03) inset}
-button.icb svg{stroke:#bfeaff}
-.status{margin-top:10px;font-size:11px;letter-spacing:3px;color:var(--c1);opacity:.9}
-.badge{margin-top:8px;padding:5px 14px;border-radius:999px;font-size:10px;letter-spacing:1.5px;background:rgba(53,224,160,.08);border:1px solid rgba(53,224,160,.45);color:#7ff3c3}
-.badge.cloud{background:rgba(39,225,255,.08);border-color:rgba(39,225,255,.5);color:var(--c1)}
-.feats{gap:12px}
-.f{flex:0 0 124px;clip-path:none;border-radius:20px;padding:14px 12px;background:linear-gradient(160deg,rgba(47,123,255,.20),rgba(163,92,255,.08) 70%,rgba(255,255,255,.02));border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.03) inset}
-.f svg{width:30px;height:30px;padding:6px;border-radius:10px;background:rgba(39,225,255,.10);border:1px solid rgba(39,225,255,.35);stroke:var(--c1)}
-.f b{margin-top:10px;font-size:11.5px;letter-spacing:1px;color:#fff}
-.f i{opacity:.65;color:var(--mut)}
-.greet{border-radius:18px;border:1px solid var(--line);border-left:3px solid var(--c1);background:linear-gradient(90deg,rgba(47,123,255,.18),rgba(163,92,255,.05))}
-.msg{border-radius:18px;font-size:14px;line-height:1.45}
-.me{background:linear-gradient(135deg,rgba(47,123,255,.34),rgba(163,92,255,.26));border:1px solid rgba(120,150,255,.55);border-bottom-right-radius:6px}
-.ai{background:rgba(39,225,255,.08);border:1px solid rgba(39,225,255,.38);border-bottom-left-radius:6px}
-button{font-family:inherit;color:#e9f6ff;cursor:pointer}
-button.sm{border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.045);color:#cfe4ff;padding:10px 14px;font-size:11px;letter-spacing:1.5px;font-weight:600;box-shadow:none}
-button.sm:active{background:rgba(39,225,255,.18)}
-#btn{padding:16px 24px;border-radius:999px;border:1.5px solid transparent;font-size:14px;font-weight:700;letter-spacing:4px;color:#fff;background:linear-gradient(rgba(10,18,52,.92),rgba(10,18,52,.92)) padding-box,var(--grad) border-box;box-shadow:0 0 26px rgba(47,123,255,.45),0 0 60px rgba(163,92,255,.18)}
-#btn:after{border-radius:999px;border-color:var(--c2)}
-#app>.row{width:100%;gap:8px;padding:12px;margin-top:6px;border-radius:28px;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 -6px 30px rgba(0,0,0,.35)}
-#app>.row #btn{flex:1 1 100%}
-#app>.row button.sm{flex:1 1 0;min-width:0;padding:11px 6px}
-.rp{background:rgba(39,225,255,.32)}
-/* settings */
-#panel{background:linear-gradient(180deg,#0a1240 0%,#050a24 55%,#03061a 100%);padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 48px;max-width:640px;margin:0 auto}
-#panel h2{font-weight:600;letter-spacing:8px;font-size:17px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 10px rgba(47,123,255,.55))}
-#panel label{font-size:12px;letter-spacing:.6px;color:#cfe0ff;opacity:1;font-weight:600}
-#panel input[type=text],#panel input[type=password],#panel select,#panel textarea,#u_feed,#g_key{border-radius:14px;border:1px solid var(--line);background:rgba(4,8,30,.7);color:#fff;padding:12px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
-#panel textarea{display:block;width:100%;margin-top:6px}
-#panel input:focus,#panel select:focus,#panel textarea:focus{border-color:var(--c1);box-shadow:0 0 0 3px rgba(39,225,255,.16)}
-#panel small{color:var(--mut);opacity:1}
-#panel .box,#st_box{border-radius:20px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(47,123,255,.12),rgba(163,92,255,.05) 70%,rgba(255,255,255,.015));padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
-#st_box b{color:var(--c1)}
-input[type=checkbox],input[type=range]{accent-color:var(--c1)}
-#smsg{color:#ffd98a}
-.ok{color:#7ff3c3}.bad{color:#ff9aa8}
-/* chat, sheets, update centre */
-#chat{background:radial-gradient(120% 60% at 50% 0%,#12206a,#060b26 60%,#03061a)}
-.chh b{font-weight:600;letter-spacing:6px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
-.chh{border-bottom:1px solid var(--line)}
-#c_in{border-radius:999px;border:1px solid var(--line);background:rgba(4,8,30,.75);font-family:inherit;outline:none}
-#c_in:focus{border-color:var(--c1);box-shadow:0 0 0 3px rgba(39,225,255,.16)}
-.chi button.icb{background:linear-gradient(rgba(10,18,52,.9),rgba(10,18,52,.9)) padding-box,var(--grad) border-box;border:1.5px solid transparent}
-.ucb,.sh{background:linear-gradient(180deg,#101c4a,#060b26);border:1px solid var(--line);box-shadow:0 0 40px rgba(47,123,255,.25)}
-.sh{border-top:1.5px solid var(--c2)}
-.ucb h3,.sh h3{font-weight:600;color:#fff;text-shadow:none}
-.ucb h4{color:var(--c1)}
-.cmd{border:1px dashed rgba(39,225,255,.55);border-radius:10px;background:rgba(39,225,255,.06)}
-.ucr{border-top:1px solid var(--line)}
-*{scrollbar-width:thin;scrollbar-color:rgba(80,150,255,.35) transparent}
-</style>
 <style id="lights-v1">
 #lt{position:absolute;inset:0;pointer-events:none;overflow:hidden;mix-blend-mode:screen}
-#lt .hl{position:absolute;left:50%;top:46%;width:100vmax;height:100vmax;margin:-50vmax 0 0 -50vmax;border-radius:50%;background:radial-gradient(circle,rgba(53,242,194,.6) 0,rgba(47,123,255,.24) 20%,transparent 46%);opacity:0;will-change:transform,opacity}
+#lt .hl{position:absolute;left:50%;top:46%;width:100vmax;height:100vmax;margin:-50vmax 0 0 -50vmax;border-radius:50%;background:radial-gradient(circle,rgba(47,216,255,.6) 0,rgba(47,123,255,.24) 20%,transparent 46%);opacity:0;will-change:transform,opacity}
 #lt .bm{position:absolute;top:-25%;bottom:-25%;left:0;width:38%;background:linear-gradient(90deg,transparent,rgba(130,225,255,.42),rgba(255,255,255,.55),rgba(130,225,255,.42),transparent);filter:blur(7px);opacity:0;transform:translateX(-130%) skewX(-18deg);will-change:transform,opacity}
 #lt .b2{width:22%;background:linear-gradient(90deg,transparent,rgba(190,140,255,.4),rgba(255,255,255,.4),rgba(190,140,255,.4),transparent)}
-#lt .fl{position:absolute;left:-10%;right:-10%;top:46%;height:3px;margin-top:-1px;background:linear-gradient(90deg,transparent,rgba(170,240,255,.95) 50%,transparent);box-shadow:0 0 26px 7px rgba(53,242,194,.65);opacity:0;transform:scaleX(.1);will-change:transform,opacity}
-#flash{position:fixed;inset:0;z-index:100;pointer-events:none;opacity:0;mix-blend-mode:screen;background:radial-gradient(circle at 50% 46%,#fff 0,#d8fff4 20%,rgba(53,242,194,.55) 52%,transparent 80%)}
-#shock{position:fixed;left:50%;top:46%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;z-index:100;pointer-events:none;opacity:0;border:2px solid rgba(170,255,235,.95);box-shadow:0 0 34px #35F2C2,inset 0 0 30px rgba(53,242,194,.6);will-change:transform,opacity}
+#lt .fl{position:absolute;left:-10%;right:-10%;top:46%;height:3px;margin-top:-1px;background:linear-gradient(90deg,transparent,rgba(170,240,255,.95) 50%,transparent);box-shadow:0 0 26px 7px rgba(47,216,255,.65);opacity:0;transform:scaleX(.1);will-change:transform,opacity}
+#flash{position:fixed;inset:0;z-index:100;pointer-events:none;opacity:0;mix-blend-mode:screen;background:radial-gradient(circle at 50% 46%,#fff 0,#d8fff4 20%,rgba(47,216,255,.55) 52%,transparent 80%)}
+#shock{position:fixed;left:50%;top:46%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;z-index:100;pointer-events:none;opacity:0;border:2px solid rgba(170,255,235,.95);box-shadow:0 0 34px #2fd8ff,inset 0 0 30px rgba(47,216,255,.6);will-change:transform,opacity}
 @media (prefers-reduced-motion:no-preference){
 @keyframes slam{0%{transform:scale(1.08);filter:brightness(2.6) saturate(1.5) blur(6px);opacity:0}40%{opacity:1}70%{filter:brightness(1.25) blur(0)}100%{transform:none;filter:none;opacity:1}}
 .ready #app{animation:slam .6s cubic-bezier(.16,1,.3,1) both}
@@ -288,144 +231,6 @@ body.ready:after{content:"";position:fixed;inset:0;z-index:98;pointer-events:non
 @keyframes breatheLight{0%,100%{filter:drop-shadow(0 0 10px rgba(47,184,255,.35))}50%{filter:drop-shadow(0 0 26px rgba(80,225,255,.75))}}
 .ready .orbbox canvas{animation:breatheLight 3.2s ease-in-out infinite}
 }
-</style>
-<style id="nova-ui-refresh-v17">
-/* NOVA V17 VISUAL REFRESH — presentation only. Keep all IDs, handlers and bridge contracts intact. */
-:root{--c1:#45e8ff;--c2:#4c80ff;--c3:#bd77ff;--ink:#f0f6ff;--mut:#9eb0d3;--glass:rgba(9,17,43,.72);--edge:rgba(99,163,255,.31);--shine:linear-gradient(110deg,#45e8ff 0%,#5886ff 48%,#bd77ff 100%)}
-html,body{background:#030613;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-body:before{background:radial-gradient(55% 38% at 50% 35%,rgba(50,123,255,.14),transparent 74%),radial-gradient(40% 34% at 5% 82%,rgba(69,232,255,.09),transparent 72%),radial-gradient(38% 38% at 100% 22%,rgba(189,119,255,.10),transparent 72%),linear-gradient(rgba(99,163,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(99,163,255,.028) 1px,transparent 1px);background-size:auto,auto,auto,34px 34px,34px 34px}
-#app.wrap{position:relative;isolation:isolate;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 12px);gap:2px}
-#app:before{content:"";position:absolute;z-index:-1;pointer-events:none;left:50%;top:28%;width:min(82vw,360px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(49,116,255,.14),rgba(50,80,190,.055) 36%,transparent 68%);border:1px solid rgba(81,158,255,.08);box-shadow:0 0 75px rgba(56,111,255,.1),inset 0 0 50px rgba(94,147,255,.08)}
-.top{flex:0 0 auto;gap:8px;width:100%;padding:3px 2px 0}
-.logo{font-size:27px;letter-spacing:8px;font-weight:650;background:var(--shine);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px rgba(76,128,255,.35));gap:9px;white-space:nowrap}
-#dot{width:7px;height:7px;background:#69ffc5;box-shadow:0 0 12px #69ffc5;flex:0 0 7px}
-.ic{gap:6px;flex-wrap:nowrap}
-button.icb{width:39px;height:39px;min-width:39px;border-radius:14px;border:1px solid var(--edge);background:linear-gradient(145deg,rgba(29,56,113,.7),rgba(12,20,53,.72));box-shadow:0 7px 20px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.06);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-button.icb svg{width:19px;height:19px;stroke:#c9f5ff}
-.status{flex:0 0 auto;margin-top:7px;padding:6px 12px;border:1px solid rgba(69,232,255,.2);border-radius:999px;background:rgba(7,21,48,.5);font-size:9px;letter-spacing:2.4px;color:#9cdff8;box-shadow:inset 0 1px rgba(255,255,255,.03)}
-.orbbox{flex:0 0 clamp(160px,28vh,226px);width:100%;position:relative;isolation:isolate;margin:0 auto;overflow:visible}
-.orbbox:before,.orbbox:after{content:"";position:absolute;left:50%;top:50%;width:clamp(148px,48vw,224px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;border:1px solid rgba(69,232,255,.16);box-shadow:0 0 32px rgba(69,232,255,.08),inset 0 0 36px rgba(76,128,255,.08);animation:novaOrbit 18s linear infinite}
-.orbbox:after{width:clamp(172px,55vw,254px);border-color:rgba(189,119,255,.15);border-style:dashed;animation:novaOrbit 30s linear infinite reverse}
-#gl{position:relative;z-index:1;width:min(250px,68vw,32vh)!important;height:min(250px,68vw,32vh)!important;max-width:100%;filter:drop-shadow(0 0 16px rgba(63,159,255,.16))}
-.feats{flex:0 0 auto;gap:10px;padding:5px 15px 12px;margin:0 -14px;width:calc(100% + 28px)}
-.f{flex:0 0 116px;min-height:96px;padding:13px 11px;border:1px solid rgba(105,164,255,.29);border-radius:18px;background:linear-gradient(150deg,rgba(31,68,145,.33),rgba(14,21,55,.65) 62%,rgba(86,44,145,.14));box-shadow:0 10px 24px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.055);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);scroll-snap-align:start}
-.f:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.07),transparent 42%);opacity:.65}
-.f svg{width:28px;height:28px;padding:5px;border-radius:10px;border:1px solid rgba(69,232,255,.21);background:rgba(69,232,255,.08);filter:drop-shadow(0 0 5px rgba(69,232,255,.13))}
-.f b{font-size:10px;letter-spacing:1.1px;margin-top:9px;color:#f2f7ff}
-.f i{font-size:10px;line-height:1.35;color:var(--mut);opacity:1}
-.log{flex:1 1 70px;min-height:50px;max-height:24vh;padding:9px 3px;gap:8px}
-.log:empty:before{content:"SPEAK OR TYPE A COMMAND";display:block;margin:auto;text-align:center;color:rgba(149,185,227,.48);font-size:9px;letter-spacing:2px}
-.msg{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 5px 16px rgba(0,0,0,.12);font-size:13px}
-.me{background:linear-gradient(135deg,rgba(48,100,215,.38),rgba(110,69,194,.26));border-color:rgba(116,160,255,.42)}
-.ai{background:linear-gradient(125deg,rgba(30,102,135,.19),rgba(38,57,113,.26));border-color:rgba(69,232,255,.25)}
-#app>.row{flex:0 0 auto;width:100%;gap:8px;padding:9px;border-radius:25px;border:1px solid rgba(92,155,255,.24);background:rgba(6,14,39,.75);box-shadow:0 12px 30px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-#app>.row button.sm{flex:0 0 auto;min-width:72px;padding:12px 13px;border-radius:999px}
-#btn{flex:1 1 150px;min-height:48px;padding:14px 20px;border-radius:999px;letter-spacing:2.8px;font-size:12px;background:linear-gradient(rgba(8,17,46,.94),rgba(8,17,46,.94)) padding-box,var(--shine) border-box;box-shadow:0 0 26px rgba(76,128,255,.25),inset 0 1px rgba(255,255,255,.07);text-shadow:0 0 13px rgba(69,232,255,.25)}
-#btn:after{border-color:rgba(69,232,255,.8);box-shadow:0 0 18px rgba(69,232,255,.17)}
-button.sm{border-color:rgba(99,163,255,.25);background:linear-gradient(135deg,rgba(24,39,84,.7),rgba(13,19,49,.72));box-shadow:inset 0 1px rgba(255,255,255,.04);color:#dceaff}
-#panel,#chat{background:radial-gradient(120% 46% at 50% 0%,rgba(35,69,164,.78),rgba(7,13,38,.98) 58%,#020511 100%);}
-#panel h2{font-size:19px;letter-spacing:7px;text-align:center;margin:5px 0 20px}
-#panel .box,#st_box{background:linear-gradient(145deg,rgba(25,48,105,.35),rgba(9,17,45,.7));border-color:rgba(103,164,255,.25);border-radius:20px;box-shadow:0 10px 28px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.04)}
-#sheet{align-items:flex-end;background:rgba(1,4,16,.88);}
-.sh{border-radius:28px 28px 0 0;padding:25px 20px calc(env(safe-area-inset-bottom,0px) + 24px);background:linear-gradient(155deg,rgba(21,40,93,.98),rgba(5,11,33,.99) 65%,rgba(21,9,51,.98));border:1px solid rgba(86,164,255,.35);border-bottom:0;box-shadow:0 -18px 65px rgba(42,103,255,.22),inset 0 1px rgba(255,255,255,.09)}
-#sheet.on .sh{animation:novaSheetIn .58s cubic-bezier(.16,1,.3,1) both}
-#sheet.out .sh{animation:novaSheetOut .3s cubic-bezier(.7,0,.84,0) both}
-#chat{padding-left:14px;padding-right:14px}
-.chh{padding-bottom:13px;border-color:rgba(95,156,255,.28)}
-.chh b{font-weight:700;letter-spacing:4px;background:var(--shine);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
-#c_in{min-height:46px;background:rgba(3,9,29,.8);border-color:rgba(95,156,255,.35);box-shadow:inset 0 1px rgba(255,255,255,.035)}
-#c_send{background:linear-gradient(145deg,rgba(32,68,145,.7),rgba(20,33,80,.88)) padding-box,var(--shine) border-box;border:1px solid transparent}
-#uc .ucb{border-radius:24px;background:linear-gradient(150deg,rgba(20,41,100,.98),rgba(5,10,33,.99) 62%,rgba(30,13,65,.98));border-color:rgba(91,159,255,.4);box-shadow:0 24px 80px rgba(0,0,0,.5),0 0 44px rgba(47,123,255,.19),inset 0 1px rgba(255,255,255,.07)}
-button:focus-visible,.f:focus-visible{outline:2px solid var(--c1);outline-offset:3px}
-@keyframes novaOrbit{to{transform:translate(-50%,-50%) rotate(360deg)}}
-@keyframes novaSheetIn{0%{opacity:0;transform:perspective(800px) translateY(80px) rotateX(-22deg) scale(.92);filter:blur(10px)}68%{opacity:1;transform:perspective(800px) translateY(-5px) rotateX(2deg) scale(1.01);filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
-@keyframes novaSheetOut{to{opacity:0;transform:perspective(800px) translateY(44px) rotateX(-14deg) scale(.96);filter:blur(5px)}}
-@media(max-height:640px){.orbbox{flex-basis:clamp(132px,24vh,180px)}.feats{padding-bottom:6px}.f{min-height:83px;padding:10px}.f svg{width:25px;height:25px}.log{max-height:19vh}}
-@media(max-width:365px){.logo{font-size:23px;letter-spacing:6px}.ic{gap:4px}button.icb{width:35px;height:35px;min-width:35px;border-radius:12px}.f{flex-basis:108px}#app>.row{gap:6px;padding:7px}#app>.row button.sm{min-width:60px;padding:11px 9px}}
-@media(prefers-reduced-motion:reduce){.orbbox:before,.orbbox:after,#dot{animation:none!important}*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
-/* v6.30 smoothness: no live blur (backdrop-filter / filter:blur are the main cause of stutter on mid phones), cheaper panel animations */
-*,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-@keyframes novaSheetIn{0%{opacity:0;transform:translateY(60px) scale(.96)}100%{opacity:1;transform:none}}
-@keyframes novaSheetOut{to{opacity:0;transform:translateY(40px) scale(.97)}}
-@keyframes unfold{from{transform:translateY(24px) scale(.97);opacity:0}to{transform:none;opacity:1}}
-@keyframes fold{to{transform:translateY(24px) scale(.97);opacity:0}}
-#panel,#chat{background:radial-gradient(120% 46% at 50% 0%,rgba(35,69,164,.97),rgba(7,13,38,.99) 58%,#020511 100%)}
-#sheet{background:rgba(1,4,16,.86)}
-.msg{background-color:rgba(10,20,55,.78)}
-.fstat{width:100%;margin:6px 0 8px;padding:12px 12px 10px;border-radius:18px;border:1px solid rgba(103,164,255,.28);background:rgba(10,22,58,.78);box-sizing:border-box}
-.fstat .fh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;letter-spacing:2px;font-weight:700;color:#cfe2ff}
-.fstat .fh span{font-size:11px;letter-spacing:.5px;font-weight:600;color:#9db8e8}
-.fstat .fr{display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(103,164,255,.14)}
-.fstat .fd{flex:0 0 10px;height:10px;margin-top:4px;border-radius:50%;background:#35e0a0}
-.fstat .fr.off .fd{background:#ff5d6c}.fstat .fr.warn .fd{background:#ffb347}
-.fstat .ft{flex:1;min-width:0;font-size:12.5px;color:#e6efff;line-height:1.3}
-.fstat .ft small{display:block;margin-top:2px;font-size:11.5px;color:#9db8e8;line-height:1.3}
-.fstat button.sm{flex:0 0 auto;padding:7px 12px;font-size:10.5px;letter-spacing:1px;min-height:0}
-.fstat .fm{margin-top:8px;font-size:11px;color:#8aa6d8;line-height:1.3}
-.fstat .ftog{margin-top:8px;width:100%;padding:8px;font-size:11px;letter-spacing:2px}
-</style>
-<style id="modern-v690">
-/* NOVA v6.90 MODERN: cleaner, calmer, flatter. Presentation only: no ids, handlers or bridge calls change. No blur, no new infinite animations (smooth on weak phones). */
-:root{--mb:#0a0d14;--ms:#121722;--ms2:#171d2b;--mline:rgba(255,255,255,.08);--mline2:rgba(255,255,255,.14);--mink:#eef2f8;--mmut:#93a0b5;--macc:#4de3c4;--macc2:#8b7bff;--mr:18px;--mfont:Inter,"SF Pro Text",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Arial,sans-serif}
-html,body{background:var(--mb)!important;color:var(--mink);font-family:var(--mfont)}
-body:before,body:after{opacity:.35}
-h1,.logo{font-weight:700;letter-spacing:5px!important;text-shadow:none!important}
-.status{border-color:var(--mline)!important;background:var(--ms)!important;color:var(--mmut)!important;letter-spacing:1.6px!important;font-weight:600}
-/* buttons: quiet by default, accent only for the main action */
-button{font-family:var(--mfont);letter-spacing:1.2px;font-weight:600;box-shadow:none!important;text-shadow:none!important}
-button.sm{background:var(--ms2)!important;border:1px solid var(--mline2)!important;color:var(--mink)!important;border-radius:12px!important;letter-spacing:.9px!important;min-height:38px;padding:8px 14px!important}
-button.sm:active,button.icb:active{background:rgba(77,227,196,.14)!important;border-color:rgba(77,227,196,.5)!important}
-button.imon,.imr button.imon{background:rgba(77,227,196,.14)!important;border-color:rgba(77,227,196,.55)!important;color:var(--macc)!important;box-shadow:none!important}
-button.icb{background:var(--ms2)!important;border:1px solid var(--mline2)!important;border-radius:14px!important;box-shadow:none!important}
-button.icb svg{stroke:var(--mink)!important}
-#btn{background:linear-gradient(135deg,var(--macc),var(--macc2))!important;color:#07110f!important;border:0!important;box-shadow:0 8px 22px rgba(77,227,196,.18)!important;letter-spacing:2.4px!important;font-weight:700}
-#btn:after{display:none!important}
-/* cards / panels */
-#panel .box,#st_box,.vc,.fstat,.f{background:var(--ms)!important;border:1px solid var(--mline)!important;border-radius:var(--mr)!important;box-shadow:none!important}
-.f:before{display:none}
-.f b{letter-spacing:.8px}
-#panel,#chat,.vw{background:var(--mb)!important}
-#panel h2,.vw h2,.chh b{letter-spacing:4px!important;font-weight:700;text-shadow:none!important}
-#panel input[type=text],#panel input[type=password],#panel select,.ed input,#c_in,#c_hs{background:var(--ms)!important;border:1px solid var(--mline2)!important;border-radius:14px!important;color:var(--mink)!important;font-family:var(--mfont)}
-#panel input:focus,#c_in:focus,#c_hs:focus{outline:none;border-color:var(--macc)!important;box-shadow:0 0 0 3px rgba(77,227,196,.15)!important}
-/* chat */
-#chat{padding-left:14px;padding-right:14px}
-.chh{border-bottom:1px solid var(--mline)!important;padding-bottom:12px}
-.chs,.imr{gap:8px}
-.ctx{color:#e9b866!important;font-size:11.5px!important;letter-spacing:.2px}
-.msg{border-radius:18px!important;font-size:14.5px!important;line-height:1.5!important;box-shadow:none!important;border:1px solid var(--mline)!important}
-.me{background:linear-gradient(135deg,#25408f,#4a3aa8)!important;border-color:transparent!important;color:#fff;border-bottom-right-radius:6px!important}
-.ai{background:var(--ms2)!important;border-color:var(--mline)!important;border-bottom-left-radius:6px!important}
-#c_send{background:linear-gradient(135deg,var(--macc),var(--macc2))!important;border:0!important}
-#c_send svg{stroke:#07110f!important}
-/* bottom tab bar: floating rounded bar */
-#tabs{background:rgba(14,18,27,.96)!important;border:1px solid var(--mline)!important;border-radius:22px!important;margin:0 10px calc(8px + env(safe-area-inset-bottom,0px))!important;left:0;right:0;padding:6px!important;box-shadow:0 10px 30px rgba(0,0,0,.45)!important}
-#tabs button{border-radius:16px!important}
-#tabs button span,#tabs button em{letter-spacing:.7px!important;font-size:9px!important}
-#tabs button.act{background:rgba(77,227,196,.13)!important;border-color:transparent!important;color:var(--macc)!important}
-#tabs button.act svg{stroke:var(--macc)!important;transform:none!important}
-.chip{letter-spacing:.8px}
-/* AI picker dialog */
-#aiw{position:fixed;inset:0;z-index:95;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,10,.72)}
-#aiw.on{display:flex}
-#aiw .aib{width:100%;max-width:560px;max-height:88%;overflow-y:auto;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--ms);border:1px solid var(--mline2);border-bottom:0;border-radius:26px 26px 0 0;animation:aiUp .26s ease-out both}
-@keyframes aiUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-#aiw h3{font-size:15px;letter-spacing:4px;font-weight:700;color:var(--mink);text-align:center}
-#aiw .aid{font-size:12px;line-height:1.5;color:var(--mmut);text-align:center;margin:6px 4px 12px}
-.aio{display:flex!important;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px!important;margin-top:8px;background:var(--ms2)!important;border:1px solid var(--mline)!important;border-radius:16px!important;letter-spacing:0!important}
-.aio i{flex:0 0 18px;height:18px;border-radius:50%;border:2px solid var(--mmut)}
-.aio.sel{border-color:var(--macc)!important;background:rgba(77,227,196,.09)!important}
-.aio.sel i{border-color:var(--macc);background:radial-gradient(circle,var(--macc) 0 45%,transparent 50%)}
-.aio span{display:block;min-width:0}.aio b{display:block;font-size:13.5px;color:var(--mink);letter-spacing:.2px}
-.aio small{display:block;font-size:11px;color:var(--mmut);margin-top:2px;line-height:1.35;font-weight:400}
-.aio.nokey b{color:#c9d1de}.aio.nokey small{color:#e9b866}
-.aifb{display:flex;align-items:flex-start;gap:12px;margin:14px 2px 4px;font-size:12px;color:var(--mink)}
-.aifb input{flex:0 0 22px;width:22px;height:22px;margin-top:2px;accent-color:#4de3c4}
-.aifb b{display:block;font-size:12px;letter-spacing:1.2px}.aifb small{display:block;color:var(--mmut);font-size:11px;line-height:1.4;margin-top:3px}
-.aim{min-height:18px;text-align:center;font-size:12px;color:var(--macc);margin:8px 0}
-#aiw .row{justify-content:center;gap:10px}
-@media(max-width:365px){#tabs{margin-left:6px!important;margin-right:6px!important}}
-@media(max-width:380px){#tabs .tb span{font-size:8.5px!important;letter-spacing:0!important}#tabs .tb{min-width:0!important;padding-left:2px!important;padding-right:2px!important}}
 </style>
 <style id="help-v691">
 #helpw{position:fixed;inset:0;z-index:96;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,10,.72)}
@@ -458,7 +263,7 @@ button.icb svg{stroke:var(--mink)!important}
 <div class="top"><div class="logo">NOVA<span id="dot"></span></div><div class="ic"><button class="icb" id="alb" aria-label="alerts and history"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/></svg><b id="alc"></b></button><button class="icb hb" id="chatb" aria-label="chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><em>CHAT</em></button><button class="icb hb" id="gear" aria-label="settings"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><em>SETTINGS</em></button><button class="icb" id="snd" aria-label="sound"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg></button><button class="icb" id="pw" aria-label="sleep"><svg viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.8a8 8 0 1011.4 0"/></svg></button></div></div>
 <div class="status" id="st">Offline</div><div class="status" id="autoT" style="display:none"></div>
 <div class="orbbox"><canvas id="gl" width="250" height="250" aria-label="NOVA"></canvas><canvas id="orb3d" width="250" height="250" aria-label="NOVA" style="display:none"></canvas></div>
-<div class="fstat" id="fstat"><div class="fh">KYA CHALTA HAI / KYA NAHI<span id="fs_sum">...</span></div><div id="fs_list"></div></div>
+<div class="fstat col" id="fstat"><div class="fh">KYA CHALTA HAI / KYA NAHI<span id="fs_sum">...</span></div><div id="fs_list"></div></div>
 <div class="feats" id="feats"></div>
 <div class="log" id="log"></div>
 <div class="row"><button id="btn">ACTIVATE</button><button class="sm" id="quiet">CHUP</button><button class="sm" id="silent">SILENT OFF</button></div>
@@ -479,7 +284,7 @@ button.icb svg{stroke:var(--mink)!important}
 <div id="c_hl" role="dialog" aria-label="Purani chats"><div class="hh"><b>PURANI CHATS</b><button class="sm" id="c_hx">BAND KARO</button></div><div class="hsr"><input id="c_hs" type="search" maxlength="60" placeholder="Chats me dhundo..." autocomplete="off" aria-label="chat search"><button class="sm" id="c_hall">SAB DELETE</button></div><div id="c_hst" class="hst" role="status" aria-live="polite"></div><div id="c_hll"></div></div>
 <div id="c_ask" role="alertdialog" aria-live="assertive"><span id="c_askq"></span><button class="sm" id="c_yes">HAAN</button><button class="sm" id="c_no">NAHI</button></div>
 <div class="imr"><button class="sm" id="c_ai" aria-haspopup="dialog">AI: AUTO</button><button class="sm" id="c_imode">IMAGE: OFF</button><button class="sm" id="c_photo">PHOTO CHUNO</button><button class="sm" id="c_smedia">WEBSITE MEDIA</button><button class="sm" id="c_smx" style="display:none">X</button><span id="c_thw"><img id="c_thumb" alt=""><button class="sm" id="c_thx">X</button></span></div>
-<div class="chi"><input id="c_in" type="text" placeholder="Likho, ya keyboard ke mic se bolo..." autocomplete="off" enterkeyhint="send">
+<div class="chi"><button class="icb" id="c_plus" aria-label="connectors aur options" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><input id="c_in" type="text" placeholder="Likho, ya keyboard ke mic se bolo..." autocomplete="off" enterkeyhint="send">
 <button class="icb" id="c_kmic" aria-label="dictate (phone voice typing)" title="Bolkar likho"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM6 11a6 6 0 0012 0M12 17v4"/></svg></button>
 <button class="icb" id="c_mic" aria-label="NOVA voice mode" title="NOVA se bolkar baat karo"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></button>
 <button class="icb" id="c_send" aria-label="send" title="Bhejo" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div>
@@ -748,7 +553,7 @@ button.icb svg{stroke:var(--mink)!important}
 
 <div class="box">
 <label style="margin-top:0">BAAT-CHEET MODE</label>
-<label class="chk"><input type="checkbox" id="cv_on"> Jawab ke baad NOVA 3 baar tak bina "nova" bole sunta rahe</label>
+<label class="chk"><input type="checkbox" id="cv_on"> Jawab ke baad NOVA 6 baar tak bina "nova" bole sunta rahe</label>
 <small>Band karne par har baat ke liye "nova" bolna padega.</small>
 <label class="chk"><input type="checkbox" id="al_bat"> Khud bolo: battery kam ho to NOVA bata de (30 minute mein ek baar)</label>
 </div>
@@ -968,10 +773,10 @@ button.icb svg{stroke:var(--mink)!important}
     alEl.addEventListener("change",function(){
       try{Android.setAlerts(alEl.checked);say(alEl.checked?"Battery alert on":"Battery alert off",true)}catch(x){say("Switch save nahi hua",false)}
     })}
-  var alLn=g("al_on");
-  if(alLn){try{alLn.checked=!!Android.getAutoLearn()}catch(x){}
-    alLn.addEventListener("change",function(){
-      try{Android.setAutoLearn(alLn.checked);say(alLn.checked?"Auto-seekho on":"Auto-seekho off",true)}catch(x){say("Switch save nahi hua",false)}
+  var alr=g("al_on");
+  if(alr){try{alr.checked=!!Android.getAutoLearn()}catch(x){}
+    alr.addEventListener("change",function(){
+      try{Android.setAutoLearn(alr.checked);say(alr.checked?"Auto-seekho on":"Auto-seekho off",true)}catch(x){say("Switch save nahi hua",false)}
     })}
   var amEl=g("am_on");
   function brainState(){var st=g("brain_state");if(!st)return;try{
@@ -1241,7 +1046,7 @@ window.onFlow=function(r){
 };
 
 /* ===== UPDATE CENTER: kya naya hai + permission check + update (har kaam aapki permission se) ===== */
-var UC=$('uc'),ucNoteTxt='',ucBusy=false;
+var UC=$('uc'),ucNoteTxt='',ucBusy=false,ucCompact=false,ucAllLog=false;
 var CHANGES=[
  'v6.31+: offline Qwen engine integration + automatic verified model download; device build/test status must be checked on the target phone. Previous static-test notes are retained for older features.',
  'v6.30 (Kotlin compiled nahi; phone par test nahi hua): home par KYA CHALTA HAI / KYA NAHI box (asli permission/key/service state + karan); app kholte hi Setup popup wapas (har launch par ek baar, sirf jab kuch zaroori baaki ho); opening animation halki (blur hata, slow phone par glow apne aap band); conversation mode default OFF; GLM ki 3 keys fallback; awaaz reject par chat mein number.',
@@ -1303,10 +1108,28 @@ function ucNext(st,of){
 }
 function ucRender(){
   var st=ucStat();if(!st)return;var of=ucOffers(),b=$('ucb');b.innerHTML='';ucBusy=false;
+  UC.classList.toggle('compact',ucCompact);
+  if(ucCompact){
+    /* wip11: small setup card at the bottom (home stays visible). Only what is still missing, nothing else. */
+    b.appendChild(el('h3',0,'SETUP BAAKI HAI'));
+    b.appendChild(el('div','ver','Ye permission dene ke baad NOVA poori tarah kaam karega'));
+    var shown=0;
+    UCP.forEach(function(p){
+      if(st[p[0]]||!p[3]||shown>=3)return;shown++;
+      var r=el('div','ucr'),t=el('div','t',p[1]);t.appendChild(el('small',0,p[2]));r.appendChild(t);
+      r.appendChild(el('span','s bad','ZAROORI'));
+      var bt=el('button','sm','ALLOW');bt.onclick=function(){ucDo(p[4])};r.appendChild(bt);b.appendChild(r)});
+    b.appendChild(el('div','ucn',ucNoteTxt||'Android ki switch aapko khud tap karke ON karni hoti hai.'));
+    var rw0=el('div','row'),m1=el('button','sm','SAB DEKHO'),m2=el('button','sm','BAAD MEIN');
+    m1.onclick=function(){ucCompact=false;ucRender();UC.scrollTop=0};m2.onclick=function(){ucDismissToday();ucClose()};
+    rw0.appendChild(m1);rw0.appendChild(m2);b.appendChild(rw0);
+    return;
+  }
   b.appendChild(el('h3',0,'UPDATE CENTER'));
   b.appendChild(el('div','ver','NOVA v'+(st.versionName||'?')+' (build '+st.versionCode+')'));
   b.appendChild(el('h4',0,'KYA NAYA HAI'));
-  var ul=el('ul');CHANGES.forEach(function(c){ul.appendChild(el('li',0,c))});b.appendChild(ul);
+  var ul=el('ul');CHANGES.slice(0,ucAllLog?CHANGES.length:3).forEach(function(c){ul.appendChild(el('li',0,c))});b.appendChild(ul);
+  if(CHANGES.length>3){var lg=el('button','sm',ucAllLog?'KAM DEKHO':'PURANE '+(CHANGES.length-3)+' BADLAV DEKHO');lg.onclick=function(){ucAllLog=!ucAllLog;ucRender()};b.appendChild(lg)}
   b.appendChild(el('h4',0,'PERMISSION CHECK'));
   UCP.forEach(function(p){
     var ok=!!st[p[0]],r=el('div','ucr'),t=el('div','t',p[1]);t.appendChild(el('small',0,p[2]));r.appendChild(t);
@@ -1342,9 +1165,12 @@ function ucRender(){
   var rw=el('div','row'),c1=el('button','sm','CHECK UPDATES'),c2=el('button','sm','BAND KARO');
   c1.onclick=ucCheck;c2.onclick=ucClose;rw.appendChild(c1);rw.appendChild(c2);b.appendChild(rw);
 }
-function ucOpen(){ucRender();UC.classList.add('on');UC.scrollTop=0;try{if(window.novaSheetSnd)novaSheetSnd()}catch(e){}}
-function ucClose(){if(!UC.classList.contains('on'))return;UC.classList.remove('on')}
-UC.addEventListener('pointerdown',function(e){if(e.target===UC)ucClose()});
+function ucOpen(compact){ucCompact=compact===true;ucRender();UC.classList.add('on');UC.scrollTop=0;try{if(window.novaSheetSnd)novaSheetSnd()}catch(e){}}
+function ucClose(){if(!UC.classList.contains('on'))return;UC.classList.remove('on');ucCompact=false}
+function ucToday(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+function ucDismissToday(){try{localStorage.setItem('nova_uc_dis',ucToday())}catch(e){}}
+function ucDismissed(){try{return localStorage.getItem('nova_uc_dis')===ucToday()}catch(e){return false}}
+UC.addEventListener('pointerdown',function(e){if(e.target===UC){if(ucCompact)ucDismissToday();ucClose()}});
 setInterval(function(){if(UC.classList.contains('on')&&ucBusy)ucRender()},2000);
 /* v6.22: Setup/Update Center has no automatic launch or automatic check hook.
    Owner opens it manually from Settings > Safe Updates; Android special switches still need the owner's tap. */
@@ -1357,8 +1183,9 @@ function ucStartup(){
   if(!document.body.classList.contains('ready')||document.getElementById('intro').classList.contains('on'))return;      /* wait until the opening animation is over */
   ucBootShown=true;
   var st=ucStat();if(!st)return;
-  var miss=false;UCP.forEach(function(p){if(p[3]&&!st[p[0]])miss=true});SETUP_ORDER.forEach(function(k){if(!st[k])miss=true});
-  if(miss&&ucFree())setTimeout(function(){if(ucFree())ucOpen()},600);
+  /* wip11: only a REQUIRED permission (mic / notifications) opens this, as a small bottom card, and never again today after BAAD MEIN / tap outside. Optional ones stay in Settings. */
+  var miss=false;UCP.forEach(function(p){if(p[3]&&!st[p[0]])miss=true});
+  if(miss&&!ucDismissed()&&ucFree())setTimeout(function(){if(ucFree())ucOpen(true)},900);
 }
 var ucBootTimer=setInterval(function(){ucStartup();if(ucBootShown)clearInterval(ucBootTimer)},700);
 document.addEventListener('visibilitychange',function(){if(!document.hidden){if(UC.classList.contains('on'))ucRender();fsLoad()}});   /* back from Android Settings: show the new ON/OFF state */
@@ -1579,16 +1406,16 @@ var PT=[];for(var i=0;i<26;i++)PT.push({x:Math.random(),y:Math.random(),v:.0006+
 function poly(pts,k){c.beginPath();pts.forEach(function(q,j){var x=q[0],y=q[1];if(k){x=k[0]+(x-k[0])*k[2];y=k[1]+(y-k[1])*k[2]}j?c.lineTo(x,y):c.moveTo(x,y)});c.closePath()}
 function draw(P){
  c.setTransform(D,0,0,D,0,0);c.clearRect(0,0,W,H);
- c.fillStyle='#35F2C2';PT.forEach(function(q){q.y-=q.v;if(q.y<0){q.y=1;q.x=Math.random()}c.globalAlpha=.15+.4*Math.abs(Math.sin(P.t/700+q.x*9));c.fillRect(q.x*W,q.y*H,1.8,1.8)});
+ c.fillStyle='#2fd8ff';PT.forEach(function(q){q.y-=q.v;if(q.y<0){q.y=1;q.x=Math.random()}c.globalAlpha=.15+.4*Math.abs(Math.sin(P.t/700+q.x*9));c.fillRect(q.x*W,q.y*H,1.8,1.8)});
  c.setTransform(D*s,0,0,D*s,D*W/2,D*H*.46);var t=P.t;
  c.globalAlpha=1;
- for(var r=0;r<3;r++){c.globalAlpha=P.fl*(.25+.25*Math.sin(t/380+r*1.5));c.strokeStyle='#35F2C2';c.lineWidth=1.6;c.shadowColor='#35F2C2';c.shadowBlur=SBK*14;c.beginPath();c.ellipse(0,128,115+r*34,24+r*7,0,0,6.2832);c.stroke()}
+ for(var r=0;r<3;r++){c.globalAlpha=P.fl*(.25+.25*Math.sin(t/380+r*1.5));c.strokeStyle='#2fd8ff';c.lineWidth=1.6;c.shadowColor='#2fd8ff';c.shadowBlur=SBK*14;c.beginPath();c.ellipse(0,128,115+r*34,24+r*7,0,0,6.2832);c.stroke()}
  c.shadowBlur=SBK*0;
- if(P.seam>0){var g=c.createLinearGradient(0,-340,0,170);g.addColorStop(0,'rgba(53,242,194,0)');g.addColorStop(.5,'rgba(190,255,238,.95)');g.addColorStop(1,'rgba(53,242,194,0)');c.globalAlpha=P.seam;c.fillStyle=g;var w=3+12*P.seam;c.fillRect(-w/2,-340,w,510)}
+ if(P.seam>0){var g=c.createLinearGradient(0,-340,0,170);g.addColorStop(0,'rgba(47,216,255,0)');g.addColorStop(.5,'rgba(190,255,238,.95)');g.addColorStop(1,'rgba(47,216,255,0)');c.globalAlpha=P.seam;c.fillStyle=g;var w=3+12*P.seam;c.fillRect(-w/2,-340,w,510)}
  if(P.core>0.01){var k=.6+.4*P.core,a=t/500;c.save();c.globalAlpha=P.core*P.pa;c.scale(k,k);c.fillStyle='#07110f';c.beginPath();c.arc(0,-5,36,0,6.2832);c.fill();
-  c.strokeStyle='#35F2C2';c.lineWidth=3.5;c.shadowColor='#35F2C2';c.shadowBlur=SBK*26;c.beginPath();c.arc(0,-5,36,0,6.2832);c.stroke();
+  c.strokeStyle='#2fd8ff';c.lineWidth=3.5;c.shadowColor='#2fd8ff';c.shadowBlur=SBK*26;c.beginPath();c.arc(0,-5,36,0,6.2832);c.stroke();
   c.lineWidth=3;c.strokeStyle='#7CFFE0';c.beginPath();c.arc(0,-5,48,a,a+1.7);c.stroke();c.beginPath();c.arc(0,-5,48,a+3.14,a+4.8);c.stroke();
-  c.lineWidth=2;c.strokeStyle='#7C5CFF';c.beginPath();c.arc(0,-5,60,-a*1.3,-a*1.3+1.2);c.stroke();c.beginPath();c.arc(0,-5,60,-a*1.3+3.14,-a*1.3+4.4);c.stroke();
+  c.lineWidth=2;c.strokeStyle='#6f7bff';c.beginPath();c.arc(0,-5,60,-a*1.3,-a*1.3+1.2);c.stroke();c.beginPath();c.arc(0,-5,60,-a*1.3+3.14,-a*1.3+4.4);c.stroke();
   c.shadowBlur=SBK*14;c.fillStyle='#eaf7ff';c.font='600 21px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('NOVA',0,-4);c.restore()}
  var g2=c.createLinearGradient(-90,-120,90,110);g2.addColorStop(0,'#1a2640');g2.addColorStop(.25,'#7088b0');g2.addColorStop(.5,'#0f1a2e');g2.addColorStop(.75,'#93abcf');g2.addColorStop(1,'#16213a');
  PL.forEach(function(p,i){var f=P.f[i],o=P.o[i],bu=P.bu,e=eb(f),e2=ez(f),al=cl(f*3)*(1-bu)*P.pa;if(al<=0.01)return;
@@ -1598,14 +1425,14 @@ function draw(P){
   poly(p.p);c.fillStyle=g2;c.fill();
   c.save();poly(p.p);c.clip();var sw=((t/1400)+i*.13)%1.6-.3,gg=c.createLinearGradient(-90+sw*180,-120,-40+sw*180,110);gg.addColorStop(0,'rgba(255,255,255,0)');gg.addColorStop(.5,'rgba(220,240,255,.3)');gg.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gg;c.fillRect(-130,-230,260,380);c.restore();
   poly(p.p,[p.cx,p.cy,.82]);var g3=c.createLinearGradient(p.cx-30,p.cy-30,p.cx+30,p.cy+30);g3.addColorStop(0,'rgba(190,215,255,.3)');g3.addColorStop(1,'rgba(5,10,25,.55)');c.fillStyle=g3;c.fill();c.strokeStyle='rgba(150,200,255,.45)';c.lineWidth=.9;c.stroke();
-  poly(p.p);c.shadowColor='#35F2C2';c.shadowBlur=SBK*10;c.strokeStyle='rgba(53,242,194,.95)';c.lineWidth=1.6;c.stroke();c.shadowBlur=SBK*0;
+  poly(p.p);c.shadowColor='#2fd8ff';c.shadowBlur=SBK*10;c.strokeStyle='rgba(47,216,255,.95)';c.lineWidth=1.6;c.stroke();c.shadowBlur=SBK*0;
   var sh=p.p.map(function(q){return[p.cx+(q[0]-p.cx)*.82,p.cy+(q[1]-p.cy)*.82]}),gl2=.25+.75*Math.max(P.core,P.seam);
-  c.shadowColor='#7CFFE0';c.shadowBlur=SBK*10*gl2;c.strokeStyle='rgba(53,242,194,'+(.4+.6*gl2)+')';c.lineWidth=2;c.beginPath();c.moveTo(sh[0][0],sh[0][1]);c.lineTo(sh[1][0],sh[1][1]);c.stroke();c.shadowBlur=SBK*0;
+  c.shadowColor='#7CFFE0';c.shadowBlur=SBK*10*gl2;c.strokeStyle='rgba(47,216,255,'+(.4+.6*gl2)+')';c.lineWidth=2;c.beginPath();c.moveTo(sh[0][0],sh[0][1]);c.lineTo(sh[1][0],sh[1][1]);c.stroke();c.shadowBlur=SBK*0;
   c.fillStyle='#b9d0f0';sh.forEach(function(q){c.beginPath();c.arc(q[0],q[1],1.5,0,6.2832);c.fill()});
-  if(P.lt){var ls=t-(P.lt+i*150);if(ls>0&&ls<320){var q=1-ls/320,rg=c.createRadialGradient(p.cx,p.cy,0,p.cx,p.cy,36);rg.addColorStop(0,'rgba(255,255,255,'+.9*q+')');rg.addColorStop(1,'rgba(53,242,194,0)');c.globalAlpha=1;c.fillStyle=rg;c.fillRect(p.cx-40,p.cy-40,80,80)}}
+  if(P.lt){var ls=t-(P.lt+i*150);if(ls>0&&ls<320){var q=1-ls/320,rg=c.createRadialGradient(p.cx,p.cy,0,p.cx,p.cy,36);rg.addColorStop(0,'rgba(255,255,255,'+.9*q+')');rg.addColorStop(1,'rgba(47,216,255,0)');c.globalAlpha=1;c.fillStyle=rg;c.fillRect(p.cx-40,p.cy-40,80,80)}}
   c.restore()});
- var ba=P.badge*P.pa;if(ba>0.01){c.save();c.globalAlpha=ba;c.fillStyle='#07110f';c.beginPath();c.arc(0,-5,27,0,6.2832);c.fill();c.strokeStyle='#35F2C2';c.lineWidth=2.5;c.shadowColor='#35F2C2';c.shadowBlur=SBK*18;c.stroke();c.fillStyle='#eaf7ff';c.font='600 15px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('NOVA',0,-4);c.restore()}
- if(P.bu>0){c.globalAlpha=Math.sin(P.bu*3.14)*.8;var fg=c.createRadialGradient(0,-5,0,0,-5,420);fg.addColorStop(0,'#fff');fg.addColorStop(.3,'rgba(53,242,194,.7)');fg.addColorStop(1,'rgba(53,242,194,0)');c.fillStyle=fg;c.fillRect(-500,-500,1000,1000)}
+ var ba=P.badge*P.pa;if(ba>0.01){c.save();c.globalAlpha=ba;c.fillStyle='#07110f';c.beginPath();c.arc(0,-5,27,0,6.2832);c.fill();c.strokeStyle='#2fd8ff';c.lineWidth=2.5;c.shadowColor='#2fd8ff';c.shadowBlur=SBK*18;c.stroke();c.fillStyle='#eaf7ff';c.font='600 15px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('NOVA',0,-4);c.restore()}
+ if(P.bu>0){c.globalAlpha=Math.sin(P.bu*3.14)*.8;var fg=c.createRadialGradient(0,-5,0,0,-5,420);fg.addColorStop(0,'#fff');fg.addColorStop(.3,'rgba(47,216,255,.7)');fg.addColorStop(1,'rgba(47,216,255,0)');c.fillStyle=fg;c.fillRect(-500,-500,1000,1000)}
  c.globalAlpha=1}
 var OPEN_END=5600,CLOSE_END=2600;
 function stOpen(t){var f=[],o=[];for(var i=0;i<NP;i++){f[i]=cl((t-900-i*150)/650);o[i]=ez(cl((t-3000-PL[i].k*90)/1200))}
@@ -1754,6 +1581,7 @@ function closeSheet(){if(!sh.classList.contains('on'))return;sh.classList.add('o
 sh.addEventListener('pointerdown',function(e){if(e.target===sh)closeSheet()});
 var box=$('feats');
 F.forEach(function(f,i){var d=document.createElement('div');d.className='f';d.style.animationDelay=(.45+i*.08)+'s';d.innerHTML='<svg viewBox="0 0 24 24"><path d="'+IC[f[0]]+'"/></svg><b>'+f[1].toUpperCase()+'</b><i>'+f[2]+'</i>';d.onclick=function(){openSheet(f)};box.appendChild(d)});
+var al2=document.createElement('div');al2.className='f all';al2.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><b>SAB SKILLS</b><i>poori list + search</i>';al2.onclick=function(){var t=document.getElementById('t_skills');if(t)t.click()};box.appendChild(al2);
 /* ===== globe + waveform dashboard ===== */
 var gl=$('gl'),g=gl.getContext('2d'),GD=Math.min(devicePixelRatio||1,window.__dprCap||3),GS=250,GP=[];
 gl.width=GS*GD;gl.height=GS*GD;gl.style.width=GS+'px';gl.style.height=GS+'px';
@@ -1775,7 +1603,7 @@ function gframe(now){var cls=$('app').className||'',on=/on|listen|think/.test(cl
  if(ls)for(var r2=0;r2<3;r2++){var ph2=((now/900)+r2/3)%1;g.strokeStyle='rgba('+col+','+(1-ph2)*.5+')';g.lineWidth=1.5;g.beginPath();g.arc(0,0,R+8+ph2*42,0,6.2832);g.stroke()}
  if(th){g.save();g.beginPath();g.arc(0,0,R,0,6.2832);g.clip();g.fillStyle='rgba('+col+',.55)';g.fillRect(-R,-R+((now/5)%(2*R)),2*R,2);g.restore()}
  for(var k=0;k<28;k++){var h=ls?6+24*Math.abs(Math.sin(now/130+k*.6)*Math.sin(now/310+k*.25)):on?2+3*Math.pow(Math.sin(now/500+k*.4),2):1.5;g.fillStyle='rgba('+col+','+(.35+.55*al)+')';g.fillRect(-111+k*8,106-h/2,3,h)}}
-function gloop(n){requestAnimationFrame(gloop);if(!window.__orb3d&&!window.__cover&&B.classList.contains('ready')&&!document.hidden)gframe(n)}requestAnimationFrame(gloop);
+var _lg=0;function gloop(n){requestAnimationFrame(gloop);if(n-_lg<33)return;_lg=n;if(!window.__orb3d&&!window.__cover&&B.classList.contains('ready')&&!document.hidden)gframe(n)}requestAnimationFrame(gloop);
 gl.onclick=function(){$('btn').click()};
 var greeted=false;
 function greetOnce(){if(greeted)return;greeted=true;var h=new Date().getHours(),w=h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night',d=document.createElement('div');d.className='greet';d.innerHTML='<b>'+w+'</b><span></span><i>Ready for your command</i>';var lg=$('log');lg.insertBefore(d,lg.firstChild);var tx='Main NOVA hoon, aapka AI companion',k=0,sp=d.querySelector('span');(function ty(){sp.textContent=tx.slice(0,k++);if(k<=tx.length)setTimeout(ty,40)})()}
@@ -2209,70 +2037,11 @@ var o=window.openPanel;if(typeof o==='function'){window.openPanel=function(){var
 document.addEventListener('visibilitychange',function(){try{if(document.visibilityState==='visible'&&g('panel')&&g('panel').style.display==='block')fill()}catch(e){}});
 })();
 </script>
-<style id="glowpack">/* NOVA GLOW PACK: look + motion only, no logic. Off in lowfx / reduced-motion. */
-body:after{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;
-background:radial-gradient(38% 30% at 20% 22%,rgba(0,240,255,.20),transparent 70%),radial-gradient(34% 30% at 82% 30%,rgba(140,80,255,.22),transparent 70%),radial-gradient(40% 32% at 55% 85%,rgba(42,107,255,.20),transparent 70%),radial-gradient(22% 20% at 10% 80%,rgba(255,70,180,.11),transparent 70%);
-animation:gpDrift 22s ease-in-out infinite alternate}
-#gp-stars{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-#gp-stars i{position:absolute;border-radius:50%;background:#bfeaff;box-shadow:0 0 8px #2fb8ff;opacity:0;animation:gpTwinkle 9s ease-in-out infinite}
-.logo{animation:gpLogo 4.5s ease-in-out infinite}
-.badge{animation:gpBadge 3.2s ease-in-out infinite}
-.status{text-shadow:0 0 12px rgba(0,240,255,.35)}
-.f{background:linear-gradient(160deg,rgba(47,184,255,.20),rgba(140,80,255,.07) 60%,rgba(255,255,255,.02));box-shadow:0 8px 22px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.10)}
-.f:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.16) 50%,transparent 62%);transform:translateX(-130%);animation:gpSheen 7s ease-in-out infinite}
-.f:nth-child(2):after{animation-delay:1.1s}.f:nth-child(3):after{animation-delay:2.2s}.f:nth-child(4):after{animation-delay:3.3s}.f:nth-child(5):after{animation-delay:4.4s}.f:nth-child(n+6):after{animation-delay:5.5s}
-.f:active{transform:translateY(2px) scale(.96)}
-.f svg{filter:drop-shadow(0 0 6px rgba(0,240,255,.7))}
-#btn{background-image:linear-gradient(100deg,rgba(0,240,255,.16),rgba(140,80,255,.22),rgba(0,240,255,.16));background-size:220% 100%;animation:gpShift 5s linear infinite}
-.wrap>.row{padding:10px;border-radius:30px;background:rgba(10,16,40,.55);border:1px solid rgba(120,200,255,.18);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.msg{box-shadow:0 6px 18px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.07)}
-.msg.ai{background:linear-gradient(160deg,rgba(47,184,255,.16),rgba(140,80,255,.08));border:1px solid rgba(100,200,255,.28)}
-.icb{box-shadow:0 0 12px rgba(0,240,255,.25)}
-.greet{box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 22px rgba(0,240,255,.10)}
-@keyframes gpDrift{0%{transform:translate3d(-3%,-2%,0) scale(1)}100%{transform:translate3d(3%,3%,0) scale(1.12)}}
-@keyframes gpTwinkle{0%,100%{opacity:0;transform:translateY(0) scale(.6)}50%{opacity:.85;transform:translateY(-16px) scale(1.1)}}
-@keyframes gpLogo{0%,100%{text-shadow:0 0 12px #2fb8ff,0 0 26px #1b7cff}50%{text-shadow:0 0 20px #7fdcff,0 0 44px #8c50ff}}
-@keyframes gpBadge{0%,100%{box-shadow:0 0 0 rgba(124,252,154,0)}50%{box-shadow:0 0 14px rgba(124,252,154,.45)}}
-@keyframes gpSheen{0%,55%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
-@keyframes gpShift{0%{background-position:0 0}100%{background-position:220% 0}}
-html.lowfx body:after,html.lowfx #gp-stars,html.lowfx .f:after{display:none}
-html.lowfx .logo,html.lowfx .badge,html.lowfx #btn{animation:none}
-@media (prefers-reduced-motion:reduce){body:after,.f:after,.logo,.badge,#btn{animation:none}#gp-stars{display:none}}
-</style>
-<script>/* NOVA GLOW PACK stars */
-(function(){try{var d=document,r=Math.random;if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;var c=d.createElement('div');c.id='gp-stars';for(var i=0;i<14;i++){var s=d.createElement('i'),z=1+r()*2;s.style.cssText='left:'+(r()*100)+'%;top:'+(20+r()*75)+'%;width:'+z+'px;height:'+z+'px;animation-delay:'+(-r()*9)+'s;animation-duration:'+(7+r()*7)+'s';c.appendChild(s)}d.body.appendChild(c)}catch(e){}})();
-</script>
-<style id="fix-scroll">
-/* v31: the home page scrolls when the screen is short; no mode/provider badge */
-.wrap{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth}
-.wrap>*{flex-shrink:0}
-.wrap>.log{flex:1 0 auto;min-height:140px}
+<style id="fix-scroll">/* wip12: the home page no longer scrolls; layout lives in nova-final */
 #mode{display:none!important}
 </style>
 <script>try{var _o=document.getElementById('i_on');if(_o&&_o.parentNode)_o.parentNode.style.display='none'}catch(e){}</script>
 
-<style id="nova-3d-icons-v17">
-/* NOVA 3D ICON + TAP FEEDBACK PACK — presentation-only; no command handlers changed. */
-:root{--n-cyan:#36e8ff;--n-blue:#347cff;--n-violet:#ad69ff;--n-glass:rgba(9,22,52,.88)}
-button,.f{position:relative;isolation:isolate;transform-style:preserve-3d;backface-visibility:hidden;transition:transform .22s cubic-bezier(.2,.85,.25,1),box-shadow .22s,border-color .22s,filter .22s;}
-button{box-shadow:0 5px 0 rgba(7,24,57,.96),0 10px 22px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.22),inset 0 -2px 0 rgba(0,0,0,.25)}
-button.sm{box-shadow:0 3px 0 rgba(8,27,62,.9),0 7px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.13)}
-button.icb{overflow:hidden;background:linear-gradient(145deg,rgba(88,221,255,.20),rgba(34,74,145,.25) 54%,rgba(92,48,154,.22));border-color:rgba(102,224,255,.72);box-shadow:0 4px 0 rgba(14,42,88,.92),0 8px 17px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -2px 0 rgba(0,0,0,.25)}
-button.icb:before{content:"";position:absolute;inset:1px;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent 34%,transparent 66%,rgba(159,98,255,.12));opacity:.9;z-index:-1}
-button.icb svg,.f svg{filter:drop-shadow(0 2px 1px rgba(0,0,0,.8)) drop-shadow(0 0 6px rgba(54,232,255,.58));transform:translateZ(7px);transform-origin:50% 60%;transition:transform .24s cubic-bezier(.2,.85,.25,1),filter .24s}
-.f{border-color:rgba(85,215,255,.52);background:linear-gradient(155deg,rgba(77,187,255,.24),rgba(35,72,140,.21) 48%,rgba(123,70,202,.14));box-shadow:0 7px 0 rgba(8,24,56,.92),0 13px 25px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.20),inset 0 -2px 0 rgba(0,0,0,.28);transform:perspective(800px) rotateX(1.5deg) translateY(0)}
-.f:before{content:"";position:absolute;left:10%;right:12%;top:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(202,248,255,.78),rgba(182,141,255,.46),transparent);opacity:.8}
-.f svg{width:30px;height:30px;padding:5px;border-radius:10px;background:linear-gradient(145deg,rgba(90,225,255,.24),rgba(77,91,191,.16) 65%,rgba(159,92,255,.17));border:1px solid rgba(112,222,255,.48);box-shadow:0 4px 0 rgba(7,29,62,.8),0 6px 12px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.28);}
-.f b{ text-shadow:0 1px 0 rgba(0,0,0,.8),0 0 10px rgba(54,232,255,.14)}
-button.nova-press,.f.nova-press{animation:novaTap3d .34s cubic-bezier(.2,.9,.25,1) both;border-color:rgba(164,239,255,.96);filter:brightness(1.16)}
-button.nova-press svg,.f.nova-press svg{animation:novaIconTap3d .34s cubic-bezier(.2,.9,.25,1) both;filter:drop-shadow(0 0 9px rgba(54,232,255,.85)) drop-shadow(0 0 14px rgba(173,105,255,.45))}
-button:focus-visible,.f:focus-visible{outline:2px solid #a7f5ff;outline-offset:3px;box-shadow:0 0 0 4px rgba(54,232,255,.18),0 7px 20px rgba(0,0,0,.35)}
-@keyframes novaTap3d{0%{transform:perspective(600px) translateY(0) rotateX(0) scale(1)}36%{transform:perspective(600px) translateY(3px) rotateX(9deg) scale(.94)}72%{transform:perspective(600px) translateY(-1px) rotateX(-3deg) scale(1.025)}100%{transform:perspective(600px) translateY(0) rotateX(0) scale(1)}}
-@keyframes novaIconTap3d{0%{transform:translateZ(7px) scale(1) rotate(0)}42%{transform:translateZ(1px) scale(.82) rotate(-7deg)}78%{transform:translateZ(10px) scale(1.13) rotate(3deg)}100%{transform:translateZ(7px) scale(1) rotate(0)}}
-html.lowfx button,html.lowfx .f{transition:none}
-html.lowfx button.nova-press,html.lowfx .f.nova-press,html.lowfx button.nova-press svg,html.lowfx .f.nova-press svg{animation:none;filter:none}
-@media(prefers-reduced-motion:reduce){button,.f,button.icb svg,.f svg{transition:none!important}button.nova-press,.f.nova-press,button.nova-press svg,.f.nova-press svg{animation:none!important}}
-</style>
 <script id="nova-3d-tap-v17">
 /* Visual-only tap feedback. Event handlers for NOVA commands remain untouched. */
 (function(){
@@ -2335,34 +2104,12 @@ html.lowfx button.nova-press,html.lowfx .f.nova-press,html.lowfx button.nova-pre
 </script>
 
 
-<style id="nova-natural-3d-v18">
-/* More natural material lighting and lower compositor cost; no DOM IDs or controls changed. */
-:root{--n-glass:rgba(13,20,35,.91);--edge:rgba(169,198,235,.19);--shine:linear-gradient(118deg,#d4e5f5 0%,#8cbbd8 42%,#a5a0ca 100%)}
-body:before{background:radial-gradient(50% 34% at 50% 36%,rgba(98,145,191,.11),transparent 76%),radial-gradient(34% 30% at 8% 82%,rgba(75,133,153,.055),transparent 74%),linear-gradient(rgba(120,151,186,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(120,151,186,.015) 1px,transparent 1px);background-size:auto,auto,40px 40px,40px 40px}
-#app:before{box-shadow:0 0 44px rgba(50,83,122,.08),inset 0 0 30px rgba(143,180,220,.035);border-color:rgba(149,185,220,.07)}
-.logo{filter:drop-shadow(0 2px 5px rgba(69,119,167,.16));letter-spacing:7px}
-.orbbox:before,.orbbox:after{border-color:rgba(158,194,225,.12);box-shadow:0 0 18px rgba(104,156,199,.035),inset 0 0 22px rgba(103,139,180,.035);animation-duration:32s}
-.orbbox:after{border-color:rgba(175,164,205,.10);animation-duration:46s}
-#gl{filter:drop-shadow(0 8px 14px rgba(0,0,0,.3)) drop-shadow(0 0 9px rgba(92,151,190,.09))}
-.f{border-color:rgba(160,188,220,.22);background:linear-gradient(150deg,rgba(74,101,135,.24),rgba(20,30,49,.82) 62%,rgba(75,75,101,.12));box-shadow:0 5px 12px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.10),inset 0 -1px rgba(0,0,0,.22);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);transform:none}
-.f svg{background:linear-gradient(145deg,rgba(167,202,224,.13),rgba(79,107,148,.12));border-color:rgba(169,201,227,.24);box-shadow:0 2px 4px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.13);filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
-button{box-shadow:0 2px 0 rgba(5,12,24,.82),0 5px 12px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.14),inset 0 -1px rgba(0,0,0,.22)}
-button.icb{border-color:rgba(153,195,226,.32);background:linear-gradient(145deg,rgba(53,81,119,.6),rgba(16,27,49,.88));box-shadow:0 2px 0 rgba(5,12,24,.8),0 5px 11px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.17)}
-button.icb svg,.f svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.54));transform:translateZ(2px)}
-#panel .box,#st_box,.ucb,.sh,.msg{backdrop-filter:none;-webkit-backdrop-filter:none}
-.ucb,#sheet.on .sh{animation:popLight .28s ease-out both}
-.ready #app{animation:slam .26s ease-out both}
-body.ready:after{animation-duration:.38s}
-@media(prefers-reduced-motion:reduce){.orbbox:before,.orbbox:after{animation:none!important}}
-html.lowfx .f,html.lowfx button,html.lowfx .orbbox:before,html.lowfx .orbbox:after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;animation:none!important;box-shadow:0 3px 8px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.08)!important}
-@media(max-width:420px){.f{backdrop-filter:none;-webkit-backdrop-filter:none}.orbbox:before,.orbbox:after{animation-duration:60s}}
-</style>
 <style id="nova-acc-v37">
 #panel .box.accd{padding:0;overflow:hidden}
 #panel .acch{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:15px 16px!important;margin:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#eef3f7!important;font-size:12px;font-weight:700;letter-spacing:1.6px;text-align:left}
-#panel .acch svg{flex:0 0 18px;width:18px;height:18px;fill:none;stroke:#35F2C2;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+#panel .acch svg{flex:0 0 18px;width:18px;height:18px;fill:none;stroke:#2fd8ff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
 #panel .box.open .acch svg{transform:rotate(180deg)}
-#panel .box.open .acch{color:#35F2C2!important;border-bottom:1px solid rgba(53,242,194,.18)!important}
+#panel .box.open .acch{color:#2fd8ff!important;border-bottom:1px solid rgba(47,216,255,.18)!important}
 #panel .accb{display:none;padding:4px 16px 16px}
 #panel .box.open .accb{display:block}
 </style>
@@ -2399,59 +2146,8 @@ window.novaAccOpen=function(id){
 };
 })();
 </script>
-<style id="nova-v37-theme">/* NOVA v37: graphite + teal + violet + amber, bottom tab bar, LIMITS + SKILLS screens */
-:root{--c1:#35F2C2;--c2:#7C5CFF;--c3:#FFB547;--bg:#0b0d12;--ink:#eef3f7;--mut:#98a4b8;--glass:rgba(16,19,28,.74);--line:rgba(124,92,255,.30);--edge:rgba(53,242,194,.26);--grad:linear-gradient(90deg,#35F2C2,#7C5CFF 70%);--shine:linear-gradient(110deg,#35F2C2 0%,#7C5CFF 70%,#FFB547 100%);--tabh:60px;--tabb:calc(var(--tabh) + env(safe-area-inset-bottom,0px))}
-html,body{background:radial-gradient(circle at 50% 28%,#161a26,#0b0d12 68%)}
-#app.wrap{height:calc(100% - var(--tabb))!important;padding-bottom:10px!important}
-#panel,#chat,#sheet,#uc{bottom:var(--tabb)!important}
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:75;display:flex;justify-content:space-around;align-items:stretch;max-width:640px;margin:0 auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));height:var(--tabb);background:linear-gradient(180deg,rgba(18,21,31,.88),rgba(9,11,16,.97));border-top:1px solid rgba(53,242,194,.20);}
-#tabs button{flex:1 1 0;min-width:0!important;width:auto!important;height:auto!important;padding:4px 2px!important;margin:0 2px;border-radius:14px!important;border:1px solid transparent!important;background:transparent!important;box-shadow:none!important;color:#98a4b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;letter-spacing:0;font-size:9px;transition:background .2s,color .2s}
-#tabs button svg{width:22px!important;height:22px!important;fill:none;stroke:#98a4b8!important;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s,transform .2s}
-#tabs button em,#tabs button span{font-style:normal;font-size:8.5px;letter-spacing:1px;opacity:1;font-weight:700;text-transform:uppercase}
-#tabs button.act{background:linear-gradient(160deg,rgba(53,242,194,.16),rgba(124,92,255,.14))!important;border-color:rgba(53,242,194,.34)!important;color:#35F2C2}
-#tabs button.act svg{stroke:#35F2C2!important;transform:translateY(-1px)}
-.vw{position:fixed;left:0;right:0;top:0;bottom:var(--tabb);z-index:4;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 14px 24px;background:radial-gradient(120% 40% at 50% 0%,rgba(124,92,255,.22),rgba(11,13,18,0) 60%),#0b0d12}
-.vw.on{display:block;animation:vwIn .32s cubic-bezier(.2,.9,.25,1) both}
-@keyframes vwIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.vw h2{font-size:17px;letter-spacing:7px;text-align:center;font-weight:700;margin:4px 0 4px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.vw .sub{font-size:11px;line-height:1.5;color:#98a4b8;text-align:center;margin:0 6px 12px}
-.vw .grp{font-size:10px;letter-spacing:3px;font-weight:700;color:#FFB547;margin:18px 4px 8px}
-.vc{position:relative;border-radius:20px;padding:13px;margin:0 0 10px;background:linear-gradient(150deg,rgba(124,92,255,.13),rgba(20,24,36,.78) 62%);border:1px solid rgba(124,92,255,.26);box-shadow:0 8px 22px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05)}
-.vc .hd{display:flex;align-items:center;gap:11px}
-.vc .gl{flex:0 0 40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,rgba(53,242,194,.22),rgba(124,92,255,.22));border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px rgba(255,255,255,.18),0 4px 12px rgba(0,0,0,.3)}
-.vc .gl svg{width:21px;height:21px;fill:none;stroke:#eafff9;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.vc b{display:block;font-size:13px;letter-spacing:.4px;color:#f2f6fa}
-.vc p{font-size:11.5px;line-height:1.45;color:#a9b4c6;margin:8px 0 0}
-.chip{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:1.2px;padding:3px 8px;border-radius:99px;margin-left:6px;vertical-align:middle;border:1px solid}
-.chip.on{color:#35F2C2;border-color:rgba(53,242,194,.5);background:rgba(53,242,194,.10)}
-.chip.off{color:#FFB547;border-color:rgba(255,181,71,.5);background:rgba(255,181,71,.09)}
-.chip.rdy{color:#b6a6ff;border-color:rgba(124,92,255,.55);background:rgba(124,92,255,.12)}
-.chip.est{color:#FFB547;border-color:rgba(255,181,71,.5)}
-.chip.mut{color:#98a4b8;border-color:rgba(152,164,184,.4)}
-.say{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
-.say button,.vc .acts button,.vw .tb2{font-size:10.5px!important;letter-spacing:.6px!important;padding:7px 11px!important;border-radius:12px!important;border:1px solid rgba(53,242,194,.4)!important;background:rgba(53,242,194,.08)!important;color:#dffff6!important;box-shadow:none!important;text-align:left;font-weight:600}
-.say button i{font-style:normal;color:#35F2C2;font-weight:800;margin-right:5px;font-size:9px;letter-spacing:1px}
-.vc .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
-.vc .acts button.v{border-color:rgba(124,92,255,.55)!important;background:rgba(124,92,255,.14)!important;color:#e5deff!important}
-.vc .acts button.a{border-color:rgba(255,181,71,.55)!important;background:rgba(255,181,71,.10)!important;color:#ffe6bf!important}
-.lim{display:flex;gap:12px;align-items:center}
-.lim svg.rg{flex:0 0 68px;width:68px;height:68px}
-.lim .nums{flex:1;min-width:0}
-.lim .nums div{font-size:11.5px;color:#c4cddb;line-height:1.55}
-.lim .nums strong{color:#fff;font-size:13px}
-.vc .meta{font-size:10px;color:#8896ab;margin-top:7px;line-height:1.5}
-.ed{display:none;gap:6px;margin-top:9px;align-items:center;flex-wrap:wrap}
-.ed.on{display:flex}
-.ed input{flex:1 1 90px;min-width:0;padding:9px 10px;border-radius:12px;border:1px solid rgba(124,92,255,.5);background:rgba(0,0,0,.45);color:#fff;font-size:14px}
-.tot{display:flex;gap:8px;margin:6px 0 4px}
-.tot div{flex:1;text-align:center;padding:10px 6px;border-radius:16px;background:rgba(20,24,36,.8);border:1px solid rgba(53,242,194,.2)}
-.tot strong{display:block;font-size:20px;color:#35F2C2}.tot span{font-size:9px;letter-spacing:1.5px;color:#98a4b8}
-.vmsg{min-height:16px;text-align:center;font-size:11.5px;color:#35F2C2;margin:6px 0}
-html.lowfx #tabs,html.lowfx .vc{-webkit-backdrop-filter:none;backdrop-filter:none}
-@media(prefers-reduced-motion:reduce){.vw.on{animation:none}}
-</style>
 <nav id="tabs" aria-label="NOVA menu"><button class="tb act" id="t_home" aria-label="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>HOME</span></button><button class="tb" id="t_skills" aria-label="skills"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>SKILLS</span></button><button class="tb" id="t_limits" aria-label="limits"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1116 0M12 18l4-6M7 18h.01M17 18h.01"/></svg><span>LIMITS</span></button></nav>
-<div class="vw" id="v_skills"><h2>SKILLS</h2><div class="sub">NOVA ke saare kaam ek jagah. Chip se dekho kya ON hai aur kya setup maangta hai. "SAY" dabao to line chat mein bhar jaati hai.</div><div id="sk_l"></div></div>
+<div class="vw" id="v_skills"><h2>SKILLS</h2><div class="sub">NOVA ke saare kaam ek jagah. Chip se dekho kya ON hai aur kya setup maangta hai. Hara RUN = seedha chalao. SAY = line chat me bhar jaati hai (naam / text aap badlo).</div><div class="sk-top"><input class="sk-s" id="sk_q" type="search" placeholder="Dhundo: call, photo, mausam, alarm, github..." autocomplete="off" maxlength="40" aria-label="skills search"><div class="sk-f" id="sk_f"></div><div class="sk-cnt" id="sk_c"></div></div><div id="sk_l"></div></div>
 <div class="vw" id="v_limits"><h2>API LIMITS</h2><div class="sub" id="li_sub"></div><div class="tot"><div><strong id="li_tot">0</strong><span>AAJ KE CALLS</span></div><div><strong id="li_day">-</strong><span>DIN</span></div></div><div class="vmsg" id="li_msg"></div><div id="li_l"></div><div class="vc"><div class="acts"><button class="a" id="li_reset">RESET TODAY</button><button class="v" id="li_ref">REFRESH</button></div><div class="meta">Ginti sirf is phone ki hai. Groq ka LIVE count Groq ke header se aata hai (wahi sahi hai). Jis service ki limit publish nahi hai, wahan sirf ginti dikhti hai &mdash; koi number banaya nahi jaata. Keys yahan kabhi nahi dikhti.</div></div></div>
 <script id="nova-tabs-v37">
 (function(){
@@ -2492,63 +2188,189 @@ g('t_limits').onclick=function(){closeOthers('limits');VL.classList.add('on');VL
 if(cb)cb.addEventListener('click',function(){closeOthers('chat');setTimeout(sync,50)});
 if(gr)gr.addEventListener('click',function(){VS.classList.remove('on');VL.classList.remove('on');if(chat&&chat.classList.contains('on')){var c=g('c_close');if(c)c.click()}setTimeout(sync,600)});
 setInterval(function(){if(!document.hidden)sync()},1000);
-/* ---- SKILLS ---- */
-function tryText(t){
-  closeOthers('chat');
-  if(cb)cb.click();
-  setTimeout(function(){var i=g('c_in');if(i){i.value=t;try{i.focus()}catch(e){}}},220);
-}
-function renderSkills(){
-  var st=J('getStatus'),se=J('getSettings');
+/* ---- SKILLS (wip12) ---- */
+/* ---- SKILLS (wip12): every NOVA feature in one searchable list. Status chips are read from the REAL phone state; nothing here is invented.
+   SAY = puts the line in the chat box. RUN = sends it to NOVA at once (only lines without a [placeholder]). ---- */
+var IC2={
+  bolt:'M13 2L4 14h7l-1 8 9-12h-7z',call:'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z',
+  scr:'M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM11 18h2',
+  eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z',
+  car:'M3 13l2-6h14l2 6v5h-3v-2H6v2H3zM7 13h.01M17 13h.01',mute:'M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6',
+  chip:'M9 9h6v6H9zM4 9h2M4 15h2M18 9h2M18 15h2M9 4v2M15 4v2M9 18v2M15 18v2',
+  spark:'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
+  upd:'M12 4v10M8 10l4 4 4-4M5 19h14',msg:'M4 5h16v11H9l-5 4z',mail:'M3 6h18v12H3zM3 7l9 6 9-6',
+  clock:'M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z',sun:'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',
+  music:'M9 18V6l10-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM19 16a3 3 0 11-6 0 3 3 0 016 0z',map:'M12 21s7-6 7-12a7 7 0 10-14 0c0 6 7 12 7 12zM12 11a2 2 0 100-4 2 2 0 000 4z',
+  cam:'M4 8h3l2-3h6l2 3h3v11H4zM12 11a3 3 0 100 6 3 3 0 000-6z',img:'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15 9h.01',
+  globe:'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  brain:'M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 0V7a3 3 0 00-3-3zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-6 0',
+  mic:'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM6 11a6 6 0 0012 0M12 17v4',
+  rec:'M12 6a6 6 0 100 12 6 6 0 000-12z',lock:'M6 11h12v9H6zM8 11V8a4 4 0 018 0v3',
+  plug:'M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0zM12 17v4',list:'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  calc:'M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01',
+  shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',repeat:'M4 12a8 8 0 0114-5M20 4v4h-4M20 12a8 8 0 01-14 5M4 20v-4h4',
+  bell:'M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4',edit:'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
+  wifi:'M2 9a15 15 0 0120 0M5 13a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01',code:'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14',
+  rocket:'M12 3c4 2 6 6 5 11l-3 3H10l-3-3c-1-5 1-9 5-11zM9 17l-2 4 4-2M15 17l2 4-4-2M12 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
+  grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',cloud:'M7 18a4 4 0 010-8 5 5 0 019.6-1A4.5 4.5 0 0117 18z',
+  news:'M5 4h12v16H5zM17 8h3v10a2 2 0 01-2 2M8 8h6M8 12h6M8 16h4',coin:'M12 3a9 9 0 100 18 9 9 0 000-18zM9 10c0-2 6-2 6 0s-6 1-6 3 6 2 6 0M12 6v2M12 16v2',
+  book:'M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11',
+  home:'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',hand:'M8 12V6a1.5 1.5 0 013 0v5M11 11V4.5a1.5 1.5 0 013 0V11M14 11V6a1.5 1.5 0 013 0v7a6 6 0 01-6 6 5 5 0 01-4-2l-3-4a1.5 1.5 0 012.2-2L8 14'
+};
+var SK_CATS=[['ALL','SAB'],['PHONE','PHONE'],['COMM','CALL / MSG'],['APPS','APPS / SCREEN'],['LIVE','LIVE INFO'],['MAKE','BANAO'],['MIND','YAAD / ROUTINE'],['VOICE','AWAAZ'],['AI','AI DIMAAG'],['LINK','CONNECTORS'],['SAFE','SAFETY']];
+var SK_TITLE={PHONE:'PHONE KAABU (BINA INTERNET)',COMM:'CALL, MESSAGE, MAIL',APPS:'APPS AUR SCREEN',LIVE:'LIVE JANKARI AUR HISAAB',MAKE:'BANAO',MIND:'YAAD, SEEKHNA, ROUTINE',VOICE:'AWAAZ AUR SUNNA',AI:'AI DIMAAG',LINK:'CONNECTORS (SERVICES)',SAFE:'SAFETY AUR BACKGROUND'};
+var skCat='ALL',skQ='';
+function skRegistry(X){
+  var st=X.st,se=X.se,B=X.B,go=X.go,call=X.call;
   var brain=!!se.hasKey||B('getFreeChain')||B('hasGroqKey')||B('hasOpenRouterKey')||B('hasZaiKey');
   var img=!!se.hasKey||B('getFreeImg')||B('hasImgKey');
-  var gh=B('hasGithubToken');
-  var go=function(id){return function(){if(window.novaGo)window.novaGo(id)}};
-  var call=function(f){return function(){try{Android[f]()}catch(e){}}};
-  var G=[
-   ['PHONE KAABU',[
-    ['bolt','Torch, volume, battery, apps, wifi','Bina internet, bina API key.',null,['nova torch jala do'],[]],
-    ['call','Call aur message','Naam se call/SMS. Contacts permission chahiye.',!!st.contacts,['nova [naam] ko call karo'],[['CONTACTS ALLOW',call('requestContacts')]]],
-    ['chip','Timer, alarm, reminder','Offline chalte hain.',null,['set alarm for six thirty am','nova das minute baad chai yaad dilao'],[]],
-    ['car','Driving mode','WhatsApp/SMS bol kar sunata hai, reply bolte hi bhej deta hai.',!!st.notifAccess,['driving mode on'],[['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
-    ['mute','Quiet mode','Jawab sirf screen par, awaaz band.',null,['quiet mode on'],[['ABHI CHUP',call('stopSpeak')]]]]],
-   ['SCREEN AUR APPS',[
-    ['eye','Screen padhna / samajhna','Screen ka text padhta hai. Protected screens cloud ko kabhi nahi jaati.',!!st.acc,['read the screen','analyze screen'],[['ACCESSIBILITY',call('openAccessibility')]]],
-    ['scr','Agent: doosre app mein kaam','App kholo, sawal poochho, jawab wapas. Bank/payment/password screens par kaam nahi karta.',!!st.acc,['nova agent status','nova kaam chatgpt kholo aur ek joke poochho'],[['ACCESSIBILITY',call('openAccessibility')]]]]],
-   ['BANAO',[
-    ['spark','Photo / image banana','AI se image. Gemini key ya free image option chahiye.',img,['nova ek billi ki photo banao'],[['KEY / OPTION',go('i_on')]]],
-    ['bolt','Website banana','Ek line se poori website. AI brain chahiye.',brain,['nova ek restaurant ki website banao'],[['AI KEY',go('s_key')]]],
-    ['upd','Website publish','GitHub par publish. GitHub token chahiye.',gh,['nova website publish karo'],[['GITHUB TOKEN',go('gh_key')]]]]],
-   ['SEEKHO AUR YAAD',[
-    ['chip','Naya topic seekhna','Topic public Wikipedia se aata hai (key nahi chahiye).',null,['nova solar panel ke baare mein seekho'],[['LEARNED LIST',go('b_clear')]]],
-    ['chip','Yaad rakhna','Sirf is phone mein, upload nahi. Max 3 relevant facts jawab mein jaate hain.',null,['nova yaad rakh mera naam Shiv hai'],[['MEMORY',go('mem_ch')]]],
-    ['eye','Background recording','Sirf aapke kehne par. Settings mein status dikhta hai.',null,['nova background me recording on karo'],[]]]],
-   ['NAYE KAAM (v6.97-wip9)',[
-    ['eye','Screen dekh kar pehchano + search','Bolo: "ye kaun si movie hai". Screenshot lekar web search se naam batata hai. Popup ke liye koi button nahi. AI key chahiye; bank/payment screen par kabhi nahi.',!!st.acc&&brain,['nova ye kaun si movie hai','nova is gaane ka naam batao'],[['ACCESSIBILITY',call('openAccessibility')],['AI KEYS',go('s_key')]]],
-    ['chat','Normal baat-cheet','Jawab ke baad NOVA khud dobara sunta hai (6 baar tak), type ya bol kar. Settings mein BAAT-CHEET switch se band kar sakte ho.',B('getConvo'),['nova aaj ka din kaisa rahega','phir usme se sabse acha kya hai'],[]],
-    ['spark','5 free browsers + Offline AI','Mausam, khabar, rate, wiki bina key. Offline AI phone par chalta hai.',null,['nova aaj ka mausam','nova bitcoin ka rate'],[]],
-    ['mute','Ringer / DND','"ringer silent / vibrate / normal". Silent ke liye Do Not Disturb access chahiye.',!!st.dnd,['nova ringer silent karo'],[['DND ACCESS',call('openDndAccess')]]],
-    ['spark','AI SMART reply','Notification/WhatsApp ka jawab NOVA khud likhta hai; OTP/password par ruk jata hai.',B('getSmartReply'),['smart reply on'],[['AUTO-REPLY',go('ar_smart')]]],
-    ['scr','Screenshot, rotation, vibrate','"screenshot lo", "auto rotate off", "phone vibrate par karo". Rotation ke liye Write settings, silent ke liye DND chahiye.',null,['nova screenshot lo','nova auto rotate off'],[]],
-    ['call','Notification padhna + reply','Driving/Message mode mein message bol kar sunata hai, reply bolte hi bhejta hai.',!!st.notifAccess,['message mode on'],[['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
-    ['car','Lock Guard','Phone lock ho to koi command nahi; Papa/Mummy ka call ya message par loud alert.',B('getLockGuard'),[],[]]]],
-   ['AI BRAIN',[
-    ['spark','Online AI (sawaal, lamba jawab)','Gemini / Groq / OpenRouter / Z.ai / Pollinations. Bina key ke local commands chalte hain.',brain,[],[['AI KEYS',go('s_key')],['LIMITS DEKHO',function(){g('t_limits').click()}]]]]]
+  var bs=X.bs||{};
+  var ar={};try{ar=JSON.parse(Android.getAutoReply())||{}}catch(e){}
+  var si={};try{si=JSON.parse(Android.getSelfImproveCfg())||{}}catch(e){}
+  var cn=X.cn||[];
+  function conn(id){var r=null;cn.forEach(function(c){if(c.id===id)r=c});return r}
+  function cc(id){var r=conn(id);return r?!!r.connected:false}
+  var O='opt';
+  var CONN=function(id,t,d,say){var r=conn(id);return {c:'LINK',i:'plug',t:t,d:(r&&r.short)||d,s:cc(id),say:say||[],act:[['CONNECT KHOLO',function(){X.openConnect()}]]}};
+  return [
+  /* ---- PHONE ---- */
+  {c:'PHONE',i:'bolt',t:'Torch',d:'Torch ek bol mein on/off. Bina internet, bina API key.',s:null,say:['nova torch jala do','torch band karo']},
+  {c:'PHONE',i:'mute',t:'Volume aur awaaz',d:'Volume badhao, kam karo, mute, full ya seedha number.',s:null,say:['volume fifty','volume mute','awaaz badhao']},
+  {c:'PHONE',i:'sun',t:'Brightness',d:'Screen ki roshni badalna. Pehle Write settings ki ijazat chahiye.',s:!!st.writeSettings,say:['brightness 70','brightness kam karo'],act:[['BRIGHTNESS ALLOW',call('openWriteSettings')]]},
+  {c:'PHONE',i:'chip',t:'Battery, time, date',d:'Battery kitni hai, abhi samay kya hai, aaj ki tareekh. Offline.',s:null,say:['battery','what is the time','what is the date']},
+  {c:'PHONE',i:'clock',t:'Alarm, timer, reminder',d:'Phone ke Clock app se asli alarm. NOVA so raha ho tab bhi bajta hai.',s:null,say:['set alarm for six thirty am','nova das minute baad chai yaad dilao']},
+  {c:'PHONE',i:'wifi',t:'Wifi, bluetooth, display settings',d:'Phone ki sahi setting screen seedha khol deta hai (wifi, bluetooth, display, sound, battery, location, do not disturb).',s:null,say:['wifi settings kholo','bluetooth settings','do not disturb']},
+  {c:'PHONE',i:'music',t:'Music control',d:'Chal rahe gaane ko pause ya next.',s:null,say:['pause music','next song']},
+  {c:'PHONE',i:'cam',t:'Camera kholna',d:'Camera ya selfie camera khol deta hai. Photo ka button aap dabate ho.',s:null,say:['camera kholo','nova selfie camera kholo']},
+  {c:'PHONE',i:'home',t:'Home, Back, Recents, scroll',d:'Phone navigation ek bol mein. Accessibility ON honi chahiye.',s:!!st.acc,say:['go home','go back','open recents','neeche scroll karo'],act:[['ACCESSIBILITY',call('openAccessibility')]]},
+  {c:'PHONE',i:'sun',t:'Aaj ka schedule (calendar)',d:'Aaj ki meetings bol kar sunata hai. Calendar text sirf phone mein padha jaata hai, cloud ko nahi jaata. Meeting se pehle reminder bhi.',s:O,say:['aaj ka schedule','meri meetings'],act:[['CALENDAR ALLOW',call('requestCalendarRead')]]},
+  {c:'PHONE',i:'bell',t:'Chup aur Quiet mode',d:'"chup" bolne par NOVA ruk jaata hai. Quiet mode me jawab sirf screen par. Order ke saath "chup rehna" bolo to us ek kaam me awaaz nahi.',s:null,say:['quiet mode on','voice replies on','stop'],act:[['ABHI CHUP',call('stopSpeak')]]},
+  /* ---- COMM ---- */
+  {c:'COMM',i:'call',t:'Call karna',d:'Naam bolo. NOVA contact dhundhta hai, pakka na ho to poochta hai, call se pehle aapse haan leta hai.',s:!!st.contacts,say:['nova [naam] ko call karo'],act:[['CONTACTS ALLOW',call('requestContacts')]]},
+  {c:'COMM',i:'msg',t:'SMS bhejna',d:'Naam se SMS taiyaar karta hai. Bhejne se pehle haan poochta hai.',s:!!st.contacts,say:['nova [naam] ko message karo [text]'],act:[['CONTACTS ALLOW',call('requestContacts')]]},
+  {c:'COMM',i:'msg',t:'WhatsApp / WhatsApp Business',d:'Message bhejna. WhatsApp aur WhatsApp Business alag app ki tarah pehchane jaate hain. Bhejne se pehle haan. Accessibility chahiye.',s:!!st.acc&&!!st.contacts,say:['nova Rahul ko WhatsApp karo kal milte hain','whatsapp business kholo'],act:[['ACCESSIBILITY',call('openAccessibility')]]},
+  {c:'COMM',i:'msg',t:'Bheja hua message delete',d:'NOVA ne jo message bheja usi ko WhatsApp me "delete for everyone" / Instagram me unsend. Screen par check karke sach batata hai. Accessibility chahiye.',s:!!st.acc,say:[],act:[['ACCESSIBILITY',call('openAccessibility')]]},
+  {c:'COMM',i:'repeat',t:'Auto reply (WhatsApp / Instagram)',d:'Naya message aate hi tay jawab bhejta hai, baad me history me dikhata hai. Group chat, code, password wale message ko kabhi nahi.',s:!!ar.on,say:[],act:[['AUTO REPLY SETTING',go('ar_on')]]},
+  {c:'COMM',i:'car',t:'Driving mode',d:'Gaadi chalate waqt WhatsApp/SMS bol kar sunata hai. "reply likho" bolo, haan ke baad hi bhejta hai.',s:!!st.notifAccess,say:['driving mode on','driving mode off'],act:[['NOTIFICATION ACCESS',call('openNotificationAccess')]]},
+  {c:'COMM',i:'mail',t:'Gmail (bina login)',d:'Gmail ki notification padh kar zaroori mail batata hai, "Jio bill" jaisi watch list rakhta hai, mail ka draft kholta hai. Bhejna aap karte ho.',s:!!st.notifAccess&&cc('gmail'),say:[],act:[['NOTIFICATION ACCESS',call('openNotificationAccess')],['CONNECT KHOLO',function(){X.openConnect()}]]},
+  {c:'COMM',i:'msg',t:'Message mode (chuni hui apps)',d:'Sirf aapki chuni apps ke message padhta hai. Bank, payment, OTP, mail kabhi nahi.',s:!!st.notifAccess,say:[],act:[['NOTIFICATION ACCESS',call('openNotificationAccess')]]},
+  /* ---- APPS ---- */
+  {c:'APPS',i:'rocket',t:'App kholna',d:'Phone ki koi bhi app naam se khulti hai.',s:null,say:['nova YouTube kholo','open whatsapp','chrome khol do']},
+  {c:'APPS',i:'music',t:'App ke andar gaana / search',d:'Installed app me seedha search ya play, AI limit lage bina. "ye share karo <app>" bhi.',s:null,say:['spotify open karo aur legacy song play karo']},
+  {c:'APPS',i:'map',t:'Raasta aur Maps',d:'Google Maps me jagah ya raasta khol deta hai.',s:null,say:['nova Delhi ka raasta dikhao']},
+  {c:'APPS',i:'eye',t:'Screen padhna',d:'Screen ka text padh kar bolta hai. Bank, payment, password screen cloud ko kabhi nahi jaati.',s:!!st.acc,say:['read the screen','nova screen padh kar batao'],act:[['ACCESSIBILITY',call('openAccessibility')]]},
+  {c:'APPS',i:'eye',t:'Screen dekh kar pehchano + search',d:'Bolo "ye kaun si movie hai" / "is gaane ka naam batao". Screenshot lekar web search se naam batata hai. Popup ke liye koi button nahi. Gemini key chahiye; bank/payment screen par kabhi nahi.',s:!!st.acc&&brain,say:['nova ye kaun si movie hai','nova is gaane ka naam batao'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('s_key')]]},
+  {c:'PHONE',i:'mute',t:'Ringer / DND (silent, vibrate, normal)',d:'"ringer silent / vibrate / normal". Silent ke liye Do Not Disturb access chahiye.',s:!!st.dnd,say:['nova ringer silent karo','vibrate par karo'],act:[['DND ACCESS',call('openDndAccess')]]},
+  {c:'PHONE',i:'scr',t:'Screenshot, auto-rotate',d:'"screenshot lo", "auto rotate off". Rotation ke liye Write settings chahiye.',s:!!st.writeSettings,say:['nova screenshot lo','nova auto rotate off'],act:[['WRITE SETTINGS',call('openWriteSettings')]]},
+  {c:'COMM',i:'spark',t:'AI SMART reply',d:'Notification / WhatsApp ka jawab NOVA khud likhta hai; OTP / password par ruk jata hai.',s:B('getSmartReply'),say:['smart reply on'],act:[['AUTO-REPLY',go('ar_smart')]]},
+  {c:'APPS',i:'eye',t:'Screen analyze (deep)',d:'Screen ko samajh kar batata hai. AI key ho to behtar jawab.',s:!!st.acc&&brain,say:['analyze screen'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('s_key')]]},
+  {c:'APPS',i:'scr',t:'Agent: doosre app me kaam',d:'App kholo, sawal poochho, naam se chat dhundo, YouTube chalao ya roko, jawab wapas lao. Payment/password screen par kaam nahi.',s:!!st.acc&&brain,say:['nova agent status','nova kaam chatgpt kholo aur ek joke poochho'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('g_key')]]},
+  {c:'APPS',i:'bell',t:'Screen alert (error / warning)',d:'Dialog me error dikhe to NOVA ek baar bol deta hai. Sab kuch phone ke andar.',s:!!st.acc,say:['monitor on'],act:[['SETTING',go('s_screen')]]},
+  {c:'APPS',i:'hand',t:'Tap, type, scroll (voice control)',d:'Screen par tap, type, scroll. Send/pay/delete jaise risky button hamesha aapke bole haan ke baad.',s:!!st.acc,say:[],act:[['ACCESSIBILITY',call('openAccessibility')]]},
+  /* ---- LIVE ---- */
+  {c:'LIVE',i:'cloud',t:'Mausam',d:'Open-Meteo se shehar ka mausam, bina key. Na mile to "abhi nahi mila", kabhi banawati jawab nahi.',s:!!bs.web,say:['jaipur ka mausam kaisa hai','weather in Delhi'],act:[['MERA SHEHAR',go('wb_city')]]},
+  {c:'LIVE',i:'news',t:'Taaza khabar',d:'Google News RSS se headlines, bina key.',s:!!bs.web,say:['aaj ki taaza khabar sunao','cricket ki khabar'],act:[['WEB BROWSERS',go('wb_web')]]},
+  {c:'LIVE',i:'coin',t:'Currency aur crypto rate',d:'Dollar, euro jaise rate (Frankfurter) aur bitcoin jaisa crypto (CoinGecko), bina key.',s:!!bs.web,say:['dollar ka rate kya hai','bitcoin ka price kya hai'],act:[['WEB BROWSERS',go('wb_web')]]},
+  {c:'LIVE',i:'book',t:'Shabd ka matlab / jankari',d:'Wikipedia, Wiktionary aur DuckDuckGo se short jawab, source ke saath.',s:!!bs.web,say:['nova solar panel kya hota hai'],act:[['WEB BROWSERS',go('wb_web')]]},
+  {c:'LIVE',i:'calc',t:'Calculator, unit, tareekh',d:'Jodna, ghatana, guna, bhaag, percent, square root, kg-lb jaise unit, "45 din baad kaun si tareekh". Bina model, bina internet.',s:null,say:['forty eight into two','what is fifteen percent of two hundred','convert five kg to pounds','what is the date after 45 days','aaj kaun sa din hai']},
+  {c:'LIVE',i:'brain',t:'Sawal ka jawab',d:'Aam sawal Hindi, Hinglish ya English me. Chhote sawal pehle phone ka offline AI, baaki online AI chain.',s:null,say:['nova solar panel kaise kaam karta hai']},
+  {c:'LIVE',i:'globe',t:'Source batana',d:'NOVA bata sakta hai ki kaun si jankari kahan se aati hai.',s:null,say:['tum jawab kahan se laate ho']},
+  /* ---- MAKE ---- */
+  {c:'MAKE',i:'img',t:'Photo / image banana',d:'AI se nayi photo. Gemini ke baad free options (Together, Pollinations, Hugging Face) apne aap try hote hain.',s:img,say:['nova ek billi ki photo banao'],act:[['KEY / OPTION',go('i_on')]]},
+  {c:'MAKE',i:'code',t:'Website banana',d:'Ek line bolo, poori website. Baad me "isko professional banao". Lambi brief bhi chalti hai.',s:brain,say:['nova ek restaurant ki website banao'],act:[['AI KEY',go('s_key')]]},
+  {c:'MAKE',i:'upd',t:'Website publish (GitHub)',d:'Bani hui site GitHub par live. GitHub token chahiye.',s:B('hasGithubToken'),say:['nova website publish karo'],act:[['GITHUB TOKEN',go('gh_key')]]},
+  {c:'MAKE',i:'img',t:'Photo bhej kar poochna (chat)',d:'Chat me PHOTO CHUNO se photo jodo aur uske baare me poochho.',s:brain,say:[],act:[['CHAT KHOLO',function(){X.openChat()}]]},
+  {c:'MAKE',i:'edit',t:'Business leads (aapke kehne par)',d:'Sirf aapke shuru karne par public business details save karta hai aur outreach draft banata hai.',s:null,say:[]},
+  /* ---- MIND ---- */
+  {c:'MIND',i:'chip',t:'Yaad rakhna (personal memory)',d:'Aapki baatein sirf is phone me. Max 100 baatein. Online AI ko sirf sawaal se milti-julti 3 tak (aap ON karo to).',s:null,say:['nova yaad rakh mera naam Shiv hai','nova mujhe kya yaad hai','nova bhool ja mera naam'],act:[['MEMORY',go('mem_ch')]]},
+  {c:'MIND',i:'book',t:'Naya topic seekhna',d:'Wikipedia se chhota note. Tabhi yaad rehta hai jab aap RAKHO dabao.',s:null,say:['nova solar panel ke baare mein seekho'],act:[['KYA SEEKHA',go('ln_ref')]]},
+  {c:'MIND',i:'edit',t:'Teach once (alias)',d:'"mummy" = "Sunita" jaise shortcut naam. Contacts aur target commands me chalte hain.',s:null,say:[],act:[['TEACH',go('teach_alias')]]},
+  {c:'MIND',i:'repeat',t:'Routines (safe multi-step)',d:'"good morning" bolo to torch off, volume up jaise safe steps ek saath. Call, message, payment, delete allowed nahi.',s:null,say:[],act:[['ROUTINES',go('rt_name')]]},
+  {c:'MIND',i:'clock',t:'Mera schedule',d:'Subah "Good morning" ke saath aaj ke kaam, har kaam se 25 min pehle yaad. Bolkar bhi kaam jod sakte ho.',s:null,say:['somvar mangalvar subah 7 baje gym yaad dilao bahut zaruri'],act:[['SCHEDULE',go('sc_label')]]},
+  {c:'MIND',i:'spark',t:'Auto-seekho',d:'Achhe jawab apne aap yaad rakhta hai (sirf phone me, KYA SEEKHA me dekh/hata sakte ho).',s:B('getAutoLearn'),say:[],act:[['SWITCH',go('al_on')]]},
+  {c:'MIND',i:'shield',t:'Roz ka sudhaar',d:'Roz 1 ghante free AI app ke nickname sujhata hai. Aapke HAAN ke baad hi lagta hai, WAPAS se undo.',s:!!si.on,say:[],act:[['SETTING',go('si_on')]]},
+  /* ---- VOICE ---- */
+  {c:'VOICE',i:'mic',t:'Wake word ("nova")',d:'"nova" bolte hi jaagta hai. Wake word badal sakte ho (jarvis, computer...). Kabhi apne aap nahi jaagta.',s:!!st.mic,say:[],act:[['WAKE SETTING',go('s_wake')]]},
+  {c:'VOICE',i:'mic',t:'Porcupine wake word (kam galat wake)',d:'Optional Picovoice key + nova.ppn se behtar wake detection.',s:O,say:[],act:[['PORCUPINE',go('pv_key')]]},
+  {c:'VOICE',i:'mic',t:'Hindi / Hinglish sunna (Groq)',d:'Groq key ho to Hindi aur Hinglish behtar samajhta hai. Aapki awaaz tab Groq ko jaati hai.',s:B('hasGroqKey'),say:[],act:[['GROQ KEY',go('g_key')]]},
+  {c:'VOICE',i:'mute',t:'Noise cancel',d:'Background shor kam karke mic ko saaf sunta hai.',s:B('getNoiseCancel'),say:[],act:[['SWITCH',go('wb_nc')]]},
+  {c:'VOICE',i:'repeat',t:'Baat-cheet mode',d:'Jawab ke baad 6 baar tak bina "nova" bole sunta rehta hai (default ON).',s:B('getConvo'),say:[],act:[['SWITCH',go('cv_on')]]},
+  {c:'VOICE',i:'mute',t:'Awaaz ki speed / pitch / bhasha',d:'Hindi ya English, bolne ki speed aur pitch. AWAAZ TEST se suno.',s:null,say:[],act:[['AWAAZ SETTING',go('s_lang')]]},
+  {c:'VOICE',i:'rec',t:'Background audio recording',d:'Sirf aapke kehne par. Notification hamesha dikhti hai. Screen band hone par bhi chalti hai.',s:null,say:['nova background me recording on karo','nova recording band karo'],act:[['RECORDING',go('rc_start')]]},
+  {c:'VOICE',i:'cam',t:'Background video recording',d:'Back ya front camera video. Camera/mic ka green indicator aur notification hamesha. Recordings manager me play, share, delete.',s:null,say:[],act:[['VIDEO',go('vr_start')]]},
+  /* ---- AI ---- */
+  {c:'AI',i:'brain',t:'Online AI chain (auto fallback)',d:'Gemini, Groq, Qwen / Z.ai, OpenRouter, Pollinations. Ek ki limit khatam ho to agla khud chalta hai, aapse poochhe bina.',s:brain,say:[],act:[['AI KEYS',go('s_key')],['FREE AI',go('fc_on')]]},
+  {c:'AI',i:'chip',t:'Phone AI (offline, Qwen)',d:'Chhote sawal phone ke andar. Online hone par bhi pehle yahi, taaki cloud par load kam ho (LOCAL FIRST).',s:!!bs.localReady,say:[],act:[['MODEL DOWNLOAD',go('am_brain')],['LOCAL FIRST',go('wb_lf')]]},
+  {c:'AI',i:'globe',t:'Hindi pack + Knowledge',d:'Hindi / Hinglish command samajhna aur phone me rakhi jankari. Bina internet.',s:null,say:[],act:[['AUTO DOWNLOAD',go('am_on')]]},
+  {c:'AI',i:'spark',t:'Chat me AI chuno',d:'Chat ke upar "AI" button se chuno kaun sa AI jawab de, ya PHONE AI. AUTO FALLBACK ON/OFF.',s:null,say:[],act:[['CHAT KHOLO',function(){X.openChat()}]]},
+  {c:'AI',i:'chip',t:'API limits dekhna',d:'Har AI service: aaj kitni use hui, kitni bachi, cooldown. Limit khud badal sakte ho.',s:null,say:[],act:[['LIMITS DEKHO',function(){X.openLimits()}]]},
+  {c:'AI',i:'upd',t:'Safe updates',d:'Naya skill / model / app pehle aapse poochta hai, SHA-256 check ke baad hi lagta hai. ROLLBACK bhi.',s:null,say:['check updates'],act:[['UPDATE FEED',go('u_feed')]]},
+  /* ---- LINK ---- */
+  CONN('github','GitHub','Repos, issues, workflow runs padhna. Issue, naya repo, file commit (WRITE, haan ke baad).'),
+  CONN('vercel','Vercel','Projects, deployments, domains dekhna. Redeploy (WRITE).'),
+  CONN('netlify','Netlify','Sites aur deploys dekhna.'),
+  CONN('cloudflare','Cloudflare','Zones aur DNS jaankari.'),
+  CONN('supabase','Supabase','Projects dekhna.'),
+  CONN('notion','Notion','Pages aur databases padhna.'),
+  CONN('lovable','Lovable','Lovable projects (GitHub se juda).'),
+  {c:'LINK',i:'plug',t:'Custom MCP server',d:'Koi bhi https MCP server jodo. NOVA uske tools dekh kar chalata hai. WRITE tool hamesha haan ke baad.',s:O,say:[],act:[['CONNECT KHOLO',function(){X.openConnect()}]]},
+  {c:'LINK',i:'repeat',t:'Automation: n8n, Zapier, Make, IFTTT',d:'Webhook trigger (hamesha haan ke baad) aur n8n API (workflows dekhna, ON/OFF).',s:O,say:[],act:[['CONNECT KHOLO',function(){X.openConnect()}]]},
+  /* ---- SAFE ---- */
+  {c:'SAFE',i:'lock',t:'Lock guard',d:'Phone lock hote hi koi voice command nahi. Sirf zaroori call/message alert beep ke saath. Volume key 1 baar = alert band.',s:B('getLockGuard'),say:[],act:[['SWITCH',go('wb_lg')]]},
+  {c:'SAFE',i:'bell',t:'History aur alerts',d:'NOVA ne kya kiya, har kaam ki list (upar ghanti). Saaf bhi kar sakte ho.',s:null,say:[],act:[['HISTORY KHOLO',function(){X.openHist()}]]},
+  {c:'SAFE',i:'shield',t:'Apne aap test aur status',d:'App khud torch, volume, mic, screen, 5 web browsers ki jaanch karta hai. Report Settings me.',s:null,say:[],act:[['TEST REPORT',go('st_err')],['SAARE FEATURES',go('fcc')]]},
+  {c:'SAFE',i:'bolt',t:'Background me chalte rehna',d:'Battery / Autostart ki setting jahan NOVA ko chalne dena hai (Xiaomi jaise brand ke liye alag guide).',s:!!st.battery,say:[],act:[['BATTERY SETTING',call('openBatterySettings')]]},
+  {c:'SAFE',i:'hand',t:'Jo NOVA nahi karta',d:'Phone band / restart / factory reset, bank-payment-password screen par kaam, OTP / PIN yaad rakhna. Ye clear jawab deta hai, koshish nahi karta.',s:null,say:[]}
   ];
+}
+function skRun(X,t){X.closeOthers('chat');if(X.cb)X.cb.click();setTimeout(function(){var i=X.g('c_in');if(i){i.value=t;var s=X.g('c_send');setTimeout(function(){try{s.click()}catch(e){}},120)}},260)}
+
+function skFilter(all){
+  var q=skQ.toLowerCase().trim();
+  return all.filter(function(x){
+    if(skCat!=='ALL'&&x.c!==skCat)return false;
+    if(!q)return true;
+    return (x.t+' '+x.d+' '+(x.say||[]).join(' ')+' '+x.c).toLowerCase().indexOf(q)>=0;
+  });
+}
+function renderSkills(){
+  var X={st:J('getStatus'),se:J('getSettings'),B:B,bs:J('getBrowserStatus'),
+    cn:(function(){try{return JSON.parse(Android.getConnectors()||'[]')}catch(e){return []}})(),
+    go:function(id){return function(){if(window.novaGo)window.novaGo(id)}},
+    call:function(f){return function(){try{Android[f]()}catch(e){}}},
+    openConnect:function(){var b=g('t_conn');if(b)b.click()},
+    openChat:function(){closeOthers('chat');if(cb)cb.click()},
+    openLimits:function(){g('t_limits').click()},
+    openHist:function(){var a=g('alb');if(a)a.click()},
+    closeOthers:closeOthers,cb:cb,g:g};
+  var all=skRegistry(X);
+  var rdy=0,set=0;all.forEach(function(x){if(x.s===null||x.s===true)rdy++;else if(x.s===false)set++});
+  var cnt=g('sk_c');cnt.textContent='';
+  [['SKILLS',all.length],['READY',rdy],['SETUP',set]].forEach(function(p,k){if(k)cnt.appendChild(document.createTextNode(' \u00b7 '));var b=el('b',null,String(p[1]));cnt.appendChild(b);cnt.appendChild(document.createTextNode(' '+p[0]))});
+  var F=g('sk_f');
+  if(!F.firstChild){SK_CATS.forEach(function(c){var b=el('button',skCat===c[0]?'sel':'',c[1]);b.setAttribute('data-c',c[0]);b.onclick=function(){skCat=c[0];[].forEach.call(F.children,function(x){x.classList.toggle('sel',x.getAttribute('data-c')===skCat)});drawSkills(all);g('v_skills').scrollTop=0};F.appendChild(b)})}
+  var q=g('sk_q');if(!q._b){q._b=1;var t=0;q.addEventListener('input',function(){clearTimeout(t);t=setTimeout(function(){skQ=q.value;drawSkills(SK_LAST)},120)})}
+  drawSkills(all);
+}
+var SK_LAST=[];
+function drawSkills(all){
+  SK_LAST=all;
+  var X={closeOthers:closeOthers,cb:cb,g:g};
   var L=g('sk_l');L.textContent='';
-  G.forEach(function(gp){
-    L.appendChild(el('div','grp',gp[0]));
-    gp[1].forEach(function(s){
-      var c=el('div','vc'),h=el('div','hd'),gl=el('div','gl');gl.appendChild(svg(IC[s[0]]||IC.spark));
-      var tt=el('div');var b=el('b',null,s[1]);
-      var ch=el('span','chip '+(s[3]===null?'rdy':(s[3]?'on':'off')),s[3]===null?'ALWAYS READY':(s[3]?'ON':'SETUP'));
-      b.appendChild(ch);tt.appendChild(b);h.appendChild(gl);h.appendChild(tt);c.appendChild(h);c.appendChild(el('p',null,s[2]));
-      if(s[4].length){var sy=el('div','say');s[4].forEach(function(t){var bt=el('button');var i=el('i',null,'SAY');bt.appendChild(i);bt.appendChild(document.createTextNode(t));bt.onclick=function(){tryText(t)};sy.appendChild(bt)});c.appendChild(sy)}
-      if(s[5].length&&s[3]!==true){var a=el('div','acts');s[5].forEach(function(x){var bt=el('button',x[0]==='LIMITS DEKHO'?'v':'a',x[0]);bt.onclick=x[1];a.appendChild(bt)});c.appendChild(a)}
-      else if(s[5].length){var a2=el('div','acts');s[5].forEach(function(x){var bt=el('button','v',x[0]);bt.onclick=x[1];a2.appendChild(bt)});c.appendChild(a2)}
-      L.appendChild(c)
-    })
-  })
+  var list=skFilter(all),last='';
+  list.forEach(function(s){
+    if(s.c!==last){last=s.c;var n=list.filter(function(z){return z.c===s.c}).length;var gp=el('div','grp',SK_TITLE[s.c]||s.c);gp.appendChild(el('em',null,String(n)));L.appendChild(gp)}
+    var c=el('div','vc'),h=el('div','hd'),gl=el('div','gl');gl.appendChild(svg(IC2[s.i]||IC2.spark));
+    var tt=el('div');var b=el('b',null,s.t);
+    var k=s.s===null?['rdy','ALWAYS READY']:s.s===true?['on','ON']:s.s==='opt'?['mut','OPTIONAL']:['off','SETUP'];
+    b.appendChild(el('span','chip '+k[0],k[1]));tt.appendChild(b);h.appendChild(gl);h.appendChild(tt);c.appendChild(h);c.appendChild(el('p',null,s.d));
+    if(s.say&&s.say.length){var sy=el('div','say');s.say.forEach(function(t){
+      var run=!/[\[<]/.test(t);var bt=el('button',run?'go':'');bt.appendChild(el('i',null,run?'RUN':'SAY'));bt.appendChild(document.createTextNode(t));
+      bt.onclick=run?function(){skRun(X,t)}:function(){tryText(t)};sy.appendChild(bt)});c.appendChild(sy)}
+    if(s.act&&s.act.length&&s.s!==true&&s.s!==null||(s.act&&s.act.length&&(s.c==='LINK'||s.c==='AI'||s.c==='VOICE'||s.c==='MIND'||s.c==='SAFE'))){
+      var a=el('div','acts');s.act.forEach(function(x){var bt=el('button',s.s===false?'a':'v',x[0]);bt.onclick=x[1];a.appendChild(bt)});c.appendChild(a)}
+    L.appendChild(c)});
+  if(!list.length)L.appendChild(el('div','sk-nil','Koi skill nahi mili. Kuch aur dhundo.'));
 }
 /* ---- LIMITS ---- */
 var GRP={brain:'AI BRAIN',voice:'AWAAZ (SUNNA)',image:'IMAGE'};
@@ -2572,7 +2394,7 @@ function renderLimits(force){
   (u.rows||[]).forEach(function(r){
     if(r.group!==last){last=r.group;L.appendChild(el('div','grp',GRP[r.group]||r.group.toUpperCase()))}
     var known=r.limit>0,pct=known?r.percent:-1;
-    var col=!known?'#7C5CFF':pct>=90?'#FF5C7A':pct>=70?'#FFB547':'#35F2C2';
+    var col=!known?'#6f7bff':pct>=90?'#FF5C7A':pct>=70?'#FFB547':'#2fd8ff';
     var c=el('div','vc'),hd=el('div','hd');var tt=el('div');var b=el('b',null,r.label);
     var src=r.source==='live'?['LIVE','on']:r.source==='local'?['PHONE COUNT','rdy']:['COUNT ONLY','mut'];
     b.appendChild(el('span','chip '+src[1],src[0]));
@@ -2814,7 +2636,7 @@ try{
   var l=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
   ['uRes','uFull','uTile','uTime','uMood','uJit','uBg'].forEach(function(n){U[n]=gl.getUniformLocation(pr,n)});
 }catch(e){return}
-var CSS=250,DPR=Math.min(window.devicePixelRatio||1,Math.min(2,window.__dprCap||2)),SC=[1,.75,.5],si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si,RM=false,lost=false;
+var CSS=250,DPR=Math.min(window.devicePixelRatio||1,Math.min(2,window.__dprCap||2)),SC=[.8,.6,.45],si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si,RM=false,lost=false;
 try{RM=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches}catch(e){}
 cv.style.background='url(orb_poster.png) center/contain no-repeat';
 function fallback(){window.__orb3d=false;cv.style.display='none';old.style.display=''}
@@ -2865,14 +2687,6 @@ requestAnimationFrame(loop);
 #lt .bm{filter:none!important}
 #app{will-change:auto}
 </style>
-<style id="resp-v38">
-/* v6.38 small to large screens */
-@media(max-width:340px){.wrap{padding:24px 12px 16px}h1{letter-spacing:8px;font-size:20px}.orbbox{flex-basis:200px}}
-@media(max-height:640px){.orbbox canvas{max-height:100%!important;max-width:100%!important;object-fit:contain}}
-@media(max-height:520px){.orbbox{flex-basis:110px}.status{margin-top:2px}}
-@media(min-width:700px){.wrap{max-width:640px;margin-left:auto;margin-right:auto}}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-</style>
 <script id="nova-sched-v40">
 (function(){
   function g(i){return document.getElementById(i)}
@@ -2913,11 +2727,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <style id="nova-conn-v686">
 #v_conn .cn-top{display:flex;gap:8px;margin:0 0 10px}
 #v_conn .gl.cn-l{font-weight:800;font-size:17px;color:#eafff9;font-family:sans-serif}
-#v_conn .cn-acc{font-size:11px;color:#35F2C2;margin:6px 0 0}
-.cn-seg{display:flex;gap:0;margin-top:10px;border:1px solid rgba(124,92,255,.5);border-radius:12px;overflow:hidden}
-.cn-seg button{flex:1;border:0!important;border-radius:0!important;background:transparent!important;color:#b6a6ff!important;padding:8px 4px!important;text-align:center!important;font-size:10px!important;letter-spacing:1px!important}
-.cn-seg button+button{border-left:1px solid rgba(124,92,255,.35)!important}
-.cn-seg button.sel{background:rgba(124,92,255,.35)!important;color:#fff!important}
+#v_conn .cn-acc{font-size:11px;color:#2fd8ff;margin:6px 0 0}
+.cn-seg{display:flex;gap:0;margin-top:10px;border:1px solid rgba(111,123,255,.5);border-radius:12px;overflow:hidden}
+.cn-seg button{flex:1;border:0!important;border-radius:0!important;background:transparent!important;color:#aab4ff!important;padding:8px 4px!important;text-align:center!important;font-size:10px!important;letter-spacing:1px!important}
+.cn-seg button+button{border-left:1px solid rgba(111,123,255,.35)!important}
+.cn-seg button.sel{background:rgba(111,123,255,.35)!important;color:#fff!important}
 .cn-seg button.selw{background:rgba(255,181,71,.28)!important;color:#fff!important}
 .cn-note{font-size:10.5px;color:#98a4b8;margin:6px 0 0;line-height:1.45}
 #v_conn .cn-act{display:flex;flex-direction:column;gap:6px;margin-top:8px}
@@ -2927,30 +2741,30 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 #v_conn .cn-dis{opacity:.45}
 .cn-sheet{position:fixed;left:0;right:0;top:0;bottom:var(--tabb,64px);z-index:90;background:rgba(5,7,12,.82);display:none;align-items:flex-end;justify-content:center}
 .cn-sheet.on{display:flex}
-.cn-card{width:100%;max-width:640px;max-height:92%;overflow-y:auto;box-sizing:border-box;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,#1a1f33,#0d1119);border:1px solid rgba(124,92,255,.4)}
+.cn-card{width:100%;max-width:640px;max-height:92%;overflow-y:auto;box-sizing:border-box;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,#1a1f33,#0d1119);border:1px solid rgba(111,123,255,.4)}
 .cn-card h3{margin:0 0 4px;font-size:15px;letter-spacing:2px;color:#fff}
 .cn-card h4{margin:14px 0 4px;font-size:10px;letter-spacing:2.5px;color:#FFB547}
 .cn-card ul{margin:0;padding:0 0 0 18px;font-size:12px;line-height:1.55;color:#dfe6f2}
 .cn-card p{font-size:11.5px;line-height:1.5;color:#a9b4c6;margin:8px 0 0}
-.cn-code{font:800 26px/1.2 monospace;letter-spacing:6px;text-align:center;color:#35F2C2;background:rgba(53,242,194,.08);border:1px dashed rgba(53,242,194,.5);border-radius:14px;padding:12px;margin:10px 0}
-.cn-msg{font-size:12px;margin:10px 0 0;min-height:16px;color:#35F2C2}
+.cn-code{font:800 26px/1.2 monospace;letter-spacing:6px;text-align:center;color:#2fd8ff;background:rgba(47,216,255,.08);border:1px dashed rgba(47,216,255,.5);border-radius:14px;padding:12px;margin:10px 0}
+.cn-msg{font-size:12px;margin:10px 0 0;min-height:16px;color:#2fd8ff}
 .cn-msg.bad{color:#ff9a8c}
 .cn-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .cn-btns button{font-size:11px!important;padding:10px 14px!important}
 
-.cn-card .cn-seg{display:flex;margin-top:10px;border:1px solid rgba(124,92,255,.5);border-radius:12px;overflow:hidden}
+.cn-card .cn-seg{display:flex;margin-top:10px;border:1px solid rgba(111,123,255,.5);border-radius:12px;overflow:hidden}
 .cn-card input{width:100%;box-sizing:border-box;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:#fff;padding:9px 10px;font-size:12px}
 .cn-card button.a{border:1px solid rgba(255,181,71,.55);background:rgba(255,181,71,.10);color:#ffe6bf;border-radius:12px}
-.cn-card button.v{border:1px solid rgba(124,92,255,.55);background:rgba(124,92,255,.14);color:#e5deff;border-radius:12px}
+.cn-card button.v{border:1px solid rgba(111,123,255,.55);background:rgba(111,123,255,.14);color:#e5deff;border-radius:12px}
 .cn-card .cn-btns button{font-size:11px;letter-spacing:.8px;font-weight:600}
 .cn-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
 .cn-row:first-of-type{border-top:0}
 .cn-row .n{flex:1;min-width:0;font-size:13px;color:#f2f6fa;font-weight:600}
 .cn-row .n small{display:block;font-size:10.5px;color:#98a4b8;font-weight:400}
-.cn-row button{font-size:10.5px;padding:8px 12px;border-radius:12px;border:1px solid rgba(53,242,194,.4);background:rgba(53,242,194,.08);color:#dffff6;font-weight:600;letter-spacing:.6px}
+.cn-row button{font-size:10.5px;padding:8px 12px;border-radius:12px;border:1px solid rgba(47,216,255,.4);background:rgba(47,216,255,.08);color:#dffff6;font-weight:600;letter-spacing:.6px}
 #cn_strip{display:flex;gap:6px;overflow-x:auto;padding:6px 10px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #cn_strip::-webkit-scrollbar{display:none}
-#cn_strip button{flex:0 0 auto;font-size:10.5px;letter-spacing:.5px;padding:7px 11px;border-radius:99px;border:1px solid rgba(53,242,194,.4);background:rgba(53,242,194,.08);color:#dffff6;font-weight:600;white-space:nowrap}
+#cn_strip button{flex:0 0 auto;font-size:10.5px;letter-spacing:.5px;padding:7px 11px;border-radius:99px;border:1px solid rgba(47,216,255,.4);background:rgba(47,216,255,.08);color:#dffff6;font-weight:600;white-space:nowrap}
 #cn_strip button.add{border-color:rgba(255,181,71,.6);background:rgba(255,181,71,.12);color:#ffe6bf}
 #cn_strip button.w{border-color:rgba(255,181,71,.45);background:rgba(255,181,71,.08);color:#ffe6bf}
 .cn-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabb,64px) + 14px);z-index:95;background:#102a2a;color:#dffff6;border:1px solid rgba(53,242,194,.5);border-radius:12px;padding:9px 14px;font-size:12px;max-width:86%}
@@ -3017,7 +2831,7 @@ window.novaBack=function(){
   if(V.classList.contains('on')){V.classList.remove('on');var h=g('t_home');if(h)h.click();return 'handled'}
   return nb?nb():'exit'};
 function tryText(t){V.classList.remove('on');mark();if(cb)cb.click();setTimeout(function(){var i=g('c_in');if(i){i.value=t;try{i.focus()}catch(e){}}},220)}
-var SAY={github:['nova github repos dikhao','nova github issues owner/repo'],vercel:['nova vercel deployments dikhao','nova vercel redeploy mysite'],netlify:['nova netlify sites dikhao'],cloudflare:['nova cloudflare zones dikhao'],supabase:['nova supabase projects dikhao'],notion:['nova notion mein budget dhundo'],lovable:['nova lovable kholo']};
+var SAY={github:['nova github repos dikhao','nova github issues owner/repo'],vercel:['nova vercel deployments dikhao','nova vercel redeploy mysite'],netlify:['nova netlify sites dikhao'],cloudflare:['nova cloudflare zones dikhao'],supabase:['nova supabase projects dikhao'],notion:['nova notion mein budget dhundo'],lovable:['nova lovable kholo'],gmail:['nova important mail dikhao','nova gmail watch list dikhao']};
 
 /* ---------- list ---------- */
 function perm(d,lv,txt,cls){var b=el('button',lv===d.perm?cls:'',txt);b.onclick=function(){
@@ -3066,8 +2880,9 @@ function render(){
       var ft=el('div','acts');
       if(!lovLink){var ts=el('button','v','TEST');ts.onclick=function(){A('connectorTest',d.id)};ft.appendChild(ts)}
       if(d.id==='github'){var gi=el('input');gi.id='cn_gh_cid';gi.placeholder='OAuth Client ID (optional)';gi.value=A('connectorClientId')||'';gi.style.cssText='flex:1 1 100%;min-width:0';var gs=el('button','v','SAVE CLIENT ID');gs.onclick=function(){var r=A('connectorSetClientId',gi.value);msg(r==='ok'?'Client ID save ho gaya':'Client ID galat hai')};ft.appendChild(gi);ft.appendChild(gs)}
-      var dc=el('button','a',lovLink?'LOVABLE KHOLO':'DISCONNECT');
-      if(lovLink){dc.onclick=function(){A('connectorBegin',d.id)}}
+      var dc=el('button','a',lovLink?'LOVABLE KHOLO':(d.kind==='device'?'NOTIFICATION ACCESS':'DISCONNECT'));
+      if(d.kind==='device'){dc.onclick=function(){A('openNotificationAccess')}}
+      else if(lovLink){dc.onclick=function(){A('connectorBegin',d.id)}}
       else{var arm=0;dc.onclick=function(){if(!arm){arm=1;dc.textContent='PAKKA HATAO?';setTimeout(function(){arm=0;dc.textContent='DISCONNECT'},3500);return}A('connectorDisconnect',d.id);render()}}
       ft.appendChild(dc);c.appendChild(ft);
       if(d.id==='github')c.appendChild(el('div','cn-note','GitHub token "website publish" ke saath shared hai. DISCONNECT karne se woh bhi hat jaata hai.'));
@@ -3090,6 +2905,12 @@ function msg(t,bad){var m=g('cn_m');if(!m){if(V.classList.contains('on')){var l=
 function closeSheet(){cur=null;step=0;stopPoll();A('connectorDeviceCancel');var h=g('cn_h');if(h)h.textContent=''}
 function li(arr){var u=el('ul');arr.forEach(function(x){u.appendChild(el('li',null,x))});return u}
 function openSheet(d){
+  if(d.kind==='device'){var r0=A('connectorBegin',d.id);
+    if(r0==='nogmail'){msg('Gmail app is phone mein nahi mila. Pehle Gmail app install karo',1);return}
+    if(r0==='connected'){render();renderStrip();msg('Gmail pehle se juda hai');return}
+    msg('Settings khul gayi: NOVA ko Notification access mein ON karo, phir wapas aao. Gmail app ke notification bhi ON rakho');
+    var nn=0,iv=setInterval(function(){nn++;var x=J().filter(function(q){return q.id===d.id})[0];
+      if((x&&x.connected)||nn>80){clearInterval(iv);render();renderStrip();if(x&&x.connected)say('Gmail connect ho gaya')}},1500);return}
   if(d.kind==='link'){A('connectorBegin','lovable');var gh=data.filter(function(x){return x.id==='github'})[0];if(gh&&!gh.connected)msg('Lovable ke liye pehle GitHub connect karo');return}
   cur=d;step=1;level='read';drawSheet();
 }
@@ -3152,20 +2973,21 @@ var chatEl=g('chat'),cin=g('c_in'),csend=g('c_send');
 var QA={github:[['repos','github repos dikhao',1],['issues','github issues owner/repo',0],['issue banao','github issue banao owner/repo ',0,1],['runs','github runs owner/repo',0]],
  vercel:[['projects','vercel projects dikhao',1],['deployments','vercel deployments dikhao',1],['domains','vercel domains dikhao',1],['redeploy','vercel redeploy ',0,1]],
  netlify:[['sites','netlify sites dikhao',1],['build','netlify build ',0,1]],cloudflare:[['zones','cloudflare zones dikhao',1],['pages','cloudflare pages dikhao',1]],
- supabase:[['projects','supabase projects dikhao',1]],notion:[['search','notion mein  dhundo',0]],lovable:[['open','lovable kholo',1]]};
+ supabase:[['projects','supabase projects dikhao',1]],notion:[['search','notion mein  dhundo',0]],lovable:[['open','lovable kholo',1]],gmail:[['zaroori mail','nova important mail dikhao',1]]};
 function sendCmd(t,go){if(!cin)return;cin.value=t;try{cin.focus()}catch(e){}if(go&&csend)csend.click()}
 var strip=null;
+function closeMenu(){if(strip)strip.classList.remove('on')}
 function renderStrip(){
   if(!chatEl)return;
-  if(!strip){strip=el('div');strip.id='cn_strip';var chi=chatEl.querySelector('.chi');if(chi)chatEl.insertBefore(strip,chi);else chatEl.appendChild(strip)}
+  if(!strip){strip=el('div');strip.id='cn_strip';strip.setAttribute('role','menu');chatEl.appendChild(strip)}
   strip.textContent='';
-  var add=el('button','add','＋ CONNECTORS');add.onclick=openPicker;strip.appendChild(add);
+  var add=el('button','add','＋ CONNECTORS');add.onclick=function(){closeMenu();openPicker()};strip.appendChild(add);
   var ds=J();ds.forEach(function(d){
     if(!d.connected||d.kind==='mcp')return;
     (QA[d.id]||[]).forEach(function(q){
       var w=q[3]===1;if(w&&d.perm!=='write')return;
       if(!w&&d.perm==='off'&&d.kind!=='link')return;
-      var b=el('button',w?'w':'',d.name+': '+q[0]);b.onclick=function(){sendCmd(q[1],q[2]===1)};strip.appendChild(b)})
+      var b=el('button',w?'w':'',d.name+': '+q[0]);b.onclick=function(){closeMenu();sendCmd(q[1],q[2]===1)};strip.appendChild(b)})
   })
 }
 function openPicker(){
@@ -3185,8 +3007,10 @@ function openPicker(){
   var cl=el('button','v','CLOSE');cl.onclick=closeSheet;bt.appendChild(vo);bt.appendChild(cl);cd.appendChild(bt);
   h.appendChild(sh);cur={id:'picker'};step=0;
 }
-if(cb)cb.addEventListener('click',function(){setTimeout(renderStrip,250)});
-setInterval(function(){if(chatEl&&chatEl.classList.contains('on')&&!(cur&&step))renderStrip()},4000);
+if(cb)cb.addEventListener('click',function(){closeMenu()});
+var plus=g('c_plus');
+if(plus)plus.addEventListener('click',function(e){e.stopPropagation();if(strip&&strip.classList.contains('on')){closeMenu();return}renderStrip();strip.classList.add('on')});
+chatEl.addEventListener('click',function(e){if(strip&&strip.classList.contains('on')&&!(e.target.closest&&e.target.closest('#cn_strip,#c_plus')))closeMenu()});
 
 /* ---------- results from the app ---------- */
 window.onConn=function(id,st,m){
@@ -3200,7 +3024,8 @@ window.onConn=function(id,st,m){
     render();renderStrip();say('Connect ho gaya: '+m);if(fromSheet&&chatEl&&chatEl.classList.contains('on')&&window.onNova)window.onNova('ai',id+' connect ho gaya ('+m+'). Ab yahin likho ya bolo, jaise: '+id+' repos dikhao');return}
   if(st==='fail'){if(cur&&cur.id===id){stopPoll();if(step===3){step=1;drawSheet()}msg(m,1);if(step===2)startPoll()}else{msg(m)}}
 };
-function say(t){if(!V.classList.contains('on')){toast(t);return}var l=g('cn_l');var x=el('div','cn-note',t);x.style.color='#35F2C2';l.insertBefore(x,l.firstChild);setTimeout(function(){if(x.parentNode)x.parentNode.removeChild(x)},3500)}
+function say(t){if(!V.classList.contains('on')){toast(t);return}var l=g('cn_l');var x=el('div','cn-note',t);x.style.color='#2fd8ff';l.insertBefore(x,l.firstChild);setTimeout(function(){if(x.parentNode)x.parentNode.removeChild(x)},3500)}
+document.addEventListener('visibilitychange',function(){try{if(!document.hidden&&V&&V.classList.contains('on')){render();renderStrip()}}catch(e){}});
 window.onConnRun=function(id,action,ok,err,lines){
   var o=g('cno_'+id+'_'+action);if(!o)return;o.style.display='block';
   if(ok){o.className='cn-out';o.textContent=(lines||[]).join('\n')}else{o.className='cn-out err';o.textContent=err||'Nahi ho paya'}
@@ -3211,9 +3036,9 @@ window.onConnRun=function(id,action,ok,err,lines){
 (function(){
 function $(i){return document.getElementById(i)}
 var chip=$('c_ai'),dlg=$('aiw');if(!chip||!dlg)return;
-var cur={choice:'auto',fallback:true,gemini:false,providers:[]},pick='auto';
+var cur={choice:'auto',fallback:true,gemini:false,local:false,providers:[]},pick='auto';
 function load(){try{var j=JSON.parse(window.Android.getChatAi());if(j&&j.providers)cur=j}catch(e){}pick=cur.choice||'auto'}
-function lab(c){return 'AI: '+(c==='auto'?'AUTO':(c==='gemini'?'GEMINI':String(c).toUpperCase()))}
+function lab(c){return 'AI: '+(c==='auto'?'AUTO':(c==='gemini'?'GEMINI':(c==='local'?'PHONE AI':String(c).toUpperCase())))}
 function paint(){chip.textContent=lab(cur.choice);chip.classList.toggle('imon',cur.choice!=='auto')}
 function row(id,name,note,off){var d=document.createElement('button');d.type='button';d.className='aio'+(pick===id?' sel':'');d.setAttribute('role','radio');d.setAttribute('aria-checked',pick===id?'true':'false');
  d.innerHTML='<i></i><span><b></b><small></small></span>';d.querySelector('b').textContent=name;d.querySelector('small').textContent=note;if(off)d.classList.add('nokey');
@@ -3221,7 +3046,10 @@ function row(id,name,note,off){var d=document.createElement('button');d.type='bu
 function draw(){var l=$('ai_l');l.innerHTML='';
  l.appendChild(row('auto','AUTO (best)','NOVA khud sabse accha AI chunta hai',false));
  l.appendChild(row('gemini','Gemini',cur.gemini?'Phone ke kaam bhi kar sakta hai':'Key nahi daali (Settings mein daalo)',!cur.gemini));
+ l.appendChild(row('local','PHONE AI (offline)',cur.local?'Phone ka apna AI, bina internet aur bina key. Thoda dheema, chhote jawab':'Offline AI abhi download nahi hua (Update Center / Setup se lo)',!cur.local));
  (cur.providers||[]).forEach(function(p){l.appendChild(row(p.id,p.label,p.keySet?'Key / access taiyaar':'Key nahi daali',!p.keySet))});
+ var nk=(cur.providers||[]).some(function(p){return !p.keySet})||!cur.gemini;
+ if(nk){var kb=document.createElement('button');kb.type='button';kb.className='sm';kb.style.marginTop='10px';kb.textContent='KEY DAALO (jis AI ki key nahi hai)';kb.onclick=function(){close();try{if(window.novaGo)window.novaGo('s_key')}catch(e){}};l.appendChild(kb)}
  $('ai_fb').checked=!!cur.fallback}
 function open(){load();draw();$('ai_m').textContent='';dlg.classList.add('on');dlg.setAttribute('aria-hidden','false')}
 function close(){dlg.classList.remove('on');dlg.setAttribute('aria-hidden','true')}
@@ -3510,5 +3338,268 @@ if(sv){sv.classList.add('c3save');sv.setAttribute('aria-label','save');sv.setAtt
   sv.addEventListener('pointerdown',function(){sv.classList.add('c3down')});}
 })();
 </script>
+<script id="nova-final-js">(function(){var f=document.getElementById("fstat");if(!f)return;var h=f.querySelector(".fh");if(!h)return;h.addEventListener("click",function(e){if(e.target.closest&&e.target.closest("button"))return;f.classList.toggle("open");f.classList.toggle("col")})})();</script>
+<style id="nova-final">
+/* NOVA FINAL (wip12): ONE clean style layer. Futuristic HUD theme. Replaces theme-v2, ui-refresh-v17, modern-v690, glowpack,
+   3d-icons-v17, natural-3d-v18, v37-theme, resp-v38, pro-v695. Rules of this layer: no animated box-shadow,
+   no full-screen animated layers; only transform/opacity animate; every animation is off in lowfx / reduced-motion. */
+:root{
+  --c1:#2fd8ff;--c2:#6f7bff;--c3:#ffb547;--ok:#35f2a8;--bad:#ff5470;
+  --bg:#03060d;--bg2:#08111f;--ink:#e9f6ff;--mut:#8ea6bf;
+  --pan:rgba(8,17,31,.94);--pan2:rgba(12,24,42,.96);
+  --line:rgba(47,216,255,.22);--line2:rgba(47,216,255,.5);--edge:rgba(47,216,255,.26);
+  --grad:linear-gradient(90deg,#2fd8ff,#6f7bff 75%);--glass:rgba(8,17,31,.94);
+  --ms:rgba(8,17,31,.94);--mline:rgba(47,216,255,.22);--mr:12px;
+  --tabh:60px;--tabb:calc(var(--tabh) + env(safe-area-inset-bottom,0px));
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+html,body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{background:radial-gradient(120% 70% at 50% 0%,#0b1c3a 0%,#050b17 55%,#03060d 100%)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:linear-gradient(rgba(47,216,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(47,216,255,.035) 1px,transparent 1px);background-size:34px 34px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 35%,#000 20%,transparent 78%);mask-image:radial-gradient(ellipse at 50% 35%,#000 20%,transparent 78%)}
+body:after,#gp-stars{display:none!important}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+@keyframes novaSheetIn{0%{opacity:0;transform:translateY(60px) scale(.96)}60%{opacity:1}100%{transform:translateY(0) scale(1)}}
+.sh,.aib{animation:novaSheetIn .26s cubic-bezier(.22,.68,0,1.2) both}
+
+/* ---------- buttons ---------- */
+button{font-family:inherit;color:var(--ink);cursor:pointer;-webkit-appearance:none;appearance:none;
+  border:1px solid var(--line2);background:linear-gradient(180deg,rgba(47,216,255,.12),rgba(47,216,255,.04));
+  border-radius:10px;padding:12px 22px;font-size:13px;font-weight:700;letter-spacing:2px;box-shadow:none;
+  transition:transform .12s ease,background .15s,border-color .15s}
+button:active{transform:scale(.96);background:rgba(47,216,255,.24)}
+button.sm{padding:9px 13px;font-size:10.5px;letter-spacing:1.4px;border-width:1px;border-radius:9px;min-height:36px}
+button.icb{width:40px;height:40px;padding:0;border-radius:11px;letter-spacing:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,rgba(47,216,255,.14),rgba(8,17,31,.9));border-color:var(--line2)}
+button.icb svg{width:19px;height:19px;stroke:var(--c1);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+button.icb.off{opacity:.4}
+button.a{border-color:rgba(255,181,71,.55);background:rgba(255,181,71,.10);color:#ffe6bf}
+button.v{border-color:rgba(111,123,255,.55);background:rgba(111,123,255,.14);color:#e5e8ff}
+button:disabled,button[disabled]{opacity:.4;pointer-events:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+button:not(#btn){overflow:hidden;position:relative}
+.rp{background:rgba(47,216,255,.35)}
+button.nova-press{animation:nvPress .28s ease-out}
+@keyframes nvPress{0%{transform:scale(1)}40%{transform:scale(.95)}100%{transform:scale(1)}}
+.hopen{background:none!important;border:0!important;box-shadow:none!important}
+
+/* ---------- HOME: fixed one-screen layout, nothing hides under the tab bar ---------- */
+#app.wrap{position:fixed!important;left:0;right:0;top:0;bottom:var(--tabb);height:auto!important;max-width:640px;margin:0 auto;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 8px!important;display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  overflow:hidden!important;z-index:1}
+#app.wrap>*{flex:0 0 auto;min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;width:100%}
+.logo{font-size:21px;font-weight:700;letter-spacing:9px;color:#fff;text-shadow:0 0 12px rgba(47,216,255,.75),0 0 26px rgba(111,123,255,.45);display:flex;align-items:center;gap:9px;animation:none}
+#dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 9px var(--ok)}
+.ic{display:flex;gap:8px}
+.status{align-self:center;font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--c1);opacity:.9;margin:0;padding:3px 12px;border:1px solid var(--line);border-radius:99px;background:rgba(47,216,255,.06)}
+.status:empty{display:none}
+.badge{animation:none}
+.orbbox{flex:1 1 150px!important;min-height:104px;max-height:250px;display:flex;align-items:center;justify-content:center;position:relative;margin:0}
+.orbbox:before,.orbbox:after{content:"";position:absolute;left:50%;top:50%;border-radius:50%;pointer-events:none;border:1px dashed rgba(47,216,255,.22);
+  width:min(78vw,86%,260px);aspect-ratio:1;margin:calc(min(78vw,86%,260px) / -2) 0 0 calc(min(78vw,86%,260px) / -2);animation:nvSpin 60s linear infinite}
+.orbbox:after{border:1px solid rgba(111,123,255,.18);border-top-color:transparent;border-bottom-color:transparent;transform:scale(.84);animation:nvSpin 38s linear infinite reverse}
+@keyframes nvSpin{to{transform:rotate(360deg)}}
+.orbbox canvas{height:100%!important;width:auto!important;max-width:100%!important;aspect-ratio:1/1;object-fit:contain;position:relative;z-index:1}
+/* system status: collapsed by default (one line), tap to open */
+.fstat{width:100%;margin:0;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--pan);position:relative}
+.fstat .fh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:2px;font-weight:700;color:var(--ink);cursor:pointer}
+.fstat .fh:after{content:"";flex:0 0 8px;height:8px;border-right:2px solid var(--c1);border-bottom:2px solid var(--c1);transform:rotate(45deg);margin:-3px 2px 0 0;transition:transform .2s}
+.fstat.open .fh:after{transform:rotate(-135deg);margin-top:3px}
+.fstat .fh span{margin-left:auto;font-size:10px;letter-spacing:.4px;font-weight:600;color:var(--c1)}
+.fstat.col #fs_list{display:none}
+.fstat.open #fs_list{max-height:30vh;overflow-y:auto}
+.fstat .fr{display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.fstat .fd{flex:0 0 9px;height:9px;margin-top:4px;border-radius:50%;background:var(--ok)}
+.fstat .fr.off .fd{background:var(--bad)}.fstat .fr.warn .fd{background:var(--c3)}
+.fstat .ft{flex:1;min-width:0;font-size:12.5px;color:var(--ink);line-height:1.3}
+.fstat .ft small{display:block;margin-top:2px;font-size:11.5px;color:var(--mut)}
+.fstat .fm{margin-top:8px;font-size:11px;color:var(--mut);line-height:1.35}
+.fstat .ftog{margin-top:8px;width:100%}
+/* quick cards: compact horizontal rail */
+.feats{width:calc(100% + 28px);margin:0 -14px;padding:2px 14px 4px;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding:0 14px;scrollbar-width:none}
+.f{flex:0 0 auto;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:center;padding:9px 13px 9px 10px;border-radius:10px;
+  background:linear-gradient(160deg,rgba(47,216,255,.12),var(--pan) 70%);border:1px solid var(--line);color:var(--ink);scroll-snap-align:start;position:relative}
+.f:after{display:none!important}
+.f:active{transform:scale(.95);background:rgba(47,216,255,.22)}
+.f svg{grid-row:1/3;width:30px;height:30px;padding:6px;border-radius:9px;border:1px solid var(--line2);background:rgba(47,216,255,.10);stroke:var(--c1);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;filter:none}
+.f b{grid-column:2;display:block;margin:0;font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:#fff;white-space:nowrap}
+.f i{grid-column:2;display:block;margin:1px 0 0;font-style:normal;font-size:10px;color:var(--mut);white-space:nowrap}
+.f.all{border-color:rgba(111,123,255,.6);background:linear-gradient(160deg,rgba(111,123,255,.22),var(--pan) 75%)}
+.f.all svg{border-color:rgba(111,123,255,.6);stroke:#cfd4ff;background:rgba(111,123,255,.16)}
+/* conversation */
+.log{flex:1 1 90px!important;min-height:70px!important;width:100%;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 1px}
+.greet{align-self:stretch;padding:9px 12px;border-radius:10px;border:1px solid var(--line);border-left:3px solid var(--c1);background:linear-gradient(90deg,rgba(47,216,255,.14),rgba(47,216,255,.02));box-shadow:none;animation:none}
+.greet b{display:block;font-size:13px;letter-spacing:1.2px;color:#fff}
+.greet span{display:block;font-size:12.5px;margin-top:2px;min-height:16px;color:var(--ink)}
+.greet i{display:block;font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:3px;color:var(--c1);margin-top:3px;opacity:.9}
+.msg{padding:10px 13px;border-radius:12px;font-size:13.5px;max-width:90%;line-height:1.42;box-shadow:none;animation:msgIn .3s ease-out backwards}
+.msg.me,.me{background:rgba(111,123,255,.20);border:1px solid rgba(111,123,255,.55);border-bottom-right-radius:3px}
+.msg.ai,.ai{background:rgba(47,216,255,.08);border:1px solid var(--line2);border-bottom-left-radius:3px}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.typing i{background:var(--c1)}
+.wrap>.row,#app.wrap>.row{display:flex;gap:8px;align-items:stretch;justify-content:center;margin:0;padding:0;border:0;background:none;box-shadow:none}
+#btn{flex:1 1 auto;position:relative;overflow:visible;padding:14px 18px;font-size:14px;letter-spacing:5px;border:1px solid var(--c1);border-radius:12px;color:#fff;
+  background:linear-gradient(100deg,rgba(47,216,255,.28),rgba(111,123,255,.30));box-shadow:0 0 18px rgba(47,216,255,.25);animation:none}
+#btn:after{content:"";position:absolute;inset:-2px;border-radius:14px;border:1px solid var(--c1);opacity:0;pointer-events:none;animation:ping 2.6s ease-out infinite 1.2s}
+@keyframes ping{0%{opacity:.5;transform:scale(1)}100%{opacity:0;transform:scale(1.06,1.35)}}
+#quiet{flex:0 0 auto}
+.on #btn{background:linear-gradient(100deg,rgba(53,242,168,.30),rgba(47,216,255,.26));border-color:var(--ok)}
+/* alert bell badge */
+#alc{background:var(--bad)}
+
+/* ---------- overlays: setup center, sheet, history, ai picker, help ---------- */
+#uc{background:rgba(2,5,12,.86)}#uc.compact.on{background:rgba(2,5,12,.5)}
+.ucb,.sh,.cn-card{background:linear-gradient(180deg,var(--pan2),var(--bg));border:1px solid var(--line2);box-shadow:0 0 0 1px rgba(47,216,255,.05),0 18px 50px rgba(0,0,0,.6)}
+.ucb h3,.sh h3,.cn-card h3{font-weight:700;letter-spacing:4px;font-size:14px;color:#fff;text-shadow:0 0 12px rgba(47,216,255,.6)}
+.ucb h4,.cn-card h4{color:var(--c1);letter-spacing:3px;font-size:10.5px;font-family:var(--mono)}
+.ucb li:before{background:var(--c1);box-shadow:0 0 8px var(--c1)}
+.ucr{border-top:1px solid var(--line)}
+.ucn{color:var(--c1)}
+#sheet{background:rgba(2,5,12,.7)}
+.sh{border-radius:18px 18px 0 0;border-bottom:0}
+.cmd{border:1px dashed var(--line2);color:var(--c1);font-family:var(--mono);border-radius:8px}
+.sh p{color:var(--ink);opacity:.85}
+#hist{background:rgba(3,7,14,.97)}
+.hh{border-bottom:1px solid var(--line)}.hh b{color:#fff;letter-spacing:3px;font-size:13px}
+#hist .hi{border:1px solid var(--line);border-radius:10px;background:var(--pan)}
+.hrow{border:1px solid var(--line);border-radius:12px;background:var(--pan)}
+.hrow.cur{border-color:var(--c1)}.hrow.pin{border-color:var(--c3)}
+#c_hl{background:var(--bg)}
+#c_hs,.hrn,#c_in,#panel input[type=text],#panel input[type=password],#panel input[type=search],#panel select,#panel textarea,#hw_q,.cn-card input,#v_conn .cn-act input,.ed input{
+  background:rgba(2,6,14,.85);border:1px solid var(--line2);color:#fff;border-radius:10px;font-family:inherit}
+#c_in{border-radius:22px}
+#helpw,#aiw{background:rgba(2,5,12,.88);position:fixed;inset:0;z-index:97;display:none;align-items:center;justify-content:center}
+#helpw[aria-hidden="false"],#aiw[aria-hidden="false"]{display:flex}
+#helpw .aib,#aiw .aib{max-width:480px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto}
+.aib{background:linear-gradient(180deg,var(--pan2),var(--bg));border:1px solid var(--line2);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.hwc{border:1px solid var(--line);border-radius:10px;background:var(--pan)}
+.hwc .hwchip{color:var(--c1);border-color:var(--line2)}
+
+/* ---------- chat ---------- */
+#chat{background:radial-gradient(120% 60% at 50% 0%,#0b1c3a,#050b17 55%,#03060d);padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;bottom:var(--tabb,64px)}
+.chh{border-bottom:1px solid var(--line)}
+.chh b{font-weight:700;letter-spacing:5px;font-size:15px;color:#fff;text-shadow:0 0 12px rgba(47,216,255,.6)}
+#clog{gap:9px;padding:10px 2px;min-height:0}
+.imr{display:flex;gap:6px;align-items:center;padding:6px 0 0;flex-wrap:nowrap;overflow-x:auto}
+.imr button.sm{flex:0 0 auto;padding:7px 11px;font-size:10px;white-space:nowrap}
+.imr button.imon{background:rgba(47,216,255,.28);box-shadow:0 0 10px rgba(47,216,255,.35)}
+.chi{display:flex;gap:7px;align-items:center;padding-top:8px}
+#c_in{flex:1;min-width:0;padding:12px 14px;font-size:15px}
+.chi button.icb{flex:0 0 42px;width:42px;height:42px;border-radius:21px}
+#chat{position:fixed}
+#chat #cn_strip{display:none;position:absolute;left:12px;bottom:66px;width:min(290px,82%);max-height:55%;overflow-y:auto;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:linear-gradient(180deg,#0c1a33,#050b17);border:1px solid var(--line2);box-shadow:0 14px 40px rgba(0,0,0,.65);z-index:6}
+#chat #cn_strip.on{display:flex}
+#chat #cn_strip button{width:100%;text-align:left;font-size:12px;padding:11px 14px;border-radius:12px}
+#c_plus svg{stroke-width:2.2}
+.gimg{border-radius:10px;border:1px solid var(--line)}
+.ctx{color:var(--mut)}.ctx.cut{color:var(--c3)}
+#cn_strip button{border-color:var(--line2);background:rgba(47,216,255,.08);color:#dff8ff}
+
+/* ---------- SETTINGS (accordion) ---------- */
+#panel{background:linear-gradient(180deg,#050b17,#03060d);padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 40px;max-width:640px;margin:0 auto}
+#panel h2{font-weight:700;letter-spacing:8px;font-size:17px;text-align:center;color:#fff;text-shadow:0 0 14px rgba(47,216,255,.6);margin-bottom:12px}
+#panel label{display:block;font-size:11.5px;letter-spacing:.8px;color:var(--ink);opacity:.92;margin-top:12px}
+#panel small{display:block;color:var(--mut);opacity:1;font-size:11px;line-height:1.45;margin-top:5px}
+#panel .box,#st_box{border:1px solid var(--line);border-radius:12px;background:var(--pan);padding:12px;margin-top:12px;box-shadow:none}
+#panel .box.accd{padding:0;overflow:hidden;position:relative}
+#panel .box.accd:before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--grad);opacity:.7}
+#panel .acch{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:15px 16px!important;margin:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--ink)!important;font-size:11.5px;font-weight:700;letter-spacing:2px;text-align:left;font-family:var(--mono)}
+#panel .acch svg{flex:0 0 18px;width:18px;height:18px;fill:none;stroke:var(--c1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .22s}
+#panel .box.open .acch svg{transform:rotate(180deg)}
+#panel .box.open .acch{color:var(--c1)!important;border-bottom:1px solid var(--line)!important}
+#panel .accb{display:none;padding:4px 14px 16px}#panel .box.open .accb{display:block}
+#panel .chk{display:flex;gap:10px;align-items:flex-start;line-height:1.4}
+#panel input[type=checkbox]{flex:0 0 18px;width:18px;height:18px;margin-top:1px;accent-color:var(--c1)}
+#panel input[type=range]{accent-color:var(--c1)}
+#panel .row{flex-wrap:wrap;justify-content:flex-start;gap:8px}
+#smsg{color:var(--c3)}
+#st_box b{color:var(--c1);letter-spacing:2px;font-family:var(--mono)}
+#st_out{font-family:var(--mono)}
+#fcc_l .fr{border-bottom:1px solid var(--line)}
+#fcc_l .fh{color:var(--c1);font-family:var(--mono);opacity:.9}
+#wb_box .wbr i.ok{color:var(--ok)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+
+/* ---------- bottom tab bar ---------- */
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:75;display:flex;justify-content:space-around;align-items:stretch;max-width:640px;margin:0 auto;
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));height:var(--tabb);background:linear-gradient(180deg,rgba(8,17,31,.97),rgba(3,6,13,.99));border-top:1px solid var(--line2)}
+#tabs:before{content:"";position:absolute;left:12%;right:12%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--c1),transparent);opacity:.8}
+#tabs button{flex:1 1 0;min-width:0!important;width:auto!important;height:auto!important;padding:4px 1px!important;margin:0 1px;border-radius:12px!important;border:1px solid transparent!important;background:transparent!important;
+  box-shadow:none!important;color:var(--mut);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;letter-spacing:0}
+#tabs button svg{width:21px!important;height:21px!important;fill:none;stroke:var(--mut)!important;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
+#tabs button em,#tabs button span{font-style:normal;font-size:8px;letter-spacing:.9px;font-weight:700;text-transform:uppercase;font-family:var(--mono)}
+#tabs button.act{background:linear-gradient(160deg,rgba(47,216,255,.18),rgba(111,123,255,.12))!important;border-color:var(--line2)!important;color:var(--c1)}
+#tabs button.act svg{stroke:var(--c1)!important}
+
+/* ---------- full screens: SKILLS / LIMITS / CONNECT ---------- */
+.vw{position:fixed;left:0;right:0;top:0;bottom:var(--tabb);z-index:4;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:640px;margin:0 auto;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) 14px 24px;background:radial-gradient(120% 40% at 50% 0%,rgba(47,216,255,.16),rgba(3,6,13,0) 60%),var(--bg)}
+.vw.on{display:block;animation:vwIn .26s ease-out both}
+@keyframes vwIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.vw h2{font-size:16px;letter-spacing:8px;text-align:center;font-weight:700;margin:2px 0 4px;color:#fff;text-shadow:0 0 14px rgba(47,216,255,.6)}
+.vw .sub{font-size:11px;line-height:1.5;color:var(--mut);text-align:center;margin:0 6px 12px}
+.vw .grp{font-family:var(--mono);font-size:10px;letter-spacing:3px;font-weight:700;color:var(--c1);margin:18px 2px 8px;display:flex;align-items:center;gap:8px}
+.vw .grp:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+.vw .grp em{font-style:normal;color:var(--mut);letter-spacing:1px;font-weight:600}
+.vc{position:relative;border-radius:12px;padding:12px;margin:0 0 9px;background:linear-gradient(150deg,rgba(47,216,255,.07),var(--pan) 60%);border:1px solid var(--line);box-shadow:none}
+.vc:before,.vc:after{content:"";position:absolute;width:9px;height:9px;pointer-events:none;opacity:.8}
+.vc:before{left:-1px;top:-1px;border-left:2px solid var(--c1);border-top:2px solid var(--c1);border-top-left-radius:12px}
+.vc:after{right:-1px;bottom:-1px;border-right:2px solid var(--c1);border-bottom:2px solid var(--c1);border-bottom-right-radius:12px}
+.vc .hd{display:flex;align-items:center;gap:11px}
+.vc .gl{flex:0 0 38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(47,216,255,.10);border:1px solid var(--line2)}
+.vc .gl svg{width:20px;height:20px;fill:none;stroke:var(--c1);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.vc b{display:block;font-size:13px;letter-spacing:.3px;color:#fff;line-height:1.3}
+.vc p{font-size:11.5px;line-height:1.45;color:#a8bdd2;margin:8px 0 0}
+.chip{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:5px;margin-left:6px;vertical-align:middle;border:1px solid;white-space:nowrap}
+.chip.on{color:var(--ok);border-color:rgba(53,242,168,.5);background:rgba(53,242,168,.09)}
+.chip.off{color:var(--c3);border-color:rgba(255,181,71,.5);background:rgba(255,181,71,.09)}
+.chip.rdy{color:#aab4ff;border-color:rgba(111,123,255,.55);background:rgba(111,123,255,.12)}
+.chip.est{color:var(--c3);border-color:rgba(255,181,71,.5)}
+.chip.mut{color:var(--mut);border-color:rgba(142,166,191,.4)}
+.say{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.say button,.vc .acts button,.vw .tb2{font-size:10.5px!important;letter-spacing:.4px!important;font-weight:600!important;padding:7px 10px!important;border-radius:8px!important;min-height:0!important;text-align:left;
+  border:1px solid var(--line2)!important;background:rgba(47,216,255,.07)!important;color:#dff8ff!important}
+.say button i{font-style:normal;color:var(--c1);font-weight:800;margin-right:5px;font-size:9px;letter-spacing:1px;font-family:var(--mono)}
+.say button.go{border-color:rgba(53,242,168,.55)!important;background:rgba(53,242,168,.10)!important}
+.say button.go i{color:var(--ok)}
+.vc .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.vc .acts button.v{border-color:rgba(111,123,255,.55)!important;background:rgba(111,123,255,.14)!important;color:#e5e8ff!important}
+.vc .acts button.a{border-color:rgba(255,181,71,.55)!important;background:rgba(255,181,71,.10)!important;color:#ffe6bf!important}
+.lim{display:flex;gap:12px;align-items:center}
+.lim svg.rg{flex:0 0 68px;width:68px;height:68px}
+.lim .nums{flex:1;min-width:0}.lim .nums div{font-size:11.5px;color:#c4d3e3;line-height:1.55}.lim .nums strong{color:#fff;font-size:13px}
+.vc .meta{font-size:10px;color:var(--mut);margin-top:7px;line-height:1.5}
+.ed{display:none;gap:6px;margin-top:9px;align-items:center;flex-wrap:wrap}.ed.on{display:flex}
+.ed input{flex:1 1 90px;min-width:0;padding:9px 10px;font-size:14px}
+.tot{display:flex;gap:8px;margin:6px 0 4px}
+.tot div{flex:1;text-align:center;padding:10px 6px;border-radius:10px;background:var(--pan);border:1px solid var(--line)}
+.tot strong{display:block;font-size:20px;color:var(--c1);font-family:var(--mono)}.tot span{font-size:9px;letter-spacing:1.5px;color:var(--mut)}
+.vmsg{min-height:16px;text-align:center;font-size:11.5px;color:var(--c1);margin:6px 0}
+/* skills screen: search + filters + counters */
+.sk-top{position:sticky;top:-16px;z-index:3;margin:0 -14px 8px;padding:8px 14px 8px;background:linear-gradient(180deg,var(--bg) 78%,rgba(3,6,13,0))}
+.sk-s{width:100%;padding:11px 14px 11px 38px;border-radius:10px;border:1px solid var(--line2);background:rgba(2,6,14,.9) no-repeat 12px 50%/16px;color:#fff;font-size:14px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232fd8ff' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E")}
+.sk-f{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}
+.sk-f button{flex:0 0 auto;padding:6px 11px;font-size:9.5px;letter-spacing:1.2px;border-radius:99px;font-family:var(--mono);min-height:0}
+.sk-f button.sel{background:rgba(47,216,255,.28);border-color:var(--c1);color:#fff}
+.sk-cnt{display:flex;gap:6px;margin:2px 0 0;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--mut);justify-content:center}
+.sk-cnt b{color:var(--c1)}
+.sk-nil{text-align:center;color:var(--mut);font-size:12px;padding:28px 10px}
+/* connectors */
+.cn-seg{border:1px solid var(--line2);border-radius:10px}
+.cn-seg button.sel{background:rgba(47,216,255,.28)!important}
+.cn-toast{background:#06222b;border-color:var(--line2);color:#dff8ff}
+.cn-sheet{background:rgba(2,5,12,.86)}
+.cn-code{color:var(--c1);border-color:var(--line2);background:rgba(47,216,255,.08)}
+@media(max-height:640px){.logo{font-size:18px}.orbbox{min-height:92px}.fstat{padding:7px 10px}.f{padding:7px 11px 7px 9px}.f i{display:none}.msg{font-size:13px}}
+@media(max-height:520px){.orbbox{display:none}}
+@media(min-height:780px){.orbbox{flex-basis:210px!important}}
+@media(min-width:700px){#app.wrap{max-width:560px}}
+html.lowfx .orbbox:before,html.lowfx .orbbox:after,html.lowfx #btn:after,html.lowfx #dot,html.lowfx .orbbox canvas,html.lowfx .vw.on,html.lowfx .msg{animation:none!important}
+@media(prefers-reduced-motion:reduce){.orbbox:before,.orbbox:after,#btn:after,#dot,.vw.on,.msg,button.nova-press{animation:none!important}}
+</style>
 </body></html>
 

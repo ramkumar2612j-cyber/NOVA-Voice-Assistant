@@ -137,7 +137,7 @@ object ExtCfg {
             a.put(org.json.JSONObject().put("id", p.id).put("label", p.label.substringBefore(" (").trim()).put("keySet", has))
         }
         return org.json.JSONObject().put("choice", chatAi(ctx)).put("fallback", chatFallback(ctx))
-            .put("gemini", SecureStore.hasKeys(ctx)).put("providers", a).toString()
+            .put("gemini", SecureStore.hasKeys(ctx)).put("local", try { LocalBrains.isLoaded() || LocalBrains.hasInstalled(ctx) } catch (e: Throwable) { false }).put("providers", a).toString()
     }
 
     fun setChatAi(ctx: Context, choice: String, fallback: Boolean) {

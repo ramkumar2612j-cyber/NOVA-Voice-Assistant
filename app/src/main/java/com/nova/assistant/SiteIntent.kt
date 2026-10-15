@@ -82,10 +82,11 @@ object SiteIntent {
         val t = tokens(text)
         if (t.isEmpty()) return null
         if (t.size > 60) return parseLong(text, t)
+        val notScope = if (t.size > 25) 6 else t.size   // wip11: in a long brief a NOT word only counts at the start
         var verb = false
         var noun = false
-        for (w in t) {
-            if (w in NOT) return null
+        for ((i, w) in t.withIndex()) {
+            if (i < notScope && w in NOT) return null
             if (w in VERBS) verb = true
             if (w in NOUNS) noun = true
         }
