@@ -40,13 +40,18 @@ class Cfg(ctx: Context) {
 
     /** v6.52: default ON (owner request) for LOCAL screen monitoring of error/warning text. It still needs the Accessibility permission. Never uploads anything. */
     var screenMonitor: Boolean
-        get() = p.getBoolean("screenMonitor", true)
+        get() = p.getBoolean("screenMonitor", false)   // v7.4: default OFF - NOVA must not pop up and ask by itself; the owner turns it on in Settings
         set(v) { p.edit().putBoolean("screenMonitor", v).apply() }
 
     /** Default ON: command replies go to the chat / floating card silently. NOVA speaks only for alerts, confirmations and driving. */
     var quietReplies: Boolean
         get() = p.getBoolean("quietReplies", false)
         set(v) { p.edit().putBoolean("quietReplies", v).apply() }
+
+    /** Part 3: persistent SILENT switch. Unlike quietReplies, this is a separate setting. */
+    var silentMode: Boolean
+        get() = p.getBoolean("silentMode", false)
+        set(v) { p.edit().putBoolean("silentMode", v).apply() }
 
     /** Default OFF: NOVA never opens the mic by itself to ask "shall I remember this shortcut?" after a command. */
     var nudges: Boolean

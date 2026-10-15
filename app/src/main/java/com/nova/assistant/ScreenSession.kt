@@ -39,7 +39,7 @@ object ScreenSession {
 
     // ---------------------------------------------------------------- spoken follow-ups
 
-    enum class Intent { STOP, MORE, IMPORTANT, WHAT, READ, REPLY, NEXT, REFRESH, PICTURE, OTHER }
+    enum class Intent { STOP, MORE, IMPORTANT, WHAT, READ, REPLY, NEXT, REFRESH, PICTURE, IDENTIFY, OTHER }
 
     private val STOP = setOf(
         "ruko", "ruk", "bas", "bus", "stop", "khatam", "enough", "rehne", "chhodo", "chodo", "cancel",
@@ -67,6 +67,19 @@ object ScreenSession {
         text.lowercase().replace(Regex("[^a-z0-9]"), " ").split(" ").filter { it.isNotEmpty() && it != "nova" }
 
     /** What the spoken follow-up means. Order matters: the first match wins. */
+    private val ID_POINT = setOf("ye", "yeh", "is", "isme", "iska", "iski", "isko", "yahan", "yaha", "this", "here", "screen", "ispe")
+    private val ID_THING = setOf("movie", "movies", "film", "filme", "serial", "series", "show", "song", "gaana", "gana", "gaane", "actor", "actress",
+        "hero", "heroine", "singer", "cartoon", "anime", "character", "logo", "brand", "product", "building", "jagah", "place", "player", "cricketer", "car", "gaadi")
+    private val ID_ASK = setOf("kaun", "kon", "kaunsi", "konsi", "kaunsa", "konsa", "naam", "name", "which", "who", "what", "kya", "batao", "bata",
+        "identify", "pehchan", "pehchano", "search", "dhundo", "dhoondo", "pata")
+
+    /** True for "ye kaun si movie hai", "is gaane ka naam batao", "who is this actor": the owner points at something on the screen and wants its name. */
+    fun wantsIdentify(text: String): Boolean {
+        val t = tokens(text)
+        if (t.size < 3 || t.size > 20) return false
+        return t.any { it in ID_POINT } && t.any { it in ID_THING } && t.any { it in ID_ASK }
+    }
+
     fun intent(text: String): Intent {
         val t = tokens(text)
         if (t.isEmpty()) return Intent.OTHER
@@ -74,6 +87,7 @@ object ScreenSession {
         if (t.contains("samajh") && (t.contains("nahi") || t.contains("nahin") || t.contains("na"))) return Intent.MORE   // "samajh nahi aaya" = explain again
         if (t.size <= 4 && has(STOP)) return Intent.STOP
         if (t.size <= 3 && t.all { it in ACK || it in STOP }) return Intent.STOP
+        if (wantsIdentify(text)) return Intent.IDENTIFY   // "ye kaun si movie hai": look at the screen AND search the web
         if (has(PIC) && !has(PIC_NOT) && t.size <= 8) return Intent.PICTURE
         if (has(REFRESH) || (has(LOOK) && has(NOW_THIS) && t.size <= 6)) return Intent.REFRESH
         if (has(REPLY_WORD) && has(REPLY_DO)) return Intent.REPLY
@@ -134,6 +148,8 @@ object ScreenSession {
         Intent.READ -> "(The owner wants this read out.) Read out the main readable content (message, article or note) word for word, skipping menus and buttons. At most about 120 words; if there is more, say that more is available."
         Intent.NEXT -> "(The owner asks what to do next.) Suggest one or two sensible next steps in words and offer to help with the first one. Do not claim you did anything."
         Intent.REPLY -> "(The owner wants a reply written.) Write ONLY the reply message text, ready to type, at most two sentences, in the same language, script and tone as the messages on the screen (this one exception to the spoken-language rule: the text must look like a normal chat message). No quotes, no explanation, no greeting like 'here is'. If there is no message on the screen to answer, write exactly: NO_MESSAGE"
+        Intent.IDENTIFY -> "(The owner said: \"" + spoken.take(300) + "\".) Look at the attached screenshot and identify what the owner points at (movie, show, song, person, product, place). " +
+            "Search the web to confirm the exact name. Answer in at most three short sentences: the name first, then one useful detail (year, who is in it, where to watch). If you are not sure, say so and give your best guess.",
         Intent.PICTURE -> "(The owner wants you to look at the picture.) Describe in two or three short sentences what the attached screenshot shows and what matters in it."
         Intent.REFRESH -> "(The owner opened another screen and said: ab ye dekho.) In two short sentences say which app this is, what is on it and the one thing that matters most."
         else -> "(The owner said: \"" + spoken.take(300) + "\".) Answer in at most three short sentences using the screen. If the question has nothing to do with the screen, answer it briefly anyway."

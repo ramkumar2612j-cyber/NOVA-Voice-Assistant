@@ -67,6 +67,13 @@ object FeatureStatus {
         val ws = Settings.System.canWrite(ctx)
         row(a, "bright", "Brightness control", if (ws) "ok" else "off",
             if (ws) "Write settings ON hai" else "Write settings ON nahi hai: brightness nahi badlegi", if (ws) "" else "writeSettings")
+        // 7b. Part 9D: ringer / rotation / screenshot by voice. Each part reads its own real permission.
+        val dndOk = try { Build.VERSION.SDK_INT < 23 || (ctx.getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true) } catch (e: Throwable) { false }
+        row(a, "ringer", "Ringer (vibrate / normal / silent)", if (dndOk) "ok" else "warn",
+            if (dndOk) "Do Not Disturb access ON hai: vibrate, normal aur silent teeno chalenge" else "Vibrate aur normal chalenge; poori silent ke liye Do Not Disturb access ON karo (optional)", if (dndOk) "" else "dnd")
+        row(a, "rotation", "Screen rotation + screenshot", if (ws && acc) "ok" else "warn",
+            if (ws && acc) "Rotation (Write settings) aur screenshot (Accessibility) dono taiyaar hain"
+            else if (!ws) "Rotation ke liye Brightness control (Write settings) ON karo" else "Screenshot ke liye Accessibility ON karo", if (!ws) "writeSettings" else if (!acc) "acc" else "")
         // 8. background (v6.74: brand-aware advice, e.g. Xiaomi Autostart)
         val bat = (ctx.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager)?.isIgnoringBatteryOptimizations(ctx.packageName) == true
         val br = VoiceDiagnosis.battery(bat, Build.MANUFACTURER ?: "", false)
@@ -97,6 +104,8 @@ object FeatureStatus {
         val gh = try { SecureStore.hasSlot(ctx, GitHubPublish.SLOT) } catch (e: Throwable) { false }
         row(a, "publish", "Website publish (GitHub)", if (gh) "ok" else "off",
             if (gh) "GitHub token hai" else "GitHub token nahi hai: website banegi par publish nahi hogi (optional)", if (gh) "" else "github")
+        row(a, "latency", "Samajhne ki speed (5 second rule)", "ok",
+            "Naap (sirf layer ka naam + ginti, koi text ya key nahi): " + (try { Latency.summary() } catch (e: Throwable) { "pata nahi" }) + ". Asli phone par 5 second abhi tak NAAPA NAHI gaya", "")
         // Auto-Heal and the wake diagnosis (what NOVA fixed or noticed by itself)
         val heal = try { svc?.healInfo() ?: emptyList() } catch (e: Throwable) { emptyList<String>() }
         row(a, "heal", "Auto-Heal (NOVA khud theek karta hai)", if (heal.isEmpty()) "ok" else "warn",
@@ -128,6 +137,40 @@ object FeatureStatus {
         readyNames.add("local phone commands")
         readyNames.add("website generation" + if (SecureStore.hasKeys(ctx) || SecureStore.hasGroq(ctx) || SecureStore.hasSlot(ctx, "zai") || SecureStore.hasSlot(ctx, "openrouter")) " (provider configured)" else " (needs AI key)")
         row(a, "capabilities", "Kya kar sakta hoon", "ok", readyNames.joinToString(" | ").take(360), "")
+
+        // v77 (Part 5): read-only rows for the Part 2/3 features. Each one only READS the real saved state; nothing is started or changed.
+        try {
+            val lg = ExtCfg.lockGuard(ctx)
+            row(a, "lockguard", "Lock Guard (lock par call/message alert)", if (lg && na) "ok" else "warn",
+                if (lg && na) "ON hai aur Notification access bhi ON hai" else if (lg) "ON hai par Notification access OFF hai: alert nahi aayega" else "OFF hai (Settings mein ON kar sakte ho, optional)", if (lg && !na) "notifAccess" else "")
+        } catch (e: Throwable) { }
+        try {
+            val ar = ActionLog.autoReplyOn(ctx)
+            row(a, "autoreply", "Auto-reply", if (ar) "ok" else "warn",
+                if (ar) "ON hai (jawab Settings ke text se, pehle se bani limits ke saath)" else "OFF hai (Settings mein ON kar sakte ho, optional)", "")
+        } catch (e: Throwable) { }
+        try {
+            val ba = ExtCfg.alerts(ctx)
+            row(a, "batteryalert", "Battery kam alert (khud bolna)", if (ba) "ok" else "warn",
+                if (ba) "ON hai: battery kam ho to NOVA bata dega" else "OFF hai (Settings mein ON kar sakte ho, optional)", "")
+        } catch (e: Throwable) { }
+        try {
+            val n = org.json.JSONArray(BrainStore.get(ctx).skillsJson()).length()
+            row(a, "routines", "Routines (apni bani hui)", if (n > 0) "ok" else "warn",
+                if (n > 0) "$n routine/shortcut saved hai" else "Abhi koi routine nahi (Settings mein bana sakte ho, optional)", "")
+        } catch (e: Throwable) { }
+        try {
+            val op = OfflinePackStore.any(ctx)
+            row(a, "offlinepack", "Offline AI pack (bina internet)", if (op) "ok" else "warn",
+                if (op) "Offline pack phone mein installed hai" else "Offline pack install nahi hai (Settings > Offline pack se; optional)", "")
+        } catch (e: Throwable) { }
+        try {
+            val rows = JSONObject(ApiUsage.snapshotJson(ctx)).optJSONArray("rows")
+            var near = 0
+            if (rows != null) for (i in 0 until rows.length()) { val r = rows.optJSONObject(i); if (r != null && r.optInt("percent", -1) >= 90) near++ }
+            row(a, "apilimits", "API limits (aaj ka use)", if (near == 0) "ok" else "warn",
+                if (near == 0) "Koi AI limit ke paas nahi (poori list LIMITS screen par)" else "$near AI limit ke paas hai: LIMITS screen dekho", "")
+        } catch (e: Throwable) { }
 
         // 13. install
         val notif = Build.VERSION.SDK_INT < 33 || granted(ctx, Manifest.permission.POST_NOTIFICATIONS)

@@ -62,6 +62,7 @@ class MainActivity : Activity() {
         NovaService.publishListener = { ok, msg, url ->
             runJs("onPublish(" + ok + "," + JSONObject.quote(msg) + "," + JSONObject.quote(url) + ")")
         }
+        NovaService.askListener = { q -> runJs("onAsk(" + JSONObject.quote(q) + ")") }
         NovaService.siteListener = { ok, msg, html, saved ->
             runJs("onSite(" + ok + "," + JSONObject.quote(msg) + "," + JSONObject.quote(html) + "," + JSONObject.quote(saved) + ")")
         }
@@ -89,29 +90,6 @@ class MainActivity : Activity() {
                         .create()
                     dialog.setOnCancelListener { if (!answered) { answered = true; complete(null) } }
                     dialog.setOnDismissListener { if (!answered) { answered = true; complete(null) } }
-                    dialog.show()
-                    dialog.window?.setLayout(
-                        (resources.displayMetrics.widthPixels * 0.92f).toInt(),
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                }
-            }
-        }
-        NovaService.songChoiceListener = { labels, complete ->
-            runOnUiThread {
-                if (isDestroyed || isFinishing) { complete(null) }
-                else {
-                    var answered = false
-                    val dialog = AlertDialog.Builder(this)
-                        .setTitle("NOVA — Kaun sa gaana?")
-                        .setItems(labels.toTypedArray()) { _, which ->
-                            if (!answered) { answered = true; complete(which) }
-                        }
-                        .setNegativeButton("Cancel") { _, _ ->
-                            if (!answered) { answered = true; complete(null) }
-                        }
-                        .create()
-                    dialog.setOnCancelListener { if (!answered) { answered = true; complete(null) } }
                     dialog.show()
                     dialog.window?.setLayout(
                         (resources.displayMetrics.widthPixels * 0.92f).toInt(),
@@ -278,6 +256,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         NovaService.uiVisible = false
+        AutoTest.stop()   // Part 10: the 5-second feature watcher sleeps while the screen is closed
         super.onPause()
     }
 
@@ -310,10 +289,10 @@ class MainActivity : Activity() {
             NovaService.learnListener = null
             NovaService.publishListener = null
             NovaService.siteListener = null
+            NovaService.askListener = null
             NovaService.imageListener = null
             NovaService.permRequest = null
             NovaService.contactChoiceListener = null
-            NovaService.songChoiceListener = null
         }
         testTts?.shutdown()
         testTts = null
@@ -328,6 +307,12 @@ class MainActivity : Activity() {
 
     private fun isDefaultAssistant(): Boolean = try {
         (Settings.Secure.getString(contentResolver, "assistant") ?: "").startsWith("$packageName/")
+    } catch (e: Exception) { false }
+
+    /** Part 9D: Do Not Disturb access (needed only for "ringer silent"). Below Android 6 there is no such gate, so it counts as granted. */
+    private fun dndGranted(): Boolean = try {
+        if (Build.VERSION.SDK_INT < 23) true
+        else getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
     } catch (e: Exception) { false }
 
     private fun granted(p: String) =
@@ -415,7 +400,7 @@ class MainActivity : Activity() {
             if (!granted(p)) ask.add(p)
         }
         if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS)) ask.add(Manifest.permission.POST_NOTIFICATIONS)
-        if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.98: watch mic over Bluetooth
+        if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.97-wip9: watch mic over Bluetooth
         val runs = prefs.getInt("setup_runs", 0)
         val opens = specialOpenCounts(prefs)
         val specialMissing = missingSpecial().keys.filter { (opens[it] ?: 0) < SetupChainRules.maxOpens(it) }
@@ -529,6 +514,7 @@ class MainActivity : Activity() {
             return
         }
         if (resultCode != RESULT_OK) return
+        if (requestCode == REQ_SITE_MEDIA) { handleSiteMedia(data); return }
         val uri = data?.data ?: return
         if (requestCode == REQ_PPN) {
             Thread {
@@ -618,6 +604,42 @@ class MainActivity : Activity() {
                 val thumb = ImageGen.shrink(small, 160) ?: small
                 runJs("onPhoto(" + JSONObject.quote(ImageGen.b64(thumb)) + ")")
             } catch (e: Throwable) { runJs("onPhotoErr('Photo padhne mein dikkat')") }
+        }.start()
+    }
+
+    // v7.0 website media: photos and short videos for the next website / website edit (kept in the app folder, embedded after the page is written)
+    private fun handleSiteMedia(data: Intent?) {
+        val uris = ArrayList<Uri>()
+        data?.data?.let { uris.add(it) }
+        val cd = data?.clipData
+        if (cd != null) for (i in 0 until cd.itemCount) cd.getItemAt(i).uri?.let { uris.add(it) }
+        if (uris.isEmpty()) return
+        Thread {
+            var added = 0
+            var err = ""
+            for (u in uris.distinct().take(SiteMedia.MAX_ITEMS)) {
+                try {
+                    val mime = contentResolver.getType(u).orEmpty()
+                    val raw = contentResolver.openInputStream(u)?.use { it.readBytes() }
+                    if (raw == null || raw.isEmpty()) { err = "Ek file padh nahi paya"; continue }
+                    if (mime.startsWith("video/")) {
+                        val r = SiteMedia.add(this, "vid", if (mime.contains("webm")) "webm" else "mp4", raw, 0, 0)
+                        if (r == null) added++ else err = r
+                    } else {
+                        if (raw.size > 30_000_000) { err = "Photo bahut badi hai"; continue }
+                        var side = 1600
+                        var jpg = ImageGen.shrink(raw, side)
+                        while (jpg != null && jpg.size > SiteMedia.MAX_IMG_BYTES && side > 640) { side -= 320; jpg = ImageGen.shrink(raw, side) }
+                        if (jpg == null) { err = "Ek photo ka format nahi padh paya"; continue }
+                        val o = android.graphics.BitmapFactory.Options()
+                        o.inJustDecodeBounds = true
+                        android.graphics.BitmapFactory.decodeByteArray(jpg, 0, jpg.size, o)
+                        val r = SiteMedia.add(this, "img", "jpg", jpg, o.outWidth, o.outHeight)
+                        if (r == null) added++ else err = r
+                    }
+                } catch (e: Throwable) { err = "Media padhne mein dikkat" }
+            }
+            runJs("onSiteMedia(" + SiteMedia.count(this) + "," + added + "," + JSONObject.quote(err) + ")")
         }.start()
     }
 
@@ -839,7 +861,20 @@ class MainActivity : Activity() {
         fun stopSpeak() { NovaService.instance?.stopSpeaking() }
 
         @JavascriptInterface
-        fun sendText(t: String): String = NovaService.instance?.typed(t.take(500)) ?: "off"
+        fun setSilentMode(on: Boolean): String {
+            cfg.silentMode = on
+            return if (on) "on" else "off"
+        }
+
+        @JavascriptInterface
+        fun getSilentMode(): Boolean = cfg.silentMode
+
+        @JavascriptInterface
+        fun sendText(t: String): String {
+            // v7.0: a long website brief is kept whole (was cut at 500); every other typed sentence keeps the old 500 limit.
+            val limit = if (t.length > 500 && SiteIntent.parse(t.take(SiteIntent.MAX_RAW)) != null) SiteIntent.MAX_RAW else 500
+            return NovaService.instance?.typed(t.take(limit)) ?: "off"
+        }
 
         // ---- v6.69 chat sessions (New Chat, history list, resume). The page shows the result; nothing here speaks or acts on the phone.
         @JavascriptInterface
@@ -1042,6 +1077,36 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun clearPhoto() { pickedPhoto = null }
+
+        /** v7.1: yes/no question NOVA is waiting for ("" = none) and the HAAN / NAHI tap. */
+        @JavascriptInterface
+        fun pendingAsk(): String = NovaService.instance?.pendingPromptNow() ?: ""
+
+        @JavascriptInterface
+        fun answerAsk(yes: Boolean): String = NovaService.instance?.answerPending(yes) ?: "off"
+
+        @JavascriptInterface
+        fun pickSiteMedia(): String {
+            runOnUiThread {
+                try {
+                    val i = Intent(Intent.ACTION_GET_CONTENT)
+                    i.type = "*/*"
+                    i.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/mp4", "video/webm"))
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    i.addCategory(Intent.CATEGORY_OPENABLE)
+                    startActivityForResult(Intent.createChooser(i, "Website ke liye photo/video chuno"), REQ_SITE_MEDIA)
+                } catch (e: Exception) {
+                    runJs("onSiteMedia(" + SiteMedia.count(this@MainActivity) + ",0,'Gallery nahi khuli')")
+                }
+            }
+            return "ok"
+        }
+
+        @JavascriptInterface
+        fun clearSiteMedia(): String { SiteMedia.clear(this@MainActivity); return "ok" }
+
+        @JavascriptInterface
+        fun siteMediaCount(): Int = SiteMedia.count(this@MainActivity)
 
         /** started / asking (waits for the HAAN tap) / busy / nokey / empty. A photo is only uploaded after that tap. */
         @JavascriptInterface
@@ -1340,6 +1405,18 @@ class MainActivity : Activity() {
         fun getAutoReply(): String = JSONObject().put("on", ActionLog.autoReplyOn(this@MainActivity)).put("text", ActionLog.autoReplyText(this@MainActivity)).toString()
 
         @JavascriptInterface
+        fun getSmartReply(): Boolean = ActionLog.smartReplyOn(this@MainActivity)
+
+        @JavascriptInterface
+        fun setSmartReply(on: Boolean): String { ActionLog.setSmartReply(this@MainActivity, on); return "ok" }
+
+        @JavascriptInterface
+        fun getOwnerName(): String = ActionLog.ownerName(this@MainActivity)
+
+        @JavascriptInterface
+        fun setOwnerName(name: String): String { ActionLog.setOwnerName(this@MainActivity, name.take(60)); return ActionLog.ownerName(this@MainActivity) }
+
+        @JavascriptInterface
         fun setAutoReply(on: Boolean, text0: String): String { val text = text0.take(500); ActionLog.setAutoReply(this@MainActivity, on, text); return "ok" }
 
         @JavascriptInterface
@@ -1557,7 +1634,7 @@ class MainActivity : Activity() {
             return if (BrainStore.get(this@MainActivity).removeSkill(name)) "ok" else "not_found"
         }
 
-        // ---- v6.98 LOCK GUARD ----
+        // ---- v6.97-wip9 LOCK GUARD ----
         @JavascriptInterface
         fun getLockGuard(): Boolean = ExtCfg.lockGuard(this@MainActivity)
 
@@ -1632,7 +1709,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun speakMsg(t0: String): String {
             val t = t0.take(4000)
-            val text = ChatText.clean(t).take(1500)
+            val text = FreeProviders.speakable(ChatText.clean(t), 1500)
             if (text.isBlank()) return "empty"
             val svc = NovaService.instance
             if (svc != null) { svc.speakClick(text); return "ok" }
@@ -1712,6 +1789,19 @@ class MainActivity : Activity() {
             }
         }
 
+        /** Part 9D: Do Not Disturb access page for NOVA. Needed only for "ringer silent". Android lists NOVA there because the manifest declares ACCESS_NOTIFICATION_POLICY. */
+        @JavascriptInterface
+        fun openDndAccess() {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e: Exception) {
+                    ErrLog.add("MainActivity", "openDndAccess " + e.toString())
+                    try { startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e2: Exception) { pushFlow("dnd_settings_failed") }
+                }
+            }
+        }
+
         /** The floating NOVA card needs "Display over other apps"; the user opens it here. */
         @JavascriptInterface
         fun openOverlaySettings() {
@@ -1745,6 +1835,7 @@ class MainActivity : Activity() {
                 .put("contacts", granted(Manifest.permission.READ_CONTACTS))
                 .put("calendar", granted(Manifest.permission.READ_CALENDAR))
                 .put("writeSettings", Settings.System.canWrite(this@MainActivity))
+                .put("dnd", dndGranted())
                 .put("battery", (getSystemService(POWER_SERVICE) as? android.os.PowerManager)?.isIgnoringBatteryOptimizations(packageName) == true)
                 .put("feedUrl", cfg.feedUrl)
                 .put("running", NovaService.running)
@@ -1963,6 +2054,7 @@ class MainActivity : Activity() {
                 .put("contacts", granted(Manifest.permission.READ_CONTACTS))
                 .put("calendar", granted(Manifest.permission.READ_CALENDAR))
                 .put("writeSettings", Settings.System.canWrite(this@MainActivity))
+                .put("dnd", dndGranted())
                 .put("overlay", Settings.canDrawOverlays(this@MainActivity))
                 .put("feedUrl", cfg.feedUrl)
                 .put("running", NovaService.running)
@@ -2031,12 +2123,6 @@ class MainActivity : Activity() {
         fun connectorBegin(id: String): String {
             if (id.length > 40) return "bad"
             val d = ConnectorCatalog.byId(id) ?: return "bad"
-            if (id == ConnectorCatalog.GMAIL) {
-                if (!GmailStore.gmailInstalled(this@MainActivity)) return "nogmail"
-                if (DrivingBridge.listenerEnabled(this@MainActivity)) return "connected"
-                runOnUiThread { DrivingBridge.openListenerSettings(this@MainActivity) }
-                return "opened"
-            }
             val url = if (id == ConnectorCatalog.LOVABLE) "https://lovable.dev" else d.tokenUrl
             runOnUiThread { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) { ErrLog.add("Connector", "open page failed") } }
             return "opened"
@@ -2044,11 +2130,11 @@ class MainActivity : Activity() {
 
         /** After the owner comes back from the provider page: is a token for this connector on the clipboard? Never returns the token. */
         @JavascriptInterface
-        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) "none" else if (clipToken(id) != null) "found" else "none"
+        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) "none" else if (clipToken(id) != null) "found" else "none"
 
         @JavascriptInterface
         fun connectorUseClip(id: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
             val t = clipToken(id) ?: return "none"
             connectorVerifyAsync(id, t, true)
             return "checking"
@@ -2057,7 +2143,7 @@ class MainActivity : Activity() {
         /** Manual fallback: the owner pastes the token into the box. */
         @JavascriptInterface
         fun connectorPaste(id: String, raw0: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
             val t = (if (raw0.length > 400) "" else raw0).trim()
             if (t.length < 20 || t.length > 255 || t.any { it.isWhitespace() }) return "invalid"
             connectorVerifyAsync(id, t, false)
@@ -2078,11 +2164,6 @@ class MainActivity : Activity() {
         /** TEST button: asks the provider again who the token belongs to. */
         @JavascriptInterface
         fun connectorTest(id: String): String {
-            if (id == ConnectorCatalog.GMAIL) {
-                val ok = ConnectorStore.connected(this@MainActivity, id)
-                pushConn(id, if (ok) "ok" else "fail", if (ok) "Gmail app + notification access theek hai" else "Notification access ON karo aur Gmail app rakho")
-                return "checking"
-            }
             if (id.length > 40 || !ConnectorStore.connected(this@MainActivity, id) || id == ConnectorCatalog.LOVABLE) return "none"
             pushConn(id, "checking", "")
             Thread({
@@ -2263,6 +2344,7 @@ class MainActivity : Activity() {
         const val REQ_CALENDAR = 8
         const val REQ_BASIC = 3
         const val REQ_PICK = 4
+        const val REQ_SITE_MEDIA = 47
         const val REQ_VIDEO = 5
         const val REQ_ALL = 9
         const val REQ_EXPORT_TEACH = 6

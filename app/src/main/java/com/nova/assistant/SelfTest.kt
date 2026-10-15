@@ -85,6 +85,19 @@ object SelfTest {
         if (Settings.System.canWrite(ctx)) rec("PASS", "Write settings (brightness)", "")
         else rec("WARN", "Write settings (brightness)", "sirf brightness command ke liye (optional)")
 
+        // ---- 1b. Part 10: the newer features, read-only (nothing is changed, nothing is spoken)
+        try {
+            val dndOn = android.os.Build.VERSION.SDK_INT < 23 || ctx.getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
+            if (dndOn) rec("PASS", "Ringer silent (Do Not Disturb access)", "") else rec("WARN", "Ringer silent (Do Not Disturb access)", "vibrate/normal chalenge; silent ke liye DND access ON karo")
+            val rm = ctx.getSystemService(AudioManager::class.java)?.ringerMode
+            rec(if (rm != null) "PASS" else "WARN", "Ringer mode padh sakta hoon", "abhi mode=" + (rm ?: -1))
+            val acc2 = NovaAccessibilityService.instance != null
+            if (acc2) rec("PASS", "Screenshot (Accessibility)", "") else rec("WARN", "Screenshot (Accessibility)", "Accessibility ON karo")
+            if (Settings.System.canWrite(ctx)) rec("PASS", "Screen rotation (Write settings)", "") else rec("WARN", "Screen rotation (Write settings)", "Brightness control ALLOW karo")
+            if (ActionLog.smartReplyOn(ctx) && !nl.contains(ctx.packageName)) rec("WARN", "AI SMART reply", "ON hai par Notification access OFF hai: jawab nahi jayega")
+            else rec("PASS", "AI SMART reply", if (ActionLog.smartReplyOn(ctx)) "ON aur Notification access ON" else "OFF (optional)")
+        } catch (e: Throwable) { rec("WARN", "Naye features ki jaanch", e.javaClass.simpleName) }
+
         // ---- 2. the service
         val svc = NovaService.instance
         if (!NovaService.running || svc == null) {
@@ -99,8 +112,11 @@ object SelfTest {
             "analyze screen" to "analyze",
             "screen dekho" to "analyze",
             "screen par kya hai" to "analyze",
+            "ye kaun si movie hai" to "analyze",   // wip9: screenshot + web search
             "flashlight on" to "torch_on",
-            "volume up" to "volume"
+            "volume up" to "volume",
+            "vibrate par karo" to "ringer",
+            "auto rotate off" to "rotation"
         )
         for ((p, want) in cases) {
             val got = Logic.classify(p)?.kind ?: "none"
@@ -274,7 +290,7 @@ object SelfTest {
         rec(if (DrivingBridge.listenerEnabled(ctx)) "PASS" else "WARN", "Notification access (business watch)", if (DrivingBridge.listenerEnabled(ctx)) "" else "business watch ke liye ON karo")
         rec("INFO", "Business watch / auto reply live", "TEST NAHI HUA: asli WhatsApp message aane par hi pata chalega")
 
-        // ---- 6f. v6.98 LOCK GUARD: rules are run for real; the phone side is only reported as it is (no fake PASS)
+        // ---- 6f. v6.97-wip9 LOCK GUARD: rules are run for real; the phone side is only reported as it is (no fake PASS)
         run {
             val ring = listOf("Answer", "Decline")
             val call = LockGuard.classify("com.google.android.dialer", "call", "Rahul", "Incoming call", ring, false, true)

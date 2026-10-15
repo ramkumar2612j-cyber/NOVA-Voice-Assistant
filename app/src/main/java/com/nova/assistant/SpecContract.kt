@@ -18,7 +18,7 @@ object SpecContract {
     private fun hasAny(s: String, words: List<String>): Boolean = words.any { s.contains(it) }
 
     fun analyze(request: String): Spec {
-        val raw = request.trim().take(1500)
+        val raw = request.trim().take(SiteGen.MAX_REQ)
         val s = raw.lowercase()
         val deniesShop = hasAny(s, listOf("no shop", "no cart", "no checkout", "without a cart", "without cart", "without checkout", "never ecommerce", "never e-commerce", "not ecommerce", "not e-commerce", "never shop", "no shopping", "cart nahi", "checkout nahi", "cart mat", "checkout mat"))
         val explicitShopTerm = Regex("\\b(shop|store|ecommerce|e-commerce|dukaan|shopping)\\b", RegexOption.IGNORE_CASE).containsMatchIn(s) ||
@@ -86,7 +86,7 @@ object SpecContract {
     fun promptBlock(spec: Spec, fullRequest: String = spec.fullRequest): String {
         fun lines(xs: List<String>) = if (xs.isEmpty()) "- (none specified)" else xs.joinToString("\n") { "- $it" }
         return """\n\nREQUIREMENTS CONTRACT — follow this literally; never swap in a generic template.
-OWNER REQUEST VERBATIM (preserve intent; do not shorten away details): "${fullRequest.trim().take(1500)}"
+OWNER REQUEST VERBATIM (preserve intent; do not shorten away details): "${fullRequest.trim().take(SiteGen.MAX_REQ)}"
 INFERRED DELIVERABLE KIND: ${spec.kind}
 VISUAL STYLE: ${if (spec.style.isEmpty()) "not specified; choose an appropriate style" else spec.style.joinToString(", ")}
 VISIBLE LANGUAGE: ${spec.language}
@@ -96,7 +96,7 @@ MUST NOT:
 ${lines(spec.mustNot)}
 EXACT DETAILS TO PRESERVE:
 ${lines(spec.exactDetails)}
-Build only what was asked for. If it is a blog, do not turn it into a shop. If 3D is requested, implement a visible real 3D treatment, not a label saying 3D. Self-contained HTML only; no external CDN/files. Inline CSS, JS, SVG and canvas are allowed. Never claim a placeholder URL is a working download URL."""
+Build only what was asked for. If it is a blog, do not turn it into a shop. If 3D is requested, implement a visible real 3D treatment, not a label saying 3D. Self-contained HTML; the only external scripts allowed are the optional three.js/GSAP builds named in the quality bar, with a fallback. Inline CSS, JS, SVG and canvas are allowed. Never claim a placeholder URL is a working download URL."""
     }
 
     /** Heuristic quality gate, deliberately conservative: returns only detected gaps/contradictions. */
@@ -123,6 +123,15 @@ Build only what was asked for. If it is a blog, do not turn it into a shop. If 3
         }
         if (spec.kind == "portfolio" && !hasAny(h, listOf("portfolio", "project", "work", "case study"))) {
             problems.add("requested portfolio lacks project/work samples")
+        }
+        // v7.4 premium gate: only for real, full-size pages (short test fixtures are not judged)
+        if (output.length > 6000) {
+            if (!h.contains("name=\"viewport\"")) problems.add("missing responsive viewport meta tag")
+            if (!h.contains("@media")) problems.add("no responsive @media rules (must work on phones)")
+            if (Regex("<section").findAll(h).count() < 5) problems.add("too few sections: a premium site needs at least 7 distinct sections")
+            if (!hasAny(h, listOf("transition", "@keyframes", "animation:"))) problems.add("no hover transitions or animations: add polished micro-interactions")
+            if (!hasAny(h, listOf("intersectionobserver", "scroll-timeline", "animation-timeline"))) problems.add("no scroll-reveal animation")
+            if (!hasAny(h, listOf("<svg", "gradient", "<canvas"))) problems.add("no real graphics: add inline SVG illustrations, gradients or canvas art")
         }
         return problems.distinct()
     }

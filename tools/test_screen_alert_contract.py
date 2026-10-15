@@ -102,7 +102,7 @@ need('Pending(' in a and 'screenStartFrom(' in a and 'say(q, true)' in a, 'alert
 need('announceIfIdle' not in a, 'alert does not use the old announce path')
 need(a.index('Pending(') < a.index('say(q, true)'), 'pending is registered before speaking')
 need('alertKind' in NS.split('private fun processAnswer')[1].split('private fun geminiHear')[0], 'a yes to the alert keeps the session follow window')
-need('screenStartFrom(' in NS.split('private fun analyzeScreen()')[1].split('private fun screenStartFrom')[0], 'analyzeScreen uses the shared start')
+need('screenStartFrom(' in NS.split('private fun analyzeScreen(')[1].split('private fun screenStartFrom')[0], 'analyzeScreen uses the shared start')
 q = SA.split('fun question')[1].lower()
 for w in ('gemini', 'groq', 'openrouter', 'pollinations', 'qwen', 'say analyze'):
     need(w not in q, 'spoken alert names ' + w)

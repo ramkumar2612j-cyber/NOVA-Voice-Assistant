@@ -16,7 +16,7 @@ checks = {
     "compact chip has an explicit close control": "drawControl(c, right - 17f * d, cy, true)" in hud,
     "UI refresh preserves original app mount id": 'id="app"' in ui,
     "UI refresh includes reduced-motion support": "@media(prefers-reduced-motion:reduce)" in ui,
-    "Update Center remains explicitly opened": "function ucOpen(compact)" in ui and "function ucMaybe()" in ui and "function ucAuto()" not in ui,
+    "Update Center remains explicitly opened": "function ucOpen()" in ui and "function ucMaybe()" in ui and "function ucAuto()" not in ui,
 }
 failed = [name for name, ok in checks.items() if not ok]
 for name, ok in checks.items():

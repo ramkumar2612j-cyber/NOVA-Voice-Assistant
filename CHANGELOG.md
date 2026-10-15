@@ -1,10 +1,26 @@
-# wip13 (music commands)
-- NEW MusicCatalog.kt: key-less song catalogue (iTunes Search, titles + artists only) used just to tell similar songs apart. Offline = skipped.
-- CHANGED NovaService music flow: musicBegin -> (similar songs? popup/voice choice) -> musicPlay -> verifyPlayback. Success is reported only when the music app's own media session (Notification access ON) shows the song playing; otherwise NOT_PLAYING / PLAYING_OTHER / PLAYING_UNCONFIRMED / CANNOT_TELL are said honestly.
-- NEW: a different music app is never tried by itself. NOVA asks "<app> par try karun?" (real yes/no, not skippable) and only then tries it.
-- NEW: songChoiceListener popup in MainActivity ("Kaun sa gaana?") plus spoken pick (number or name).
-- RESTORED: .github/workflows/build.yml (was missing from wip12 zip; recreated from docs/BUILD.md; fixes tools/test_vosk_model_packaging.py).
-- NEW tests: MusicPlayRulesTest (extended), MusicCatalogTest, tools/test_music_play_contract.py. Kotlin was NOT compiled in the sandbox (no kotlinc, no network): first real compile is GitHub Actions.
+## v6.97-wip9 - screen se pehchano + baat-cheet (compile / phone par NOT RUN)
+- "ye kaun si movie hai" / "is gaane ka naam batao" / "who is this actor": NOVA screenshot leta hai aur Google Search se naam batata hai (ScreenSession.Intent.IDENTIFY, sirf isi sawal par search). "screen analyse karo aur batao ye kaun si movie hai" bhi isi raste par jaata hai. Protected screen par kabhi nahi. Popup mein koi button nahi chahiye.
+- Baat-cheet mode (jawab ke baad dobara sunna) default ON, 6 follow-up tak (pehle OFF aur 3). Settings mein BAAT-CHEET switch se band hota hai.
+- SKILLS screen mein naya group "NAYE KAAM": screen pehchano, baat-cheet, 5 browsers + offline AI, ringer/DND, Lock Guard.
+- Tests: ScreenSessionTest.identifyQuestionsWantScreenAndSearch (JUnit NOT RUN); tools/run_all_checks.sh = 69/69 PASS (RUN).
+
+## Part 2 (skills list)
+- MADAD list, HelpGuide.TOPICS aur aiFacts mein 15 naye topics (31 total): WhatsApp Business, Auto-reply, Connectors, Routines, Lock Guard, Nickname + ROZ KA SUDHAAR, Battery guide, Gmail, Lambe kaam, Screen alerts, Watch mic, Quiet/Silent, Offline AI pack, Leads, API limits/Update Center. HelpGuideTest.kt aur test_help_contract.py update. Details: PART2_STATUS.md
+
+## v7.4 - understands roundabout commands
+- PhoneActionRules.likelyAction: much wider filter (verb stems, device words, indirect cues like "andhera hai" / "bahut shor hai", polite "kya tum ... sakte ho", Hindi in Devanagari, up to 80 words) so ghuma-phira ke bole command reach the action model; plain questions still skip it.
+- Action prompt (Hinglish + English) now teaches intent-first understanding with examples and allows up to 3 actions in one answer ({"actions":[...]}), parsed by PhoneActionRules.parseAll; NovaService runs them in order and stops at a call/WhatsApp confirmation.
+- Gemini voice prompt also told to act on hints, not only direct commands.
+- Tests: PhoneActionUnderstandTest (JUnit, still to run on GitHub Actions).
+
+## v7.3 - ChatGPT/Claude-style typed chat
+- Typed chat turn ("rich"): backup AIs (Groq/Qwen/GLM/OpenRouter) give full structured answers (2000 tokens, lists, code, "Samjha:" line); Gemini gets a typed-chat note that lifts the read-aloud / 8-sentence rules. Spoken commands keep the short plain rules.
+- Live web context for backup AIs on typed questions (WebContext.kt): Gemini Google Search, else Google News / DuckDuckGo / Wikipedia; "Sources:" line added.
+- ui.html: light markdown in AI bubbles (headings, bold, inline code, lists, code blocks) built from DOM nodes only; COPY on code blocks and long AI messages.
+- Speech: markdown/code stripped before text-to-speech (FreeProviders.speakable).
+- Faster thinking: Gemini 2.5 Flash gets thinkingBudget=0 (GeminiSpeed.kt), retried without it on HTTP 400.
+- Website jobs start with a "Samjha: subject, style, photos, new/edit" line (SiteSummary.kt).
+- MADAD "questions" topic updated. Tests: RichChatTest, WebContextTest, NovaV73Test, tools/test_rich_chat_contract.py (compile + JUnit still to be run on GitHub Actions).
 
 # v6.97 (wip8) 5 KEY-LESS BROWSERS + LOCAL-FIRST AI + LOCK GUARD + ADAPTIVE LISTENING
 - Compile + 834 JUnit tests RUN (kotlinc 1.9.24, real org.json); phone behaviour NOT tested.
@@ -395,3 +411,12 @@ Older history: [docs/PROGRESS.md](docs/PROGRESS.md) and [docs/archive/](docs/arc
 - Integrated a conservative clarification preflight in `NovaService`; it intercepts only low-confidence requests when existing deterministic handlers do not already own them. Existing contact, WhatsApp, app launch, permission, confirmation, and result handlers remain authoritative.
 - Added `IntentParserTest` for call/message/open-app intent, Hindi/Hinglish variants, app-specific routing, ambiguous/negated commands, stage separation, duplicate guard, and safe fallback.
 - Verification: relevant Python regression/contract checks passed. Gradle unit tests and Android build could not run because Gradle 8.7 is not cached and network DNS to `services.gradle.org` is unavailable. Real-device verification remains deferred until all five parts are complete.
+
+## Part 9D - DND access wiring
+- Manifest: ACCESS_NOTIFICATION_POLICY. Bridge openDndAccess + `dnd` state. UI: DND rows (permissions, Settings, SAARE FEATURES). FeatureStatus: ringer + rotation/screenshot rows. Contract: test_part9d_dnd_wiring_contract.py.
+
+## Part 10 - chat auto-start
+- ui.html: autoStartSend (NOVA off + chat send = auto toggle + resend). test_part10_chat_autostart_contract.py.
+
+## Part 10B - 5 sec live status + AutoTest watcher
+- ui.html fsLoad 5000 ms; AutoTest 5 sec watcher + stop() on pause; SelfTest checks DND/ringer/screenshot/rotation/AI SMART; test_part10_autotest_5s_contract.py.

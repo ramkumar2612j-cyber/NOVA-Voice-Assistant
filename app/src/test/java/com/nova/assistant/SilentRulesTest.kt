@@ -96,6 +96,14 @@ class SilentRulesTest {
         assertFalse(SilentRules.carryValid(5000L, 1000L, 60000L))   // clock went back
     }
 
+    @Test fun persistentSilentVoiceRoutesAreSeparateFromLegacyQuietMode() {
+        assertEquals(Logic.Cmd("silent_on"), Logic.classify("silent on"))
+        assertEquals(Logic.Cmd("silent_on"), Logic.classify("silent mode on"))
+        assertEquals(Logic.Cmd("silent_off"), Logic.classify("silent off"))
+        assertEquals(Logic.Cmd("quiet_on"), Logic.classify("quiet mode on"))
+        assertEquals(Logic.Cmd("quiet_off"), Logic.classify("quiet mode off"))
+    }
+
     @Test fun existingStopAndQuietCommandsStillWork() {
         assertEquals(Logic.Cmd("stop"), Logic.classify("quiet"))
         assertEquals(Logic.Cmd("quiet_on"), Logic.classify("quiet mode on"))

@@ -4,7 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 
 /**
- * v6.98: target of android.intent.action.VOICE_COMMAND, which Android sends when a Bluetooth headset / calling watch presses its
+ * v6.97-wip9: target of android.intent.action.VOICE_COMMAND, which Android sends when a Bluetooth headset / calling watch presses its
  * voice-assistant (AI) button. No screen: it wakes NOVA (same as the wake word) on the watch mic and closes at once.
  * The first time Android may ask which app to use: choose NOVA and ALWAYS.
  */

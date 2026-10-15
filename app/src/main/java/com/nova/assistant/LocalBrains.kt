@@ -98,9 +98,6 @@ object LocalBrains {
     /** true when a model is already in RAM: answering with it costs no load time. */
     fun isLoaded(): Boolean = synchronized(lock) { cached != null }
 
-    /** wip11: true when at least one offline model file is installed (the AI picker shows the PHONE AI option as ready). */
-    fun hasInstalled(ctx: Context): Boolean = try { candidates(ctx).isNotEmpty() } catch (e: Throwable) { false }
-
     /** Unloads the model (low memory / service stopping). The next request loads it again. */
     fun release() = synchronized(lock) { dropLocked() }
 
@@ -125,7 +122,7 @@ object LocalBrains {
     fun ask(ctx: Context, text: String): String? {
         val c = candidates(ctx).firstOrNull() ?: return null
         val brain = brainFor(c.path) ?: return null
-        val raw = run(brain, LocalBrainRules.buildPrompt(text), LocalBrainRules.TIMEOUT_MS)
+        val raw = Latency.time("offline_model") { run(brain, LocalBrainRules.buildPrompt(text), minOf(LocalBrainRules.TIMEOUT_MS, UnderstandBudget.OFFLINE_MODEL_MS)) }   // v7.4: 5-second rule
         return LocalBrainRules.parseOutput(PackText.clean(raw))
     }
 

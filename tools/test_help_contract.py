@@ -18,6 +18,10 @@ if S.count('HelpGuide.aiFacts()') < 2: bad.append('AI facts missing in Gemini or
 fn = re.search(r'fun aiFacts\(\): String =(.*?)\n\}', K, re.S)
 if not fn or '$' in fn.group(1).replace('${', '').replace('$', '') and False: bad.append('aiFacts check')
 if fn and re.search(r'\$[A-Za-z{]', fn.group(1)): bad.append('aiFacts must not contain a dollar template (it is pasted into a raw-string prompt)')
+REQ = ['wabiz','autoreply','connectors','routines','lockguard','teach','powerguide','gmail','agent','screenalert','watchmic','quiet','offlineai','leads','limits']
+for r in REQ:
+    if r not in [c['id'] for c in caps]: bad.append('Part 2 topic missing in MADAD: ' + r)
+if len(set(c['id'] for c in caps)) != len(caps): bad.append('duplicate topic ids')
 for c in caps:
     if not c['d'] or not c['t']: bad.append('empty text for ' + c['id'])
 if bad:

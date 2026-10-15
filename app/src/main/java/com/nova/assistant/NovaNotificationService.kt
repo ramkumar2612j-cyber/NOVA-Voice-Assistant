@@ -57,7 +57,7 @@ class NovaNotificationService : NotificationListenerService() {
     }
 
     /**
-     * v6.98 LOCK GUARD: phone locked + (any call while the phone is silent | call or message from Papa / Mummy) = loud beep + one spoken line.
+     * v6.97-wip9 LOCK GUARD: phone locked + (any call while the phone is silent | call or message from Papa / Mummy) = loud beep + one spoken line.
      * Never reads message text. Normal messages are ignored here (and held back by NovaService while locked). Rules: LockGuard.
      */
     private fun handleLock(sbn: StatusBarNotification) {
@@ -99,11 +99,13 @@ class NovaNotificationService : NotificationListenerService() {
             if (!ActionLog.autoReplyOn(ctx)) return
             val now = System.currentTimeMillis()
             if (WaBiz.active(now) && (m.pkg == "com.whatsapp" || m.pkg == "com.whatsapp.w4b")) return   // business watch has its own rules
-            val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: AutoReplyRules.gate.allow(m.sender, now)
+            val smart = ActionLog.smartReplyOn(ctx)
+            val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: (if (smart) SmartReplyRules.gate.allow(m.sender, now) else AutoReplyRules.gate.allow(m.sender, now))
             if (reason != null) {
                 if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true))
                 return
             }
+            if (smart) { smartAutoReply(ctx, m); return }
             val text = ActionLog.autoReplyText(ctx)
             val ok = DrivingBridge.sendReply(ctx, m.key, text)
             ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
@@ -111,6 +113,34 @@ class NovaNotificationService : NotificationListenerService() {
         } catch (e: Exception) {
             // one odd notification must never crash the listener
         }
+    }
+
+    /**
+     * Part 7 AI SMART REPLY: the AI answers in its own words (own thread: the AI call must never run on the main thread), then the owner is told
+     * (history + phone notification + voice when idle). If no AI is available the owner's fixed text is sent instead. Rules: SmartReplyRules.
+     */
+    private fun smartAutoReply(ctx: Context, m: Driving.Msg, business: Boolean = false) {
+        Thread {
+            try {
+                if (SmartReplyRules.convo.lastAssistant(m.sender) == m.text) return@Thread   // our own reply showing up again
+                if (!SmartReplyRules.seen.fresh(m.sender, m.text, System.currentTimeMillis())) return@Thread   // the same notification posted twice
+                val svc = NovaService.instance
+                val res = try { svc?.smartDraft(m.sender, m.text, business) } catch (e: Throwable) { null }
+                if (res != null && res.skip) {
+                    ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", "Jawab ki zaroorat nahi thi", m.pkg)
+                    return@Thread
+                }
+                val text = res?.text ?: ActionLog.autoReplyText(ctx)
+                val needOwner = res?.needOwner ?: false
+                val ok = DrivingBridge.sendReply(ctx, m.key, text)
+                ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
+                val line = SmartReplyRules.inform(m.sender, m.app, m.text, text, needOwner, ok, true)
+                GmailStore.notifyPhone(ctx, if (needOwner) "NOVA: zaruri message" else "NOVA ne baat ki", line)
+                svc?.onSmartReplied(line)
+            } catch (e: Throwable) {
+                ErrLog.add("SmartReply", e.toString())   // one failed chat must never crash the listener
+            }
+        }.start()
     }
 
     /** v6.93: a new Gmail notification = a new mail. Only sender + subject are used (numbers masked); nothing is uploaded. */
@@ -145,6 +175,30 @@ class NovaNotificationService : NotificationListenerService() {
         }
     }
 
+    /**
+     * Part 8: AI SMART REPLY inside the Business Watch window. Runs only when ALL of these are ON: Auto-reply, AI SMART, and Business watch "auto on"
+     * (the owner allowed replies in this window). The owner's catalogue answers still go first and are never replaced; WaBiz URGENT messages still
+     * tell the owner. The business prompt forbids stock / size / rate / delivery claims, so the AI only greets and says the owner will confirm.
+     */
+    private fun bizSmart(pkg: String, key: String, title: String, body: String, canReply: Boolean, d: WaBiz.Decision?) {
+        try {
+            val ctx = applicationContext
+            if (!ActionLog.autoReplyOn(ctx) || !ActionLog.smartReplyOn(ctx) || !WaBiz.autoReply) return
+            if (d != null && (d.sendNow || d.item.draft.isNotBlank())) return   // the owner's own catalogue answer wins
+            if (WaBiz.looksSensitive(body)) return
+            val now = System.currentTimeMillis()
+            val m = Driving.makeMsg(key, pkg, title, body, now, canReply) ?: return
+            val reason = AutoReplyRules.skipReason(false, m.canReply, m.hidden, m.text) ?: SmartReplyRules.gate.allow(m.sender, now)
+            if (reason != null) {
+                if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true), m.pkg)
+                return
+            }
+            smartAutoReply(ctx, m, true)
+        } catch (e: Throwable) {
+            ErrLog.add("BizSmart", e.toString())   // one odd notification must never crash the listener
+        }
+    }
+
     /** WhatsApp / WhatsApp Business only. Decision rules are in WaBiz; this only reads and sends via the notification's own reply button. */
     private fun handleBiz(sbn: StatusBarNotification) {
         val pkg = sbn.packageName ?: return
@@ -159,7 +213,9 @@ class NovaNotificationService : NotificationListenerService() {
         val key = sbn.key ?: "$pkg:${sbn.id}"
         val action = DrivingBridge.replyAction(n)
         if (action != null) DrivingBridge.remember(key, action)
-        val d = WaBiz.onMessage(title, body, System.currentTimeMillis(), action != null, key.hashCode()) ?: return
+        val dec = WaBiz.onMessage(title, body, System.currentTimeMillis(), action != null, key.hashCode())
+        bizSmart(pkg, key, title, body, action != null, dec)   // Part 8: AI smart reply inside the Business Watch window
+        val d = dec ?: return
         if (d.tellOwner) NovaService.instance?.onBizUrgent(d.item.sender, d.item.text)
         if (d.sendNow && d.item.draft.isNotBlank()) {
             val ctx = applicationContext

@@ -121,4 +121,15 @@ class ScreenSessionTest {
         assertFalse(en.contains("press Send?"))
     }
 
+    @Test fun identifyQuestionsWantScreenAndSearch() {
+        assertTrue(ScreenSession.wantsIdentify("nova ye kaun si movie hai"))
+        assertTrue(ScreenSession.wantsIdentify("is gaane ka naam batao"))
+        assertTrue(ScreenSession.wantsIdentify("screen analyse karo aur batao ye kaun si movie hai"))
+        assertTrue(ScreenSession.wantsIdentify("who is this actor"))
+        assertFalse(ScreenSession.wantsIdentify("aaj kaun si movie dekhni chahiye"))
+        assertFalse(ScreenSession.wantsIdentify("torch jala do"))
+        assertEquals(Intent.IDENTIFY, ScreenSession.intent("ye kaun si movie hai"))
+        assertEquals(Logic.Cmd("analyze", "ye kaun si movie hai"), Logic.classify("ye kaun si movie hai"))
+    }
+
 }

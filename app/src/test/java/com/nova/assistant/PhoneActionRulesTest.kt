@@ -37,4 +37,30 @@ class PhoneActionRulesTest {
         assertFalse(prompt.contains("pay("))
         assertFalse(PhoneActionRules.parse("{\"tool\":\"tap\",\"args\":{\"label\":\"pay\"}}") != null)
     }
+
+    // ---- Part 9 (NOT RUN: Kotlin was not compiled in the sandbox)
+    @Test fun part9AcceptsScreenshotRingerAndRotation() {
+        assertEquals("screenshot", PhoneActionRules.parse("{\"tool\":\"global_action\",\"args\":{\"action\":\"screenshot\"}}")?.args?.get("action"))
+        assertEquals("vibrate", PhoneActionRules.parse("{\"tool\":\"ringer\",\"args\":{\"mode\":\"vibrate\"}}")?.args?.get("mode"))
+        assertEquals("silent", PhoneActionRules.parse("{\"tool\":\"ringer\",\"args\":{\"mode\":\"silent\"}}")?.args?.get("mode"))
+        assertEquals("landscape", PhoneActionRules.parse("{\"tool\":\"rotation\",\"args\":{\"mode\":\"landscape\"}}")?.args?.get("mode"))
+        assertEquals("auto_off", PhoneActionRules.parse("{\"tool\":\"rotation\",\"args\":{\"mode\":\"auto_off\"}}")?.args?.get("mode"))
+    }
+
+    @Test fun part9RejectsBadRingerAndRotationModes() {
+        assertNull(PhoneActionRules.parse("{\"tool\":\"ringer\",\"args\":{\"mode\":\"loud\"}}"))
+        assertNull(PhoneActionRules.parse("{\"tool\":\"ringer\",\"args\":{}}"))
+        assertNull(PhoneActionRules.parse("{\"tool\":\"ringer\",\"args\":{\"mode\":\"vibrate\",\"volume\":5}}"))
+        assertNull(PhoneActionRules.parse("{\"tool\":\"rotation\",\"args\":{\"mode\":\"upside_down\"}}"))
+        assertNull(PhoneActionRules.parse("{\"tool\":\"rotation\",\"args\":{\"mode\":true}}"))
+        assertNull(PhoneActionRules.parse("{\"tool\":\"global_action\",\"args\":{\"action\":\"power_off\"}}"))
+    }
+
+    @Test fun part9NewToolsCanBeChainedAndAreKnownToVerify() {
+        val l = PhoneActionRules.parseAll("{\"actions\":[{\"tool\":\"ringer\",\"args\":{\"mode\":\"vibrate\"}},{\"tool\":\"rotation\",\"args\":{\"mode\":\"portrait\"}}]}")
+        assertEquals(2, l.size)
+        assertTrue(ToolVerify.KNOWN_TOOLS.containsAll(listOf("ringer", "rotation")))
+        assertTrue(PhoneActionRules.likelyAction("phone ko vibrate par kar do"))
+        assertTrue(PhoneActionRules.likelyAction("screen rotation band karo"))
+    }
 }

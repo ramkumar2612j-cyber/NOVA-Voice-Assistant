@@ -140,6 +140,13 @@ class NovaHud(private val ctx: Context) {
 
     private val wm: WindowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     @Volatile private var view: HudView? = null
+    /** v7.1: tap on HAAN (true) / NAHI (false) while NOVA waits for a yes/no. Set by the service. */
+    @Volatile var onAnswer: ((Boolean) -> Unit)? = null
+    /** Explicit STOP control; unlike dismiss, this cancels active work and listening. */
+    @Volatile var onStop: (() -> Unit)? = null
+    @Volatile var onSilentToggle: (() -> Boolean)? = null
+    @Volatile var silentOn: Boolean = false
+    @Volatile private var askOn = false
     private var shownAt = 0L
     private var lastReply = ""
 
@@ -170,6 +177,11 @@ class NovaHud(private val ctx: Context) {
         lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         lp.y = (44 * ctx.resources.displayMetrics.density).toInt()
         nv.onDismissTap = { hide() }
+        nv.onAnswerTap = { yes -> onAnswer?.invoke(yes) }
+        nv.onStop = { onStop?.invoke() }
+        nv.onSilentToggle = { onSilentToggle?.invoke() ?: nv.silentOn }
+        nv.silentOn = silentOn
+        nv.setAsk(askOn)
         nv.onMinimizeTap = {
             if (view === nv) {
                 nv.toggleMinimized()
@@ -189,6 +201,9 @@ class NovaHud(private val ctx: Context) {
 
     /** Mic loudness 0..1, may be called from the audio thread (it only stores a number; the card redraws itself). */
     fun setLevel(l: Float) { view?.level = l }
+
+    /** v7.1: show (or hide) the HAAN / NAHI buttons on the card. */
+    fun setAsk(on: Boolean) { askOn = on; view?.setAsk(on) }
     fun holdMs(): Long = HudMath.holdMs(view?.reply?.length ?: 0)
 
     fun setHeard(text: String) { view?.heard = text; view?.invalidate() }
@@ -249,6 +264,18 @@ private class HudView(ctx: Context) : View(ctx) {
     var reply = ""
     var state = "listen"
     var onDismissTap: (() -> Unit)? = null
+    var onAnswerTap: ((Boolean) -> Unit)? = null
+    var onStop: (() -> Unit)? = null                 // explicit STOP tap (wired from NovaHud)
+    var onSilentToggle: (() -> Boolean)? = null      // SILENT tap: returns the new state
+    @Volatile var silentOn: Boolean = false
+    private var askMode = false
+    private val askExtra = (62f * d).toInt()   // v77: room for 44dp HAAN/NAHI buttons
+    private val btnYes = RectF()
+    private val btnNo = RectF()
+    private val btnStop = RectF()
+    private val btnSilent = RectF()
+    private val btnPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val btnText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 14f * d; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
     var onMinimizeTap: (() -> Unit)? = null
     @Volatile var level = 0f            // mic loudness 0..1 (written from the audio thread)
     private var smooth = 0f
@@ -257,7 +284,7 @@ private class HudView(ctx: Context) : View(ctx) {
     private var modeAnimator: ValueAnimator? = null
     private var downX = 0f
     private var downY = 0f
-    private var pressedControl = 0 // 1=minimize/restore, 2=close; visual feedback only
+    private var pressedControl = 0 // 1=minimize/restore, 2=close, 3=STOP, 4=SILENT
 
     private var t = 0f                     // 0 = hidden, 1 = fully shown
     private var entering = false           // true only while the card opens (light burst is not played when closing)
@@ -279,7 +306,7 @@ private class HudView(ctx: Context) : View(ctx) {
     private val title = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 18f * d; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
     private val sub = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF9FB4D6.toInt(); textSize = 12.5f * d }
     private val body = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFEAF2FF.toInt(); textSize = 14.5f * d }
-    private val hint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF6F86AD.toInt(); textSize = 13f * d }
+    private val hint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF9FB4D6.toInt(); textSize = 13f * d }
     private val controlFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x88304A8D.toInt() }
     private val controlStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.2f * d; color = 0xAA8CEBFF.toInt() }
     private val controlLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.8f * d; strokeCap = Paint.Cap.ROUND; color = 0xFFEAF7FF.toInt() }
@@ -292,7 +319,15 @@ private class HudView(ctx: Context) : View(ctx) {
     private var barShader: LinearGradient? = null
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(if (minimized) miniViewW else fullViewW, if (minimized) miniViewH else fullViewH)
+        setMeasuredDimension(if (minimized) miniViewW else fullViewW, if (minimized) miniViewH else fullViewH + (if (askMode) askExtra else 0))
+    }
+
+    fun setAsk(on: Boolean) {
+        if (askMode == on) return
+        askMode = on
+        fillShader = null
+        requestLayout()
+        invalidate()
     }
 
     fun changeState(s: String) { state = s; invalidate() }
@@ -327,6 +362,8 @@ private class HudView(ctx: Context) : View(ctx) {
                     val closeCx = right - 27f * d
                     val miniCx = right - 51f * d
                     when {
+                        x in (margin + 2f * d)..(margin + 62f * d) && kotlin.math.abs(y - controlY) <= 14f * d -> 3
+                        x in (margin + 66f * d)..(margin + 146f * d) && kotlin.math.abs(y - controlY) <= 14f * d -> 4
                         kotlin.math.abs(x - closeCx) <= 13f * d && kotlin.math.abs(y - controlY) <= 14f * d -> 2
                         kotlin.math.abs(x - miniCx) <= 13f * d && kotlin.math.abs(y - controlY) <= 14f * d -> 1
                         else -> 0
@@ -343,6 +380,10 @@ private class HudView(ctx: Context) : View(ctx) {
                 if (moved) return true
                 val x = event.x
                 val y = event.y
+                if (askMode && !minimized) {
+                    if (btnYes.contains(x, y)) { onAnswerTap?.invoke(true); return true }
+                    if (btnNo.contains(x, y)) { onAnswerTap?.invoke(false); return true }
+                }
                 if (minimized) {
                     val right = width - margin
                     val closeCx = right - 17f * d
@@ -354,9 +395,11 @@ private class HudView(ctx: Context) : View(ctx) {
                 val controlY = margin + 24f * d
                 val closeCx = right - 27f * d
                 val miniCx = right - 51f * d
-                if (kotlin.math.abs(x - closeCx) <= 13f * d && kotlin.math.abs(y - controlY) <= 14f * d) onDismissTap?.invoke()
+                if (x in (margin + 2f * d)..(margin + 62f * d) && kotlin.math.abs(y - controlY) <= 14f * d) onStop?.invoke()
+                else if (x in (margin + 66f * d)..(margin + 146f * d) && kotlin.math.abs(y - controlY) <= 14f * d) { onSilentToggle?.invoke()?.let { silentOn = it; invalidate() } }
+                else if (kotlin.math.abs(x - closeCx) <= 13f * d && kotlin.math.abs(y - controlY) <= 14f * d) onDismissTap?.invoke()
                 else if (kotlin.math.abs(x - miniCx) <= 13f * d && kotlin.math.abs(y - controlY) <= 14f * d) onMinimizeTap?.invoke()
-                else onDismissTap?.invoke()
+                else if (!askMode) onDismissTap?.invoke()   // while NOVA waits for HAAN / NAHI a stray tap must not hide the question
                 return true
             }
             MotionEvent.ACTION_CANCEL -> { pressedControl = 0; invalidate(); return true }
@@ -464,6 +507,18 @@ private class HudView(ctx: Context) : View(ctx) {
         c.drawRoundRect(rect, radius, radius, border)
         drawControl(c, right - padForControls(), top + 24f * d, true)
         drawControl(c, right - 51f * d, top + 24f * d, false)
+        // Explicit actions stay separate from the dismiss/minimize controls, including during HAAN/NAHI.
+        val stopRect = RectF(margin + 2f * d, top + 10f * d, margin + 62f * d, top + 38f * d)
+        val silentRect = RectF(margin + 66f * d, top + 10f * d, margin + 146f * d, top + 38f * d)
+        btnSilent.set(silentRect)
+        btnPaint.style = Paint.Style.FILL
+        btnPaint.color = 0xFFB52F48.toInt(); c.drawRoundRect(stopRect, 7f * d, 7f * d, btnPaint)
+        btnPaint.color = if (silentOn) 0xFF187B70.toInt() else 0xFF304A8D.toInt(); c.drawRoundRect(silentRect, 7f * d, 7f * d, btnPaint)
+        btnText.textSize = 11f * d   // v77: was 9
+        val actionY = stopRect.centerY() - (btnText.descent() + btnText.ascent()) / 2f
+        c.drawText("STOP", stopRect.centerX(), actionY, btnText)
+        c.drawText(if (silentOn) "SILENT ON" else "SILENT OFF", silentRect.centerX(), actionY, btnText)
+        btnText.textSize = 14f * d
 
         // orb
         val pad = 16f * d
@@ -551,6 +606,24 @@ private class HudView(ctx: Context) : View(ctx) {
         } else if (state == "listen") {
             val lay = build("\u201Copen YouTube\u201D  \u00B7  \u201Ctorch on\u201D  \u00B7  \u201Cvolume badhao\u201D", hint, bodyW, 2)
             c.save(); c.translate(bx0, by); lay.draw(c); c.restore()
+        }
+        // v7.1 HAAN / NAHI buttons (only while NOVA waits for a yes/no)
+        if (askMode) {
+            val bh = 44f * d   // v77: 44dp touch target
+            val gap = 10f * d
+            val bw2 = (right - left - 2f * pad - gap) / 2f
+            btnYes.set(left + pad, bottom - pad * 0.75f - bh, left + pad + bw2, bottom - pad * 0.75f)
+            btnNo.set(btnYes.right + gap, btnYes.top, right - pad, btnYes.bottom)
+            btnPaint.style = Paint.Style.FILL
+            btnPaint.color = 0xFF16B58A.toInt()
+            c.drawRoundRect(btnYes, 12f * d, 12f * d, btnPaint)
+            btnPaint.color = 0xFF3A4B7A.toInt()
+            c.drawRoundRect(btnNo, 12f * d, 12f * d, btnPaint)
+            btnText.textSize = 16f * d   // v77: bigger HAAN/NAHI label (colors/actions unchanged)
+            val ty = btnYes.centerY() - (btnText.descent() + btnText.ascent()) / 2f
+            c.drawText("HAAN", btnYes.centerX(), ty, btnText)
+            c.drawText("NAHI", btnNo.centerX(), ty, btnText)
+            btnText.textSize = 14f * d
         }
         // opening light: border flash + a light band sweeping across the glass + one shock ring (only while opening)
         if (entering && t < 1f) {

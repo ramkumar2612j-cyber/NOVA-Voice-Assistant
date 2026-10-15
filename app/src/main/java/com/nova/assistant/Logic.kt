@@ -378,6 +378,10 @@ object Logic {
             return Cmd("calendar_today")
         }
 
+        // ---- Part 3: persistent SILENT switch, kept separate from legacy quiet replies.
+        if (core in setOf("silent on", "silent mode on", "silent karo", "awaaz band mode on")) return Cmd("silent_on")
+        if (core in setOf("silent off", "silent mode off", "silent hatao", "awaaz band mode off")) return Cmd("silent_off")
+
         // ---- quiet replies on / off (default on: replies are shown in the chat, not spoken)
         if (core in setOf("quiet mode on", "silent replies on", "voice replies off")) return Cmd("quiet_on")
         if (core in setOf("quiet mode off", "silent replies off", "voice replies on")) return Cmd("quiet_off")
@@ -408,6 +412,7 @@ object Logic {
 
         // ---- Message Mode has its own saved switch/inbox; Driving remains independent.
         WaBiz.command(n)?.let { return it }
+        SmartReplyRules.command(n)?.let { return it }   // Part 8: AI SMART / Auto-reply on or off by voice (confirmation in NovaService)
         MessageMode.command(n, core)?.let { return it }
 
         // ---- driving mode (read messages aloud, fixed quick replies). Checked before the free-text "type" rule.
@@ -437,6 +442,7 @@ object Logic {
             return null
         }
 
+        if (ScreenSession.wantsIdentify(text)) return Cmd("analyze", text)   // v6.97-wip9: "ye kaun si movie hai" = screenshot + web search
         if (has("screen") && !has("brightness", "brightnes", "timeout", "lock", "rotate", "rotation", "record", "recording", "shot", "off", "band") && // FIXSCREEN2
             (has("analyze", "analyse", "analysis", "dekho", "check", "read", "summarize", "summary",
                 "dekh", "dekhna", "dikh", "dikha", "dikhao", "dikhta", "padh", "padho", "padhna", "batao", "bata", "kya", "likha",
@@ -468,6 +474,19 @@ object Logic {
             val num = parseNumber(t)
             if (num != null) return Cmd("volume", "set", num.coerceIn(0, 100))
             return null
+        }
+
+        // Part 9B: ringer + screen rotation by voice, also without AI. The bare word "silent" is NOT used here (it belongs to NOVA's Silent mode and volume mute).
+        if (!negated && size <= 6) {
+            if (has("vibrate", "vibration") && !has("off", "band", "bandh", "stop", "disable", "camera", "alarm")) return Cmd("ringer", "vibrate")
+            if (has("ringer") && has("silent")) return Cmd("ringer", "silent")
+            if (has("ringer") && has("normal", "on", "chalu")) return Cmd("ringer", "normal")
+            if (has("portrait", "landscape") && has("screen", "rotate", "rotation", "lock", "orientation") && !has("camera", "photo", "selfie", "image"))
+                return Cmd("rotation", if (has("portrait")) "portrait" else "landscape")
+            if (has("rotate", "rotation", "autorotate")) {
+                if (has("off", "band", "bandh", "lock", "stop", "disable")) return Cmd("rotation", "auto_off")
+                if (has("on", "chalu", "chalao", "start", "enable")) return Cmd("rotation", "auto_on")
+            }
         }
 
         if (has("brightness", "brightnes")) {

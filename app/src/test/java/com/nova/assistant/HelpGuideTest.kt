@@ -42,4 +42,24 @@ class HelpGuideTest {
         for (tp in HelpGuide.TOPICS) assertTrue(tp.id, f.contains(tp.example))
         assertFalse(f.contains("$"))
     }
+
+    @Test fun part2TopicsExistAndAreFound() {
+        val ids = HelpGuide.TOPICS.map { it.id }
+        for (id in listOf("wabiz", "autoreply", "connectors", "routines", "lockguard", "teach", "powerguide", "gmail", "agent", "screenalert", "watchmic", "quiet", "offlineai", "leads", "limits"))
+            assertTrue(id, id in ids)
+        assertEquals(ids.size, ids.toSet().size)
+        assertEquals("wabiz", HelpGuide.topicFor("kya tum business watch kar sakte ho")?.id)
+        assertEquals("gmail", HelpGuide.topicFor("can you read my gmail")?.id)
+        assertEquals("connectors", HelpGuide.topicFor("kya tum github ka kaam kar sakte ho")?.id)
+        assertEquals("quiet", HelpGuide.topicFor("kya tum quiet mode kar sakte ho")?.id)
+        assertEquals("offlineai", HelpGuide.topicFor("can you work with offline ai")?.id)
+        assertEquals("lockguard", HelpGuide.topicFor("kya tum lock guard kar sakte ho")?.id)
+    }
+
+    @Test fun everyTopicHasExampleAndDescription() {
+        for (tp in HelpGuide.TOPICS) {
+            assertTrue(tp.id, tp.hi.isNotBlank() && tp.en.isNotBlank() && tp.example.isNotBlank() && tp.descHi.isNotBlank() && tp.descEn.isNotBlank())
+            assertTrue(tp.id, HelpGuide.topicLine(tp, false).startsWith("Haan!"))
+        }
+    }
 }

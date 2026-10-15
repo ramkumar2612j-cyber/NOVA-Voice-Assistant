@@ -7,7 +7,7 @@ import android.media.AudioRecord
 import android.os.Build
 
 /**
- * v6.98 WATCH MIC (owner: calling watch connected over Bluetooth, its AI button should wake NOVA and NOVA should hear the watch mic).
+ * v6.97-wip9 WATCH MIC (owner: calling watch connected over Bluetooth, its AI button should wake NOVA and NOVA should hear the watch mic).
  * A calling watch is a Bluetooth HEADSET to the phone. Its AI / voice button sends the headset "voice command" signal, which Android turns into
  * android.intent.action.VOICE_COMMAND (WatchCommandActivity). Then the watch mic is only reachable through a Bluetooth SCO call-audio link:
  * this object opens that link and points NOVA's AudioRecord at it, and closes it again after the turn so music / phone mic come back.

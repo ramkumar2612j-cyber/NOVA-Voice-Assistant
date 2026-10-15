@@ -35,10 +35,10 @@ object ExtCfg {
 
     private const val CONVO = "convo_mode_v2"   // v6.30: new key so the old default-ON value of existing installs is dropped
 
-    /** v16 conversation mode: after a spoken reply NOVA listens again (up to 3 times in a row) without the wake word. Default OFF since v6.30 (it made NOVA listen without being called). */
+    /** v16 conversation mode: after a spoken reply NOVA listens again (up to 3 times in a row) without the wake word. Default ON again since v6.97-wip9 (owner wants normal back-and-forth talk); the BAAT-CHEET switch turns it off. */
     fun convo(ctx: Context): Boolean = try {
-        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(CONVO, false)
-    } catch (e: Exception) { false }
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(CONVO, true)
+    } catch (e: Exception) { true }
 
     fun setConvo(ctx: Context, on: Boolean) {
         try {
@@ -87,7 +87,7 @@ object ExtCfg {
 
     private const val LOCK_GUARD = "lock_guard"
 
-    /** v6.98 LOCK GUARD: while the phone is locked NOVA takes no commands, reads no normal messages, and only alerts for calls (phone silent) and Papa / Mummy. Default ON. */
+    /** v6.97-wip9 LOCK GUARD: while the phone is locked NOVA takes no commands, reads no normal messages, and only alerts for calls (phone silent) and Papa / Mummy. Default ON. */
     fun lockGuard(ctx: Context): Boolean = try {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(LOCK_GUARD, true)
     } catch (e: Exception) { true }
@@ -137,7 +137,7 @@ object ExtCfg {
             a.put(org.json.JSONObject().put("id", p.id).put("label", p.label.substringBefore(" (").trim()).put("keySet", has))
         }
         return org.json.JSONObject().put("choice", chatAi(ctx)).put("fallback", chatFallback(ctx))
-            .put("gemini", SecureStore.hasKeys(ctx)).put("local", try { LocalBrains.isLoaded() || LocalBrains.hasInstalled(ctx) } catch (e: Throwable) { false }).put("providers", a).toString()
+            .put("gemini", SecureStore.hasKeys(ctx)).put("providers", a).toString()
     }
 
     fun setChatAi(ctx: Context, choice: String, fallback: Boolean) {

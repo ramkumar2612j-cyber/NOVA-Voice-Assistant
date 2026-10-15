@@ -1,25 +1,3 @@
-# NOVA next account prompt (v6.97 WIP11) - paste as first message, attach this ZIP (NOVA-v6_97-wip11.zip, folder nova_part4_work)
-
-Owner: not a programmer, Android phone only. Reply in Hinglish, short, ONE step at a time. Say clearly RUN vs NOT RUN.
-Owner wants a direct link + preview with every delivery. Compile only on GitHub Actions.
-
-## wip11 (15 Oct 2026) - code written, NOTHING compiled, NO JUnit, NO phone test. Only headless Playwright UI check (RUN, 0 JS errors).
-Owner report: many features not working; website request failed; popup; Gmail missing in connectors; no AI choice in chat.
-Root causes found + fixes written:
-1. Website by voice/chat: HelpGuide.isAsk stole the first message; SiteIntent.parse rejected >60 words so the 2nd went to the agent ("not a text box"). FIX: SiteIntent.parse accepts up to 400 tokens, NOT-words only count in the first 6 tokens of long text, subject = short label (raw brief keeps 3000 chars); NovaService help route has `SiteIntent.parse(text) == null &&` guard.
-2. Agent "not a text box": NovaService agent loop adds a HINT listing editable item numbers and allows 5 refusals for that reason.
-3. Popup (ui.html): Update Center no longer auto-opens full. ucOpen(compact): small bottom card "SETUP BAAKI HAI" only when mic/notif missing, dismissed for the day via localStorage nova_uc_dis; manual full view shows 3 newest changelog items + "PURANE ... DEKHO". Contracts test_feature_status_contract.py and test_hud_controls.py strings updated.
-4. Gmail connector: ConnectorCatalog.GMAIL (kind "device", aliases "gmail connector..." so GmailRules voice commands are not stolen), ConnectorStore.connected = Gmail installed + notification listener ON, ConnectorApi.gmailRun (recent, important, watches, compose = opens Gmail draft, owner presses SEND), MainActivity.connectorBegin/Test handle GMAIL, NovaService connect branch, ui.html device flow (opens notification access, polls until connected).
-5. Chat AI picker already existed (chip c_ai). Added AiChoice.LOCAL ("PHONE AI (offline)"): NovaService uses localAnswer first, ExtCfg.chatAiJson "local", LocalBrains.hasInstalled, KEY DAALO button in picker.
-
-## TODO for next account (owner ordered: tests/compile are for the next account)
-- Run tools/local_compile_check.sh or GitHub Actions; fix real compile errors (all wip11 Kotlin edits are uncompiled).
-- Add unit tests: SiteIntent long brief (the two owner messages), AiChoice.LOCAL, Gmail connector catalog/ConnectorStore; run tools/run_all_checks.sh fully (only the 2 edited contracts were re-run).
-- test_connectors_contract.py may pin connector count (now +1 Gmail): check.
-- Phone check: website request builds site; popup compact; Gmail CONNECT; AI picker PHONE AI.
-
-
-## OLDER NOTES (wip4-wip10)
 # NOVA next account prompt (v6.97 WORK IN PROGRESS, wip7) - paste as first message, attach this ZIP
 
 Owner: not a programmer, Android phone only (Chrome + GitHub website). Reply in Hinglish, short, ONE step at a time.

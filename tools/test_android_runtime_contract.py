@@ -17,5 +17,5 @@ check("wrapper Gradle is 8.7 or newer (AGP 8.5.2 needs 8.7+)", re.search(r"gradl
 check("versionName matches the release notes", 'versionName = "6.97"' in G)
 check("every PendingIntent has IMMUTABLE or MUTABLE (crash on targetSdk 31+ otherwise)", all(("FLAG_IMMUTABLE" in blk or "FLAG_MUTABLE" in blk or "flags" in blk or "fl)" in blk or ", fl" in blk) for blk in [x[:400] for x in re.split(r"PendingIntent\.get(?:Activity|Service|Broadcast)\(", "".join(rd("app/src/main/java/com/nova/assistant/" + f) for f in os.listdir(os.path.join(R, "app/src/main/java/com/nova/assistant")) if f.endswith(".kt")))[1:]]))
 check("foreground services declare a type that matches the permissions", 'foregroundServiceType="microphone"' in MF and "FOREGROUND_SERVICE_MICROPHONE" in MF and 'foregroundServiceType="camera|microphone"' in MF and "FOREGROUND_SERVICE_CAMERA" in MF)
-check("only the launcher activity and system-bound services are exported (+ boot receiver)", MF.count('exported="true"') == 8)   # v6.98: +WatchCommandActivity (VOICE_COMMAND, no UI)
+check("only the launcher activity and system-bound services are exported (+ boot receiver)", MF.count('exported="true"') == 8)   # v6.97-wip9: +WatchCommandActivity (VOICE_COMMAND, no UI)
 sys.exit(1 if bad else 0)

@@ -546,7 +546,7 @@ class NovaAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * v6.98 LOCK GUARD: while a lock alert plays, ONE press of a volume key stops it (and is consumed, so the volume does not change).
+     * v6.97-wip9 LOCK GUARD: while a lock alert plays, ONE press of a volume key stops it (and is consumed, so the volume does not change).
      * Without an active alert the key is passed on untouched. Needs flagRequestFilterKeyEvents (accessibility_config.xml).
      */
     override fun onKeyEvent(event: android.view.KeyEvent?): Boolean {

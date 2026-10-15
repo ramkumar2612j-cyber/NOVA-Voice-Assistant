@@ -17,7 +17,7 @@ object ConnectorCatalog {
         val id: String,
         val name: String,
         val short: String,
-        /** "token" = provider API with a personal access token, "link" = no public API (opens the site), "device" = works through the phone itself (Gmail app + NOVA notification access, no login), "mcp" = custom MCP server. */
+        /** "token" = provider API with a personal access token, "link" = no public API (opens the site), "mcp" = custom MCP server. */
         val kind: String,
         val tokenUrl: String,
         val tokenHelp: String,
@@ -35,7 +35,6 @@ object ConnectorCatalog {
     const val SUPABASE = "supabase"
     const val NOTION = "notion"
     const val LOVABLE = "lovable"
-    const val GMAIL = "gmail"
     const val MCP_PREFIX = "mcp_"
 
     const val PERM_OFF = "off"
@@ -131,22 +130,6 @@ object ConnectorCatalog {
             emptyList(),
             listOf(Action("open", "Lovable kholo", false)),
             listOf("lovable", "lavable")
-        )
-        ,
-        Def(
-            GMAIL, "Gmail", "Naye mail dekhna, zaroori mail pakadna, mail likhna. Login ya token nahi, Gmail app ke notification se.", "device",
-            "",
-            "Settings mein NOVA ka Notification access ON karo aur Gmail app ke notification ON rakho. Bas, koi password ya token nahi.",
-            null,
-            listOf("Gmail ke naye mail (sender aur subject) dekhna", "Zaroori mail pakadna", "Watch list dekhna"),
-            listOf("Mail likhne ka draft Gmail mein kholna (bhejna aapke haath mein)"),
-            listOf(
-                Action("recent", "Naye mail", false),
-                Action("important", "Zaroori mail", false),
-                Action("watches", "Watch list", false),
-                Action("compose", "Mail likho", true, "email | subject | message")
-            ),
-            listOf("gmail connector", "gmail connection", "gmail connectors")
         )
     )
 

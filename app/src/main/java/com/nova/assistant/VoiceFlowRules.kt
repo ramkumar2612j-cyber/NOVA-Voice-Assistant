@@ -25,7 +25,7 @@ object CaptureRules {
     const val MAX_SILENCE_MS = 3500
 
     /**
-     * v6.98 ("chota ya bada sentence, NOVA poori baat samjhe"): a short finished command ends after the base silence; a LONG sentence waits a little
+     * v6.97-wip9 ("chota ya bada sentence, NOVA poori baat samjhe"): a short finished command ends after the base silence; a LONG sentence waits a little
      * longer and a sentence that stops on a connector word ("... aur", "... ko") waits longer still, so a thinking pause does not cut it.
      * [text] = what Vosk has recognised so far in this capture.
      */

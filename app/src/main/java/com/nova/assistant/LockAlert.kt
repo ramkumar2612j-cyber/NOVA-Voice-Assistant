@@ -14,7 +14,7 @@ import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
 /**
- * v6.98 loud lock-screen alert: 3 beeps on the ALARM stream (a silent / vibrate ringer does not mute it), then the sentence
+ * v6.97-wip9 loud lock-screen alert: 3 beeps on the ALARM stream (a silent / vibrate ringer does not mute it), then the sentence
  * from LockGuard.text spoken on the alarm stream, repeated up to LockGuard.ROUNDS times.
  * Own TextToSpeech instance, so it works even when NOVA is not ACTIVATED (the notification listener is kept alive by Android).
  * Stops by: one volume key press (NovaAccessibilityService.onKeyEvent -> [stop]), unlocking the phone, or the last round.
