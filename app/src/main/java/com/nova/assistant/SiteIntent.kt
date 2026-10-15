@@ -46,11 +46,14 @@ object SiteIntent {
     /** null = this is not a "build a website" sentence. Otherwise the subject (may be empty) and whether it must be refused. */
     fun parse(text: String): Parsed? {
         val t = tokens(text)
-        if (t.isEmpty() || t.size > 60) return null
+        // v6.97 wip11: a long, detailed brief ("3d website banao, ... features, ... download kar sake") is still a website request.
+        // Long sentences only treat a "NOT" word as another feature when it sits at the very start of the sentence.
+        if (t.isEmpty() || t.size > 400) return null
+        val notScope = if (t.size > 25) 6 else t.size
         var verb = false
         var noun = false
-        for (w in t) {
-            if (w in NOT) return null
+        for ((i, w) in t.withIndex()) {
+            if (i < notScope && w in NOT) return null
             if (w in VERBS) verb = true
             if (w in NOUNS) noun = true
         }
@@ -62,9 +65,10 @@ object SiteIntent {
             if (w in VERBS || w in NOUNS || w in FILLER) continue
             keep.add(w)
         }
-        var subject = keep.joinToString(" ")
-        if (subject.length < 3) subject = ""
-        return Parsed(subject, blocked, text.trim().take(1500))
+        // the subject is only a short label (it is spoken back); the full brief travels in [raw]
+        var subject = keep.take(6).joinToString(" ").take(60).trim()
+        if (subject.length < 3) subject = if (t.size > 12) "professional" else ""
+        return Parsed(subject, blocked, text.trim().take(3000))
     }
 
     // v6.90 follow-up on the website NOVA already built: "isko professional banao", "website ko dark mode ke saath behtar karo".

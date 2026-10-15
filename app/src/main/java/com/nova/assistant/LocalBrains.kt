@@ -98,6 +98,9 @@ object LocalBrains {
     /** true when a model is already in RAM: answering with it costs no load time. */
     fun isLoaded(): Boolean = synchronized(lock) { cached != null }
 
+    /** wip11: true when at least one offline model file is installed (the AI picker shows the PHONE AI option as ready). */
+    fun hasInstalled(ctx: Context): Boolean = try { candidates(ctx).isNotEmpty() } catch (e: Throwable) { false }
+
     /** Unloads the model (low memory / service stopping). The next request loads it again. */
     fun release() = synchronized(lock) { dropLocked() }
 

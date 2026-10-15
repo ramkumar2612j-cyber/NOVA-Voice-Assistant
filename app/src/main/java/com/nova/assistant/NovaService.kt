@@ -77,6 +77,8 @@ class NovaService : Service() {
         @Volatile var uiVisible = false          // set by MainActivity.onResume/onPause (PART 2)
         var listener: ((String, String) -> Unit)? = null
         var contactChoiceListener: ((List<ContactCandidate>, (ContactCandidate?) -> Unit) -> Unit)? = null
+        /** wip13: popup "which song?" - labels in, tapped index (or null = cancel) out. */
+        var songChoiceListener: ((List<String>, (Int?) -> Unit) -> Unit)? = null
         var permRequest: ((String) -> Unit)? = null   // v31: the open app shows the Android permission dialog at the moment a command needs it
         var publishListener: ((Boolean, String, String) -> Unit)? = null   // v16: voice publish finished -> chat screen (ok, message, url)
         var learnListener: (() -> Unit)? = null   // v16: a new note arrived -> refresh Settings > KYA SEEKHA
@@ -1934,7 +1936,7 @@ class NovaService : Service() {
         }
         if (text.isNotBlank() && AgentTaskRules.isStatusQuery(text)) return AgentTaskLedger(this).statusText()
         // v6.91 easy help: "tum kya kar sakte ho" / "kya tum website bana sakte ho" is answered locally (no AI, works offline) for typed chat and voice.
-        if (text.isNotBlank() && HelpGuide.isAsk(text)) {
+        if (text.isNotBlank() && SiteIntent.parse(text) == null && HelpGuide.isAsk(text)) {   // wip11: a "website banao ... nova kya kar sakta h" brief is a BUILD request, not a help question
             lastTurnLocal = true
             lastKind = "help_guide"
             return HelpGuide.answer(text, cfg.lang == "en")
@@ -2013,7 +2015,7 @@ class NovaService : Service() {
         if (musicReq != null) {
             lastTurnLocal = true
             lastKind = "music_play"
-            return musicPlay(musicReq).msg
+            return musicBegin(musicReq)
         }
         // v6.92: any installed app: "<app> me <cheez> search/play karo", "ye share karo". Unknown app name = falls through to normal routing.
         // v6.93: Gmail (send, watch list, important mail). Needs a mail word, so ordinary sentences are untouched.
@@ -2151,7 +2153,7 @@ class NovaService : Service() {
         if (musicReq2 != null) {   // v6.60: same no-AI music play for text heard by the cloud listener
             lastTurnLocal = true
             lastKind = "music_play"
-            return musicPlay(musicReq2).msg
+            return musicBegin(musicReq2)
         }
         val gmCmd2 = if (c == null && groqText.isNotBlank()) GmailRules.parse(groqText) else null
         if (gmCmd2 != null) {   // v6.93: same Gmail commands for text heard by the cloud listener
@@ -2276,6 +2278,11 @@ class NovaService : Service() {
         // The result cannot bypass runTool: calls/WhatsApp still ask spoken yes; unsafe tools are not in the allow-list.
         val aiChoice = ExtCfg.chatAi(this)
         val aiFallback = ExtCfg.chatFallback(this)
+        if (aiChoice == AiChoice.LOCAL && !PhoneActionRules.likelyAction(said)) {   // wip11: owner chose the phone's own offline AI
+            val la = try { localAnswer(said, true, false) } catch (e: Exception) { null }
+            if (la != null) return Routing.CloudResult(la, true)
+            if (!aiFallback) return Routing.CloudResult(tr("Phone ka offline AI abhi jawab nahi de paya. AI CHUNO mein AUTO FALLBACK ON karo ya AUTO chuno.", "The phone's offline AI could not answer. Turn AUTO FALLBACK on in the AI picker, or choose AUTO."), false)
+        }
         if (PhoneActionRules.likelyAction(said) && ExtCfg.freeChain(this) && AiChoice.chainAllowed(aiChoice, aiFallback)) {
             val act = runFreePhoneAction(said, en)
             if (act != null) {
@@ -2601,6 +2608,24 @@ class NovaService : Service() {
                     agentAnsText = text
                     agentAnsFlag?.set(true)
                     tr("Theek hai", "Okay")
+                }
+                p === songChoicePending -> {   // wip13: spoken pick of one of the songs shown in the popup
+                    val labels = songChoices.map { it.label }
+                    val picked = MusicPlayRules.matchSpoken(text, labels)
+                    when {
+                        picked != null -> {
+                            songChosen(picked)
+                            tr("${labels[picked]} chala raha hoon", "Playing ${labels[picked]}")
+                        }
+                        Logic.parseAnswer(text) == false || Regex("cancel|rehne do|mat|nahi|band").containsMatchIn(Logic.norm(text)) -> {
+                            h.post { clearSongChoice() }
+                            tr("Theek hai, gaana chunna cancel kar diya", "Okay, cancelled the song choice")
+                        }
+                        else -> {
+                            pending = p
+                            tr("Number ya gaane ka naam bolo, ya cancel bolo", "Say the number or the song name, or say cancel")
+                        }
+                    }
                 }
                 isContactRetry -> {
                     // A spoken choice may select only one of the real candidates shown in the contact picker.
@@ -3334,6 +3359,9 @@ class NovaService : Service() {
             "connect" -> {
                 if (on) return tr("${d.name} pehle se connect hai", "${d.name} is already connected")
                 if (ConnectorCatalog.isDynId(d.id)) return tr("Ye connector app mein CONNECT tab se jodte hain (address aur key wahin daalni hoti hai)", "Add this connector in the CONNECT tab (the address and key are typed there)")
+                if (d.kind == "device") {
+                    return gmailRun(GmailRules.Cmd.Connect)
+                }
                 if (d.kind == "link") {
                     val opened = connOpenPage(d.tokenUrl)
                     return tr("${d.name} ka public API nahi hai. Pehle github connect karo, phir wahi repo use hoga" + if (opened) ". Site khol di" else "",
@@ -4256,7 +4284,11 @@ class NovaService : Service() {
                 denied++
                 hist.add("step $step: " + agentDescribe(a, node) + " -> REFUSED by safety (" + chk.why + ")")
                 agentNote("step $step: " + a.act + " roka gaya (" + chk.why + ") [" + pkg + "]")   // v6.18d: visible in the chat
-                if (denied >= 3) return agentFinish(AgentTaskRules.State.FAILED, tr(
+                if (chk.why == "not a text box") {   // wip11: tell the model which items ARE text boxes so it can pick one instead of giving up
+                    val boxes = nodes.filter { it.editable }.take(6).joinToString(", ") { "#" + it.i }
+                    hist.add("HINT: item #" + a.index + " is not a text box. " + (if (boxes.isEmpty()) "No text box is on screen: tap the field you want to type into first, then type." else "Text boxes on this screen: $boxes. Use one of these numbers for type."))
+                }
+                if (denied >= (if (chk.why == "not a text box") 5 else 3)) return agentFinish(AgentTaskRules.State.FAILED, tr(
                     "Ye step main nahi kar sakta (" + chk.why + "). Aap khud karo",
                     "I cannot do this step (" + chk.why + "). Please do it yourself"
                 ))
@@ -4531,31 +4563,179 @@ class NovaService : Service() {
         ) + r.msg)
     }
 
-    private fun musicPlay(req: MusicPlayRules.Request): R {
-        val pm = packageManager
-        val pkg = req.packages.firstOrNull { try { pm.getPackageInfo(it, 0); true } catch (e: Exception) { false } }
-            ?: return R(false, tr("${req.appLabel} phone mein install nahi mila", "${req.appLabel} is not installed on this phone"))
+    // ------------------------------------------------------------------ wip13: music commands (real playback check, honest answers, no silent app switch)
+
+    @Volatile private var songChoicePending: Pending? = null
+    @Volatile private var songChoices: List<MusicCatalog.Track> = emptyList()
+    @Volatile private var songChoiceReq: MusicPlayRules.Request? = null
+
+    private fun isInstalled(pkg: String): Boolean = try { packageManager.getPackageInfo(pkg, 0); true } catch (e: Exception) { false }
+
+    private fun clearSongChoice() {
+        songChoices = emptyList()
+        songChoiceReq = null
+        val p = songChoicePending
+        songChoicePending = null
+        if (p != null && pending === p) pending = null
+    }
+
+    /** Entry for "<music app> par <song> play karo". Similar songs -> popup / spoken choice. Otherwise straight to [musicPlay]. Worker thread. */
+    private fun musicBegin(req: MusicPlayRules.Request): String {
+        if (req.packages.none { isInstalled(it) }) return musicPlay(req).msg
+        val tracks = try { MusicCatalog.lookup(req.query) } catch (e: Exception) { null }
+        if (tracks != null) {
+            val many = MusicPlayRules.choices(req.query, tracks)
+            if (many.size >= 2) return songAsk(req, many)
+            val one = MusicPlayRules.bestSingle(req.query, tracks)
+            if (one != null) return musicPlay(req.copy(query = MusicPlayRules.searchQuery(one)), verifyText = one.title).msg
+        }
+        return musicPlay(req).msg
+    }
+
+    private fun songAsk(req: MusicPlayRules.Request, tracks: List<MusicCatalog.Track>): String {
+        songChoices = tracks
+        songChoiceReq = req
+        val lines = tracks.mapIndexed { i, t -> "${i + 1}. ${t.label}" }.joinToString("\n")
+        val prompt = tr(
+            "'${req.query}' ke kai gaane mile:\n$lines\nNumber ya naam bolo, ya cancel bolo.",
+            "Found several songs for '${req.query}':\n$lines\nSay the number or the name, or say cancel."
+        )
+        val p = Pending(prompt, System.currentTimeMillis(), onNo = { clearSongChoice() }, run = { "" })
+        songChoicePending = p
+        pending = p
+        if (uiVisible) {
+            songChoiceListener?.invoke(tracks.map { it.label }) { idx ->
+                if (idx != null) songChosen(idx) else h.post { clearSongChoice() }
+            }
+        }
+        return prompt
+    }
+
+    /** One real choice (popup tap or spoken). The claim stops a tap + a spoken answer from starting the song twice. */
+    private fun songChosen(idx: Int) {
+        val req = songChoiceReq
+        val track = songChoices.getOrNull(idx)
+        if (req == null || track == null) return
+        if (!claimAction("song|" + req.appKey + "|" + track.label)) return
+        h.post { clearSongChoice() }
+        Thread {
+            val r = try { musicPlay(req.copy(query = MusicPlayRules.searchQuery(track)), verifyText = track.title) }
+                catch (e: Exception) { R(false, tr("Gaana chalane me dikkat aayi", "Could not start the song")) }
+            announce(r.msg)
+        }.start()
+    }
+
+    /** Asks (always, even if the other confirmations are switched off) before trying a DIFFERENT app. Nothing is sent anywhere else without a yes. */
+    private fun musicAltOffer(req: MusicPlayRules.Request, why: String, tried: Set<String>): String {
+        val seen = tried + req.appKey
+        val alt = MusicPlayRules.others(req.appKey, seen).firstOrNull { a -> a.packages.any { isInstalled(it) } }
+            ?: return why + tr(" Koi doosra music app installed nahi mila. Maine ise kisi aur app par nahi bheja.", " No other music app is installed. I did not send it to any other app.")
+        val prompt = why + tr(" ${alt.label} par '${req.query}' try karun? Haan ya na bolo.", " Try '${req.query}' on ${alt.label}? Say yes or no.")
+        pending = Pending(prompt, System.currentTimeMillis(), onNo = null, run = {
+            musicPlay(MusicPlayRules.Request(alt.key, alt.label, alt.packages, req.query), seen).msg
+        })
+        return prompt
+    }
+
+    /** Samples the music app's own media session (needs Notification access ON) and AudioManager for up to ~8 s. Blocks the worker thread. */
+    private fun verifyPlayback(pkg: String, wasActive: Boolean, q: String): Triple<MusicPlayRules.Outcome, String, String> {
+        val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        try { Thread.sleep(1500) } catch (e: InterruptedException) { return Triple(MusicPlayRules.Outcome.CANNOT_TELL, "", "") }
+        val end = System.currentTimeMillis() + 6500
+        var last = MusicPlayRules.Outcome.NOT_PLAYING
+        var title = ""
+        var artist = ""
+        while (true) {
+            var sp: Boolean? = null
+            title = ""
+            artist = ""
+            try {
+                val msm = getSystemService(MEDIA_SESSION_SERVICE) as android.media.session.MediaSessionManager
+                val list = msm.getActiveSessions(android.content.ComponentName(this, NovaNotificationService::class.java))
+                sp = false
+                for (c in list) {
+                    if (c.packageName != pkg) continue
+                    val st = c.playbackState?.state
+                    if (st == android.media.session.PlaybackState.STATE_PLAYING || st == android.media.session.PlaybackState.STATE_BUFFERING) {
+                        sp = true
+                        title = c.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: ""
+                        artist = c.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+                    }
+                }
+            } catch (e: Exception) {
+                sp = null   // no Notification access (SecurityException) or no media service: only AudioManager is left
+            }
+            val active = try { am.isMusicActive } catch (e: Exception) { false }
+            last = MusicPlayRules.judge(wasActive, active, sp, title, artist, q)
+            if (last == MusicPlayRules.Outcome.VERIFIED_MATCH) break
+            if (sp == null && (last == MusicPlayRules.Outcome.PLAYING_UNCONFIRMED || last == MusicPlayRules.Outcome.CANNOT_TELL)) break
+            if (System.currentTimeMillis() >= end) break
+            try { Thread.sleep(600) } catch (e: InterruptedException) { break }
+        }
+        return Triple(last, title, artist)
+    }
+
+    /**
+     * Asks ONE music app (the one the owner named) to search and play, then CHECKS what really happened.
+     * Never opens or searches another app by itself: a different app is only offered as a question ([musicAltOffer]).
+     */
+    private fun musicPlay(req: MusicPlayRules.Request, tried: Set<String> = emptySet(), verifyText: String = req.query): R {
+        val pkg = req.packages.firstOrNull { isInstalled(it) }
+            ?: return R(false, musicAltOffer(req, tr("${req.appLabel} phone mein install nahi mila.", "${req.appLabel} is not installed on this phone."), tried))
         val q = req.query
+        val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        val wasActive = try { am.isMusicActive } catch (e: Exception) { false }
         val search = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
             .setPackage(pkg)
             .putExtra(android.app.SearchManager.QUERY, q)
             .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        var sent = false
         try {
             startActivity(search)
-            return R(true, tr("${req.appLabel} mein $q chala diya", "Playing $q on ${req.appLabel}"))
+            sent = true
         } catch (e: Exception) {
             ErrLog.add("music-play", "play-from-search failed " + e.javaClass.simpleName)
         }
-        if (req.appKey == "spotify") {
+        if (!sent && req.appKey == "spotify") {
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:" + enc(q))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                return R(true, tr("Spotify mein $q search khol diya. Gaane par ek tap karo", "Opened $q in Spotify search. Tap the song"))
+                return R(false, tr(
+                    "Spotify ne seedha play karne ki request nahi li, isliye maine sirf '$q' ka search khola hai. Gaana khud nahi baja, aap result par tap karo. Maine kisi aur app par nahi bheja.",
+                    "Spotify did not accept a direct play request, so I only opened the search for '$q'. Nothing is playing yet, tap a result. I did not send it to any other app."
+                ))
             } catch (e: Exception) {
                 ErrLog.add("music-play", "spotify search link failed " + e.javaClass.simpleName)
             }
         }
-        return openApp(req.appLabel)
+        if (!sent) {
+            val o = openApp(req.appLabel)
+            return R(false, if (o.ok) tr(
+                "${req.appLabel} khol diya, par '$q' khud chalane ka tareeka ${req.appLabel} ne nahi diya. Aap app me search kar lo. Maine kisi aur app par nahi bheja.",
+                "I opened ${req.appLabel}, but it gives no way to play '$q' from here. Please search inside the app. I did not send it to any other app."
+            ) else o.msg)
+        }
+        val (outcome, title, artist) = verifyPlayback(pkg, wasActive, verifyText)
+        val shown = if (artist.isBlank()) title else "$title — $artist"
+        return when (outcome) {
+            MusicPlayRules.Outcome.VERIFIED_MATCH -> R(true, tr("${req.appLabel} par chal raha hai: $shown", "Playing on ${req.appLabel}: $shown"))
+            MusicPlayRules.Outcome.PLAYING_OTHER -> R(false, musicAltOffer(req, tr(
+                "${req.appLabel} par '$shown' chal raha hai, jo '$q' se match nahi karta. Ho sakta hai wo gaana nahi mila ya account me allowed nahi hai.",
+                "${req.appLabel} is playing '$shown', which does not match '$q'. The song may not be found or not allowed on this account."
+            ), tried))
+            MusicPlayRules.Outcome.PLAYING_UNCONFIRMED -> R(true, tr(
+                "${req.appLabel} me music chalu ho gaya, par kaun sa gaana hai ye main confirm nahi kar sakta. Confirm karne ke liye Notification access ON karo.",
+                "Music started in ${req.appLabel}, but I cannot confirm which song it is. Turn on Notification access so I can confirm."
+            ))
+            MusicPlayRules.Outcome.CANNOT_TELL -> R(true, tr(
+                "${req.appLabel} ko '$q' chalane ki request bheji, par pehle se kuch baj raha tha isliye confirm nahi kar sakta. Confirm karne ke liye Notification access ON karo.",
+                "I asked ${req.appLabel} to play '$q', but something was already playing so I cannot confirm. Turn on Notification access so I can confirm."
+            ))
+            MusicPlayRules.Outcome.NOT_PLAYING -> R(false, musicAltOffer(req, tr(
+                "${req.appLabel} khula par '$q' play nahi hua." + if (req.appKey == "spotify") " Spotify free account, login ya app ki restriction ki wajah se gaana seedha nahi chalne deta ho sakta hai." else "",
+                "${req.appLabel} opened but '$q' did not start playing." + if (req.appKey == "spotify") " Spotify free accounts, login or app restrictions can block direct playback." else ""
+            ), tried))
+        }
     }
 
     /** v6.92: works with ANY installed app. SEARCH: standard play-from-search, then the app's own search intent, then the screen

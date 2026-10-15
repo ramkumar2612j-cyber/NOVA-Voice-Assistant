@@ -97,6 +97,29 @@ class MainActivity : Activity() {
                 }
             }
         }
+        NovaService.songChoiceListener = { labels, complete ->
+            runOnUiThread {
+                if (isDestroyed || isFinishing) { complete(null) }
+                else {
+                    var answered = false
+                    val dialog = AlertDialog.Builder(this)
+                        .setTitle("NOVA — Kaun sa gaana?")
+                        .setItems(labels.toTypedArray()) { _, which ->
+                            if (!answered) { answered = true; complete(which) }
+                        }
+                        .setNegativeButton("Cancel") { _, _ ->
+                            if (!answered) { answered = true; complete(null) }
+                        }
+                        .create()
+                    dialog.setOnCancelListener { if (!answered) { answered = true; complete(null) } }
+                    dialog.show()
+                    dialog.window?.setLayout(
+                        (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+            }
+        }
         NovaService.permRequest = { what ->
             if (what == "contacts") runOnUiThread { if (!isDestroyed) requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS), REQ_CONTACTS) }
             if (what == "call") runOnUiThread { if (!isDestroyed) requestPermissions(arrayOf(Manifest.permission.CALL_PHONE), REQ_CALL) }
@@ -290,6 +313,7 @@ class MainActivity : Activity() {
             NovaService.imageListener = null
             NovaService.permRequest = null
             NovaService.contactChoiceListener = null
+            NovaService.songChoiceListener = null
         }
         testTts?.shutdown()
         testTts = null
@@ -2007,6 +2031,12 @@ class MainActivity : Activity() {
         fun connectorBegin(id: String): String {
             if (id.length > 40) return "bad"
             val d = ConnectorCatalog.byId(id) ?: return "bad"
+            if (id == ConnectorCatalog.GMAIL) {
+                if (!GmailStore.gmailInstalled(this@MainActivity)) return "nogmail"
+                if (DrivingBridge.listenerEnabled(this@MainActivity)) return "connected"
+                runOnUiThread { DrivingBridge.openListenerSettings(this@MainActivity) }
+                return "opened"
+            }
             val url = if (id == ConnectorCatalog.LOVABLE) "https://lovable.dev" else d.tokenUrl
             runOnUiThread { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) { ErrLog.add("Connector", "open page failed") } }
             return "opened"
@@ -2014,11 +2044,11 @@ class MainActivity : Activity() {
 
         /** After the owner comes back from the provider page: is a token for this connector on the clipboard? Never returns the token. */
         @JavascriptInterface
-        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) "none" else if (clipToken(id) != null) "found" else "none"
+        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) "none" else if (clipToken(id) != null) "found" else "none"
 
         @JavascriptInterface
         fun connectorUseClip(id: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
             val t = clipToken(id) ?: return "none"
             connectorVerifyAsync(id, t, true)
             return "checking"
@@ -2027,7 +2057,7 @@ class MainActivity : Activity() {
         /** Manual fallback: the owner pastes the token into the box. */
         @JavascriptInterface
         fun connectorPaste(id: String, raw0: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
             val t = (if (raw0.length > 400) "" else raw0).trim()
             if (t.length < 20 || t.length > 255 || t.any { it.isWhitespace() }) return "invalid"
             connectorVerifyAsync(id, t, false)
@@ -2048,6 +2078,11 @@ class MainActivity : Activity() {
         /** TEST button: asks the provider again who the token belongs to. */
         @JavascriptInterface
         fun connectorTest(id: String): String {
+            if (id == ConnectorCatalog.GMAIL) {
+                val ok = ConnectorStore.connected(this@MainActivity, id)
+                pushConn(id, if (ok) "ok" else "fail", if (ok) "Gmail app + notification access theek hai" else "Notification access ON karo aur Gmail app rakho")
+                return "checking"
+            }
             if (id.length > 40 || !ConnectorStore.connected(this@MainActivity, id) || id == ConnectorCatalog.LOVABLE) return "none"
             pushConn(id, "checking", "")
             Thread({
