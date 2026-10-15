@@ -27,7 +27,7 @@ object SmartReplyRules {
 
     /** Part 8: the owner's name for the AI. Only letters, digits, space . - ' (so a name can never carry instructions), max 30. */
     fun cleanName(raw: String): String =
-        raw.filter { it.isLetterOrDigit() || it == ' ' || it == '.' || it == '-' || it == '\'' }.replace(Regex("\\s+"), " ").trim().take(30)
+        raw.map { if (it.isWhitespace()) ' ' else it }.joinToString("").filter { it.isLetterOrDigit() || it == ' ' || it == '.' || it == '-' || it == '\'' }.replace(Regex("\\s+"), " ").trim().take(30)
 
     fun systemPrompt(ownerName: String, hinglish: Boolean, business: Boolean = false, facts: List<String> = emptyList()): String {
         val who = cleanName(ownerName).ifBlank { "the owner" }
