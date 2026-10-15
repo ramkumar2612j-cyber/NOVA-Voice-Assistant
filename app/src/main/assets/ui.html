@@ -281,7 +281,7 @@ body.ready:after{content:"";position:fixed;inset:0;z-index:98;pointer-events:non
 <div id="clog"></div>
 <div id="c_hl" role="dialog" aria-label="Purani chats"><div class="hh"><b>PURANI CHATS</b><button class="sm" id="c_hx">BAND KARO</button></div><div class="hsr"><input id="c_hs" type="search" maxlength="60" placeholder="Chats me dhundo..." autocomplete="off" aria-label="chat search"><button class="sm" id="c_hall">SAB DELETE</button></div><div id="c_hst" class="hst" role="status" aria-live="polite"></div><div id="c_hll"></div></div>
 <div class="imr"><button class="sm" id="c_ai" aria-haspopup="dialog">AI: AUTO</button><button class="sm" id="c_imode">IMAGE: OFF</button><button class="sm" id="c_photo">PHOTO CHUNO</button><span id="c_thw"><img id="c_thumb" alt=""><button class="sm" id="c_thx">X</button></span></div>
-<div class="chi"><input id="c_in" type="text" placeholder="Likho, ya keyboard ke mic se bolo..." autocomplete="off" enterkeyhint="send">
+<div class="chi"><button class="icb" id="c_plus" aria-label="connectors aur options" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><input id="c_in" type="text" placeholder="Likho ya bolo..." autocomplete="off" enterkeyhint="send">
 <button class="icb" id="c_kmic" aria-label="phone voice typing" title="Phone ki voice typing"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></button>
 <button class="icb" id="c_mic" aria-label="mic"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM6 11a6 6 0 0012 0M12 17v4"/></svg></button>
 <button class="icb" id="c_send" aria-label="send"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></button></div></div>
@@ -2516,7 +2516,7 @@ try{
   var l=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
   ['uRes','uFull','uTile','uTime','uMood','uJit','uBg'].forEach(function(n){U[n]=gl.getUniformLocation(pr,n)});
 }catch(e){return}
-var CSS=250,DPR=Math.min(window.devicePixelRatio||1,Math.min(2,window.__dprCap||2)),SC=[1,.75,.5],si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si,RM=false,lost=false;
+var CSS=250,DPR=Math.min(window.devicePixelRatio||1,Math.min(2,window.__dprCap||2)),SC=[.8,.6,.45],si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si,RM=false,lost=false;
 try{RM=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches}catch(e){}
 cv.style.background='url(orb_poster.png) center/contain no-repeat';
 function fallback(){window.__orb3d=false;cv.style.display='none';old.style.display=''}
@@ -2542,7 +2542,7 @@ function loop(now){
   if(RM){var k=cls;if(k===lastKey&&first)return;lastKey=k;m=[/listen/.test(cls)?1:0,/think/.test(cls)?1:0,/speak/.test(cls)?1:0,0]}
   if(last){var dt=now-last;if(dt<250)ema=ema*.9+dt*.1}
   last=now;
-  var minDt=(H3.classList.contains('lowfx')||window.__tier!=='high')?33:16;   /* v6.33: cap the orb at 60 fps (30 in low-effects mode) even on 90/120 Hz screens */
+  var minDt=(H3.classList.contains('lowfx')||window.__tier!=='high')?33:24;   /* v6.33: cap the orb at 60 fps (30 in low-effects mode) even on 90/120 Hz screens */
   if(lastDraw&&now-lastDraw<minDt-1)return;lastDraw=now;
   try{draw(now)}catch(e){fallback();lost=true;return}
   if(!RM){
@@ -2836,17 +2836,18 @@ var QA={github:[['repos','github repos dikhao',1],['issues','github issues owner
  supabase:[['projects','supabase projects dikhao',1]],notion:[['search','notion mein  dhundo',0]],lovable:[['open','lovable kholo',1]],gmail:[['zaroori mail','nova important mail dikhao',1]]};
 function sendCmd(t,go){if(!cin)return;cin.value=t;try{cin.focus()}catch(e){}if(go&&csend)csend.click()}
 var strip=null;
+function closeMenu(){if(strip)strip.classList.remove('on')}
 function renderStrip(){
   if(!chatEl)return;
-  if(!strip){strip=el('div');strip.id='cn_strip';var chi=chatEl.querySelector('.chi');if(chi)chatEl.insertBefore(strip,chi);else chatEl.appendChild(strip)}
+  if(!strip){strip=el('div');strip.id='cn_strip';strip.setAttribute('role','menu');chatEl.appendChild(strip)}
   strip.textContent='';
-  var add=el('button','add','＋ CONNECTORS');add.onclick=openPicker;strip.appendChild(add);
+  var add=el('button','add','＋ CONNECTORS');add.onclick=function(){closeMenu();openPicker()};strip.appendChild(add);
   var ds=J();ds.forEach(function(d){
     if(!d.connected||d.kind==='mcp')return;
     (QA[d.id]||[]).forEach(function(q){
       var w=q[3]===1;if(w&&d.perm!=='write')return;
       if(!w&&d.perm==='off'&&d.kind!=='link')return;
-      var b=el('button',w?'w':'',d.name+': '+q[0]);b.onclick=function(){sendCmd(q[1],q[2]===1)};strip.appendChild(b)})
+      var b=el('button',w?'w':'',d.name+': '+q[0]);b.onclick=function(){closeMenu();sendCmd(q[1],q[2]===1)};strip.appendChild(b)})
   })
 }
 function openPicker(){
@@ -2866,8 +2867,10 @@ function openPicker(){
   var cl=el('button','v','CLOSE');cl.onclick=closeSheet;bt.appendChild(vo);bt.appendChild(cl);cd.appendChild(bt);
   h.appendChild(sh);cur={id:'picker'};step=0;
 }
-if(cb)cb.addEventListener('click',function(){setTimeout(renderStrip,250)});
-setInterval(function(){if(chatEl&&chatEl.classList.contains('on')&&!(cur&&step))renderStrip()},4000);
+if(cb)cb.addEventListener('click',function(){closeMenu()});
+var plus=g('c_plus');
+if(plus)plus.addEventListener('click',function(e){e.stopPropagation();if(strip&&strip.classList.contains('on')){closeMenu();return}renderStrip();strip.classList.add('on')});
+chatEl.addEventListener('click',function(e){if(strip&&strip.classList.contains('on')&&!(e.target.closest&&e.target.closest('#cn_strip,#c_plus')))closeMenu()});
 
 /* ---------- results from the app ---------- */
 window.onConn=function(id,st,m){
@@ -3106,7 +3109,7 @@ button.nova-press{animation:nvPress .28s ease-out}
 .hwc .hwchip{color:var(--c1);border-color:var(--line2)}
 
 /* ---------- chat ---------- */
-#chat{background:radial-gradient(120% 60% at 50% 0%,#0b1c3a,#050b17 55%,#03060d);padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px}
+#chat{background:radial-gradient(120% 60% at 50% 0%,#0b1c3a,#050b17 55%,#03060d);padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;bottom:var(--tabb,64px)}
 .chh{border-bottom:1px solid var(--line)}
 .chh b{font-weight:700;letter-spacing:5px;font-size:15px;color:#fff;text-shadow:0 0 12px rgba(47,216,255,.6)}
 #clog{gap:9px;padding:10px 2px;min-height:0}
@@ -3116,6 +3119,11 @@ button.nova-press{animation:nvPress .28s ease-out}
 .chi{display:flex;gap:7px;align-items:center;padding-top:8px}
 #c_in{flex:1;min-width:0;padding:12px 14px;font-size:15px}
 .chi button.icb{flex:0 0 42px;width:42px;height:42px;border-radius:21px}
+#chat{position:fixed}
+#chat #cn_strip{display:none;position:absolute;left:12px;bottom:66px;width:min(290px,82%);max-height:55%;overflow-y:auto;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:linear-gradient(180deg,#0c1a33,#050b17);border:1px solid var(--line2);box-shadow:0 14px 40px rgba(0,0,0,.65);z-index:6}
+#chat #cn_strip.on{display:flex}
+#chat #cn_strip button{width:100%;text-align:left;font-size:12px;padding:11px 14px;border-radius:12px}
+#c_plus svg{stroke-width:2.2}
 .gimg{border-radius:10px;border:1px solid var(--line)}
 .ctx{color:var(--mut)}.ctx.cut{color:var(--c3)}
 #cn_strip button{border-color:var(--line2);background:rgba(47,216,255,.08);color:#dff8ff}
