@@ -52,14 +52,13 @@ class MusicPlayRulesTest {
         assertNull(MusicPlayRules.matchSpoken("5", labels))
     }
     @Test fun judgeNeverClaimsPlayingWithoutProof() {
-        val O = MusicPlayRules.Outcome
-        assertEquals(O.VERIFIED_MATCH, MusicPlayRules.judge(false, true, true, "Kesariya", "Arijit Singh", "kesariya"))
-        assertEquals(O.PLAYING_OTHER, MusicPlayRules.judge(false, true, true, "Blinding Lights", "The Weeknd", "kesariya"))
-        assertEquals(O.NOT_PLAYING, MusicPlayRules.judge(false, false, false, "", "", "kesariya"))
-        assertEquals(O.NOT_PLAYING, MusicPlayRules.judge(false, false, null, "", "", "kesariya"))
-        assertEquals(O.PLAYING_UNCONFIRMED, MusicPlayRules.judge(false, true, null, "", "", "kesariya"))
-        assertEquals(O.CANNOT_TELL, MusicPlayRules.judge(true, true, null, "", "", "kesariya"))
-        assertEquals(O.NOT_PLAYING, MusicPlayRules.judge(true, true, false, "", "", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.VERIFIED_MATCH, MusicPlayRules.judge(false, true, true, "Kesariya", "Arijit Singh", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.PLAYING_OTHER, MusicPlayRules.judge(false, true, true, "Blinding Lights", "The Weeknd", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.NOT_PLAYING, MusicPlayRules.judge(false, false, false, "", "", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.NOT_PLAYING, MusicPlayRules.judge(false, false, null, "", "", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.PLAYING_UNCONFIRMED, MusicPlayRules.judge(false, true, null, "", "", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.CANNOT_TELL, MusicPlayRules.judge(true, true, null, "", "", "kesariya"))
+        assertEquals(MusicPlayRules.Outcome.NOT_PLAYING, MusicPlayRules.judge(true, true, false, "", "", "kesariya"))
     }
     @Test fun alternativesExcludeCurrentAndTried() {
         val o = MusicPlayRules.others("spotify", setOf("ytmusic"))
