@@ -2542,7 +2542,7 @@ function loop(now){
   if(RM){var k=cls;if(k===lastKey&&first)return;lastKey=k;m=[/listen/.test(cls)?1:0,/think/.test(cls)?1:0,/speak/.test(cls)?1:0,0]}
   if(last){var dt=now-last;if(dt<250)ema=ema*.9+dt*.1}
   last=now;
-  var minDt=(H3.classList.contains('lowfx')||window.__tier!=='high')?33:24;   /* v6.33: cap the orb at 60 fps (30 in low-effects mode) even on 90/120 Hz screens */
+  var minDt=(H3.classList.contains('lowfx')||window.__tier!=='high')?33:16;   /* v6.33: cap the orb at 60 fps (30 in low-effects mode) even on 90/120 Hz screens */
   if(lastDraw&&now-lastDraw<minDt-1)return;lastDraw=now;
   try{draw(now)}catch(e){fallback();lost=true;return}
   if(!RM){
