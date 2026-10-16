@@ -32,6 +32,7 @@ object SiteGen {
         "start with <!DOCTYPE html>, end with </html>. Put CSS in <style> and JavaScript in an inline <script>. " +
         "No external images; the only external stylesheet allowed is Google Fonts (with a system-font fallback). Inline CSS transforms, perspective, preserve-3d, translateZ, SVG, canvas/WebGL and CSS/JS animation are encouraged when the request calls for them; " +
         "the only external scripts allowed are the optional three.js and GSAP builds named in the QUALITY BAR, always with a working fallback. " +
+        "When the owner supplied no photos, never leave empty grey image boxes: draw rich inline SVG illustrations, layered gradients, patterns and icons that fit the business, so every section still looks finished and professional. " +
         "Every site must look different: follow the DESIGN DIRECTION, never reuse one generic template or one colour scheme. " +
         "Do not force a generic business template: choose a real information architecture that matches the exact requested deliverable. " +
         "Preserve every requirement, named item, quantity, colour, and explicit exclusion in the REQUIREMENTS CONTRACT. " +

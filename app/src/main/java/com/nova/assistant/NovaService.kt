@@ -5462,15 +5462,89 @@ class NovaService : Service() {
     }
 
     // ---------------------------------------------------------------- alarm / timer / calendar / urls
-    private fun alarmTool(hour: Int, minute: Int, label: String): R {
+    private val SONG_MARK = setOf("song", "songs", "gana", "gaana", "gaane", "tune", "ringtone")
+    private val SONG_FILL = setOf("laga", "lagao", "do", "de", "dena", "ke", "ka", "ki", "sath", "saath", "with", "bajao", "baja", "baje", "wala", "wali",
+        "pe", "par", "on", "use", "karo", "kar", "set", "rakho", "rakh", "aur", "or", "the", "a", "mera", "meri", "mere", "alarm", "alarms", "in", "sab", "sabhi")
+
+    /** "kesariya song laga do" -> ("", "kesariya"). No song word -> (label, ""). Pure text, never throws. */
+    private fun extractSong(label: String): Pair<String, String> {
+        val w = label.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val k = w.indexOfFirst { it.lowercase() in SONG_MARK }
+        if (k < 0) return Pair(label, "")
+        val after = w.drop(k + 1).takeWhile { it.lowercase() !in SONG_FILL }
+        val before = w.take(k).reversed().takeWhile { it.lowercase() !in SONG_FILL }.reversed()
+        val from: Int
+        val to: Int
+        val songWords: List<String>
+        if (after.isNotEmpty()) { from = k; to = k + after.size; songWords = after } else { from = k - before.size; to = k; songWords = before }
+        val rest = w.filterIndexed { idx, _ -> idx < from || idx > to }.filter { it.lowercase() !in SONG_FILL }
+        return Pair(rest.joinToString(" "), songWords.joinToString(" "))
+    }
+
+    private fun audioPermGranted(): Boolean {
+        val p = if (Build.VERSION.SDK_INT >= 33) "android.permission.READ_MEDIA_AUDIO" else Manifest.permission.READ_EXTERNAL_STORAGE
+        return checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** First song on the phone whose title or file name contains every word of [query]; newest first. */
+    private fun findSongUri(query: String): android.net.Uri? {
+        val words = query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 2 }.take(6)
+        if (words.isEmpty()) return null
+        val sel = words.joinToString(" AND ") { "(LOWER(" + MediaStore.Audio.Media.TITLE + ") LIKE ? OR LOWER(" + MediaStore.Audio.Media.DISPLAY_NAME + ") LIKE ?)" }
+        val args = words.flatMap { listOf("%$it%", "%$it%") }.toTypedArray()
+        return try {
+            contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media._ID), sel, args, MediaStore.Audio.Media.DATE_ADDED + " DESC")?.use { c ->
+                if (c.moveToFirst()) android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, c.getLong(0)) else null
+            }
+        } catch (e: Exception) { null }
+    }
+
+    /** Asks the system for its next alarm for up to 2.5 s (only on a background thread). True only when it is this alarm. */
+    private fun alarmArmed(hour: Int, minute: Int): Boolean {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return false
+        val am = getSystemService(android.app.AlarmManager::class.java) ?: return false
+        val now = java.util.Calendar.getInstance()
+        val want = java.util.Calendar.getInstance()
+        want.set(java.util.Calendar.HOUR_OF_DAY, hour)
+        want.set(java.util.Calendar.MINUTE, minute)
+        want.set(java.util.Calendar.SECOND, 0)
+        want.set(java.util.Calendar.MILLISECOND, 0)
+        if (want.timeInMillis <= now.timeInMillis) want.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        for (n in 1..5) {
+            try { Thread.sleep(500) } catch (e: InterruptedException) { return false }
+            val nx = try { am.nextAlarmClock } catch (e: Exception) { null }
+            if (nx != null && Math.abs(nx.triggerTime - want.timeInMillis) < 60_000L) return true
+        }
+        return false
+    }
+
+    private fun alarmTool(hour: Int, minute: Int, label: String, songArg: String = ""): R {
         if (hour !in 0..23 || minute !in 0..59) return R(false, tr("Alarm ka time galat hai", "That alarm time is not valid"))
+        val ex = extractSong(label)
+        val song = if (songArg.isNotBlank()) songArg.trim() else ex.second
         val i = Intent(AlarmClock.ACTION_SET_ALARM)
             .putExtra(AlarmClock.EXTRA_HOUR, hour).putExtra(AlarmClock.EXTRA_MINUTES, minute)
-            .putExtra(AlarmClock.EXTRA_MESSAGE, label).putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            .putExtra(AlarmClock.EXTRA_MESSAGE, ex.first).putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+        var songNote = ""
+        if (song.isNotBlank()) {
+            if (!audioPermGranted()) {
+                songNote = tr(". Song nahi laga: NOVA ko Settings, Apps, NOVA, Permissions mein Music and audio ki permission do, phir dobara bolo",
+                    ". The song was not set: allow NOVA the Music and audio permission in Settings, Apps, NOVA, Permissions, then ask again")
+            } else {
+                val uri = findSongUri(song)
+                if (uri == null) songNote = tr(". '$song' naam ka gaana phone mein nahi mila, normal awaaz rakhi", ". I could not find a song called '$song' on the phone, so the normal sound stays")
+                else {
+                    i.putExtra(AlarmClock.EXTRA_RINGTONE, uri.toString())
+                    songNote = tr(". Song '$song' ki request bheji, alarm baje tab ek baar suna kar check kar lena", ". Requested the song '$song', please check that it plays when the alarm rings")
+                }
+            }
+        }
         val t = Timers.clock(hour * 60 + minute)
-        return if (fire(i)) R(true, tr("$t ke alarm ki request bheji. Android confirm nahi karta, clock app mein dekh lo",
-            "Requested an alarm for $t. Android gives no confirmation, please check the clock app"))
-        else R(false, tr("Alarm set karne wala app nahi mila", "No app could set the alarm"))
+        if (!fire(i)) return R(false, tr("Alarm set karne wala app nahi mila", "No app could set the alarm"))
+        return if (alarmArmed(hour, minute)) R(true, tr("$t ka alarm verify ho gaya, system ki alarm list mein dikh raha hai$songNote",
+            "The $t alarm is confirmed in the system alarm list$songNote"))
+        else R(true, tr("$t ka alarm clock app ko bhej diya. Android khud batata nahi, ek baar clock app mein check kar lena$songNote",
+            "Requested an alarm for $t. Android gives no confirmation, please check the clock app$songNote"))
     }
 
     private fun timerTool(seconds: Int, label: String): R {
@@ -5479,7 +5553,7 @@ class NovaService : Service() {
             .putExtra(AlarmClock.EXTRA_LENGTH, seconds).putExtra(AlarmClock.EXTRA_MESSAGE, label)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
         val d = Timers.human(seconds, cfg.lang == "en")
-        return if (fire(i)) R(true, tr("$d ke timer ki request bheji. Android confirm nahi karta, clock app mein dekh lo",
+        return if (fire(i)) R(true, tr("$d ka timer clock app ko bhej diya. Android khud batata nahi, ek baar clock app mein check kar lena",
             "Requested a $d timer. Android gives no confirmation, please check the clock app"))
         else R(false, tr("Timer set karne wala app nahi mila", "No app could set the timer"))
     }
@@ -5518,7 +5592,7 @@ class NovaService : Service() {
                 "call" -> callTool(a.optString("who"))
                 "sms" -> smsTool(a.optString("to"), a.optString("message"))
                 "whatsapp" -> whatsappTool(a.optString("to"), a.optString("message"))
-                "alarm" -> alarmTool(a.optInt("hour", -1), a.optInt("minute", -1), a.optString("label"))
+                "alarm" -> alarmTool(a.optInt("hour", -1), a.optInt("minute", -1), a.optString("label"), a.optString("song"))
                 "timer" -> timerTool(a.optInt("seconds", -1), a.optString("label"))
                 "torch" -> torch(a.optBoolean("on", false))
                 "volume" -> volume(a.optString("action"), a.optInt("percent", -1))
@@ -5702,7 +5776,7 @@ class NovaService : Service() {
         t.put(tool("call", "Phone call a saved contact name or number. The user is asked to confirm by voice first; only the dialer opens", "who" to "string"))
         t.put(tool("sms", "Open the SMS app with a prefilled message to a contact name or number", "to" to "string", "message" to "string"))
         t.put(tool("whatsapp", "Send a WhatsApp message to a contact name or number. The user is asked to confirm by voice first", "to" to "string", "message" to "string"))
-        t.put(tool("alarm", "Set an alarm (24-hour clock)", "hour" to "integer", "minute" to "integer", "label" to "string"))
+        t.put(tool("alarm", "Set an alarm (24-hour clock). Optional song: a song title saved on the phone to ring instead of the normal sound", "hour" to "integer", "minute" to "integer", "label" to "string", "song" to "string"))
         t.put(tool("timer", "Start a countdown timer", "seconds" to "integer", "label" to "string"))
         t.put(tool("torch", "Turn the flashlight on or off", "on" to "boolean"))
         t.put(tool("volume", "Change media volume: action is one of up, down, mute, max", "action" to "string"))

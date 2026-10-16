@@ -9,7 +9,7 @@ object PhoneActionRules {
     private val schemas: Map<String, Set<String>> = linkedMapOf(
         "open_app" to setOf("name"), "open_url" to setOf("url"), "call" to setOf("who"),
         "sms" to setOf("to", "message"), "whatsapp" to setOf("to", "message"),
-        "alarm" to setOf("hour", "minute", "label"), "timer" to setOf("seconds", "label"),
+        "alarm" to setOf("hour", "minute", "label", "song"), "timer" to setOf("seconds", "label"),
         "torch" to setOf("on"), "volume" to setOf("action", "percent"), "navigate" to setOf("place"),
         "play_music" to setOf("query"), "camera" to setOf("mode", "facing"), "settings" to setOf("page"),
         "brightness" to setOf("percent"), "brightness_step" to setOf("delta"), "media" to setOf("action"),
