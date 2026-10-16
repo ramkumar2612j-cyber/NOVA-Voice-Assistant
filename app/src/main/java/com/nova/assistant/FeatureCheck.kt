@@ -28,6 +28,14 @@ object FeatureCheck {
         chk(rec, try { AgentRules.isTask("chatgpt open karo aur usse ek banner banwao") } catch (e: Throwable) { false }, "Samajh: ChatGPT se banner banwao (agent)", "")
         chk(rec, try { AgentRules.isTask("chatgpt kholo aur usse ek website banwao") } catch (e: Throwable) { false }, "Samajh: ChatGPT se website banwao (agent)", "")
         chk(rec, try { !AgentRules.isTask("battery kitni hai") && !AgentRules.isTask("open youtube") } catch (e: Throwable) { false }, "Samajh: chhote command agent nahi bante", "")
+        chk(rec, try { OpenWebRules.parseOpen("youtube chrome pe kholo")?.targets?.size == 1 && OpenWebRules.parseOpen("nova youtube google aur flipkart chrome pe kholo")?.targets?.size == 3 && OpenWebRules.parseOpen("youtube kholo") == null } catch (e: Throwable) { false }, "Samajh: website Chrome tab mein kholo", "")
+        chk(rec, try { OpenWebRules.parseDownload("whatsapp download karo")?.pkg == "com.whatsapp" && OpenWebRules.parseDownload("nova mummy ko whatsapp bhejo") == null } catch (e: Throwable) { false }, "Samajh: app download karo (Play Store)", "")
+        chk(rec, try { HelpGuide.topicFor("kya tum bank screen par kaam kar sakte ho")?.id == "safety" } catch (e: Throwable) { false }, "Samajh: suraksha niyam (safety)", "")
+        chk(rec, try { SocialReplyRules.decide("com.instagram.android", "shame on you")?.report == true && SocialReplyRules.decide("com.whatsapp", "happy birthday")?.reply != null } catch (e: Throwable) { false }, "Samajh: Insta/WhatsApp insult ya wish", "")
+        chk(rec, try { Logic.classify("call uthao")?.kind == PhoneVoiceRules.K_ANSWER && Logic.classify("call kaato")?.kind == PhoneVoiceRules.K_REJECT && Logic.classify("call rahul")?.kind == "call" } catch (e: Throwable) { false }, "Samajh: call uthao / call kaato", "")
+        chk(rec, try { Logic.classify("screenshot lo")?.kind == PhoneVoiceRules.K_SHOT && Logic.classify("ringer silent karo")?.arg == "silent" && Logic.classify("rotation off karo")?.arg == "off" } catch (e: Throwable) { false }, "Samajh: screenshot, ringer, rotation", "")
+        chk(rec, try { SmartReplyRules.useAi(true, null, "kal milte hain?") && !SmartReplyRules.useAi(true, null, "mera OTP 123456") && SmartReplyRules.pick(null, "fixed").text == "fixed" && SmartReplyRules.pick("Theek hai bhai", "fixed").ai } catch (e: Throwable) { false }, "Samajh: AI smart jawab (paise/OTP AI ko nahi, fixed fallback)", "")
+        chk(rec, try { HelpGuide.topicFor("kya tum screenshot le sakte ho")?.id == "phonecontrol" && HelpGuide.topicFor("kya tum smart jawab de sakte ho")?.id == "smartreply" && HelpGuide.topicFor("kya tum call uthao kar sakte ho")?.id == "callanswer" } catch (e: Throwable) { false }, "Samajh: naye features ki help (call uthao, screenshot, smart jawab)", "")
         val act = try { AgentRules.parse("{\"act\":\"done\",\"say\":\"ok\"}") } catch (e: Throwable) { null }
         chk(rec, act != null && act.act == "done", "Agent: AI ka jawab padhna (JSON)", "")
         val pn = try { AgentRules.planNote("{\"goal\":\"g\",\"prompt\":\"p\"}") } catch (e: Throwable) { "" }
@@ -81,9 +89,22 @@ object FeatureCheck {
         rec(if (chain && (groq || orr || zai || keyless)) "PASS" else "WARN", "AI fallback chain", if (chain) "Gemini ke baad configured Groq/Qwen, Z.ai, OpenRouter aur optional Pollinations text fallback" else "Free chain OFF; Settings mein enable karo")
         val access = try { NovaAccessibilityService.isEnabled(ctx) } catch (e: Throwable) { false }
         val wa = try { ctx.packageManager.getLaunchIntentForPackage("com.whatsapp.w4b") != null || ctx.packageManager.getLaunchIntentForPackage("com.whatsapp") != null } catch (e: Throwable) { false }
+        feat(rec, access, "App download (Play Store Install dabana)", "NOVA Phone Control (Accessibility) ON karo; Chrome tab bina iske bhi khulte hain")
         feat(rec, access, "Public lead capture / app control", "NOVA Phone Control (Accessibility) ON karo")
         feat(rec, wa, "WhatsApp batch (owner approval required)", "WhatsApp ya WhatsApp Business install karo")
         feat(rec, brain || keyless, "Offline cloud queue worker", "Gemini ya koi configured text provider chahiye; internet wapas aane par jobs process hongi")
+        val ansCalls = try { ctx.checkSelfPermission(android.Manifest.permission.ANSWER_PHONE_CALLS) == android.content.pm.PackageManager.PERMISSION_GRANTED } catch (e: Throwable) { false }
+        val notifAcc = try { DrivingBridge.listenerEnabled(ctx) } catch (e: Throwable) { false }
+        feat(rec, ansCalls || notifAcc, "Call uthana / kaatna", "Notification access ya Phone permission ON karo (Skills > Call uthana / kaatna)")
+        val dnd = try { (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).isNotificationPolicyAccessGranted } catch (e: Throwable) { false }
+        feat(rec, dnd, "Ringer silent (Do Not Disturb access)", "DND access nahi hai: silent ki jagah vibrate lagega")
+        val ws = try { android.provider.Settings.System.canWrite(ctx) } catch (e: Throwable) { false }
+        feat(rec, ws, "Auto-rotate on/off (Modify system settings)", "Modify system settings ALLOW karo")
+        feat(rec, access, "Screenshot (Accessibility)", "NOVA Phone Control (Accessibility) ON karo")
+        val smart = try { ExtCfg.smartReply(ctx) } catch (e: Throwable) { false }
+        rec(if (smart && (groq || orr || zai) && notifAcc) "PASS" else "WARN", "AI smart jawab", if (!smart) "Switch OFF hai (Settings > AI SMART JAWAB); fixed jawab chalta hai" else if (!(groq || orr || zai)) "AI key nahi hai: fixed jawab jayega" else if (!notifAcc) "Notification access OFF" else "ON, AI key hai (asli jawab phone par TEST NAHI HUA)")
+        val cal = try { CalendarRead.permitted(ctx) } catch (e: Throwable) { false }
+        feat(rec, cal, "Calendar meeting yaad dilana", "Skills > Calendar meeting alert > CALENDAR ALLOW")
         rec("INFO", "Agent task history/checkpoints (TEST NAHI HUA)", "Local redacted history; resume is manual and only allowed after completed open_app/wait-only steps, within original deadline; all other steps fail closed")
         rec("INFO", "Calendar/meeting rules (TEST NAHI HUA)", "READ_CALENDAR and Contacts access are still requested only from an owner tap")
         return brain

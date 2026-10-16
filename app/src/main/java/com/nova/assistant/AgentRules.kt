@@ -288,13 +288,8 @@ object AgentRules {
         }
         // tap / long_tap
         if (node == null) return Check(Verdict.DENY, "no such item on this screen")
-        val words = Logic.norm(label(node)).split(" ").filter { it.isNotEmpty() }
-        if (words.any { it in HARD }) return Check(Verdict.DENY, "money, account or security item")
-        val risky = words.filter { it in Control.RISKY }
-        if (risky.isEmpty()) return Check(Verdict.OK)
-        // v6.76: only a plain send button is free inside an AI app ("Send", "Send message", "Send prompt"); "Send money" / "Send file to ..." ask.
-        if (pkg in AI_APPS && risky.all { it in SEND_OK } && isAiSend(label(node))) return Check(Verdict.OK)
-        return Check(Verdict.CONFIRM, label(node).take(40))
+        // v6.98 owner decision: no money / risky-button refusal and no spoken yes. The owner's order is the permission.
+        return Check(Verdict.OK)
     }
 
     /**

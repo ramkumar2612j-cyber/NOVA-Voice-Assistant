@@ -12,9 +12,9 @@ def check(name, cond):
     if not cond: fails.append(name)
 check("listener auto replies only for selected Message Mode apps", "MessageMode.isSelected(this, pkg)) autoReply(" in ns)
 check("auto reply never sends to groups / codes / no-button", all(x in ar for x in ('isGroup -> "group"', 'hidden -> "code"', '!canReply -> "no_reply_button"')))
-check("rate limits present (10 min, 3/h, 80/day)", all(x in ar for x in ("SENDER_COOLDOWN_MS = 600_000L", "SENDER_PER_HOUR = 3", "DAY_CAP = 80")))
-check("reply text is the owner's own text, never invented", "ActionLog.autoReplyText(ctx)" in ns)
-check("every attempt is written to the history", 'ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)' in ns)
+check("rate limits present (10 min, 2/h, 80/day)", all(x in ar for x in ("SENDER_COOLDOWN_MS = 600_000L", "SENDER_PER_HOUR = 2", "DAY_CAP = 80")))
+check("reply text is the owner's own text (AI smart reply is OFF by default, fixed text is always the fallback)", "ActionLog.autoReplyText(ctx)" in ns)
+check("every attempt is written to the history", 'ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg, if (pay != null) PaymentReplyRules.note(pay.kind) else SmartReplyRules.note(picked.ai))' in ns)   # v6.99 Part 5: money talk has its own history note
 check("code messages are stored without their text", "m.hidden" in ar or 'hidden -> "code"' in ar)
 check("owner is told afterwards, never asked", "fun onAutoReplied" in rd("NovaService.kt") and "askOrRun" not in ns)
 check("bridge methods for history + settings exist", all(f"fun {n}(" in act for n in ("getAutoReply", "setAutoReply", "getActionLog", "actionUnseen", "markActionsSeen", "clearActionLog")))

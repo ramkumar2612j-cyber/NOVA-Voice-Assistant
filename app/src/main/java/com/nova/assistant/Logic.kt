@@ -350,6 +350,8 @@ object Logic {
     fun classify(text: String): Cmd? {
         // Contact grammar runs on the original transcript so Devanagari and phonetic variants
         // survive the general ASCII command normalizer. It only classifies; it never looks up or calls.
+        // v6.99 Part 1: "call uthao / call kaato" must win over "call <name>"
+        PhoneVoiceRules.parse(stripWake(norm(text)))?.takeIf { it.kind in PhoneVoiceRules.ACTIVE }?.let { return it }
         ContactRequestParser.parseCommand(text)?.let { return Cmd("call", it.requestedName) }
         val n = stripWake(norm(text))   // a custom wake word at the start is never part of the command
         if (n.isEmpty() || n.length > 120) return null
@@ -363,7 +365,7 @@ object Logic {
         // v6.75: used ONLY by the torch / volume / brightness / media / global-nav blocks below (NOT by "do not disturb", which has its own rule)
         val negated = t.any { it in NEGATION }
 
-        if (core in setOf("stop", "cancel", "chup", "quiet", "ruko", "be quiet", "shut up")) return Cmd("stop")
+        if (core in setOf("stop", "cancel", "chup", "quiet", "ruko", "be quiet", "shut up") || StopRules.isStop(core)) return Cmd("stop")   // v6.99 Part 2: ruk jao / roko / bas karo ...
 
         // ---- "unlock" is only a stub that says unlocking was removed (voice / pattern / face unlock no longer exist)
         if (core in setOf("unlock", "unlock phone", "phone unlock", "unlock karo", "phone unlock karo", "unlock the phone", "unlock screen")) return Cmd("unlock")

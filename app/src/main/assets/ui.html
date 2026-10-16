@@ -490,7 +490,7 @@ button.icb svg{stroke:var(--mink)!important}
 <p class="aid">Neeche se koi bhi kaam chuno. Example dabao, wo chat mein aa jayega, bas SEND dabao ya bolo.</p>
 <input id="hw_q" type="search" maxlength="40" placeholder="Dhundho: call, photo, alarm..." autocomplete="off" aria-label="madad search">
 <div id="hw_l"></div>
-<p class="hwn">Ye main nahi karta: bank, payment ya password wali screen par kaam. Kuch bhi poochna ho to seedha chat mein likho.</p>
+<p class="hwn">Bank, payment ya password screen ka text main online AI ko nahi bhejta; tum bolo to tap/type kar deta hoon. Kuch bhi poochna ho to seedha chat mein likho.</p>
 <div class="row"><button class="sm" id="hw_x">BAND KARO</button></div></div></div>
 <div id="sheet"><div class="sh"><h3 id="sht"></h3><p id="shd"></p><div class="cmd" id="shc"></div><div class="row" id="sha"></div></div></div>
 <div id="uc"><div class="ucb" id="ucb"></div></div>
@@ -508,12 +508,17 @@ button.icb svg{stroke:var(--mink)!important}
 <small id="wb_lgs"></small>
 <label for="wb_city">MERA SHEHAR</label>
 <input id="wb_city" type="text" maxlength="80" placeholder="jaise Delhi (mausam ke liye)" autocomplete="off">
+<label for="wb_wait">BOLNE KE BAAD KITNI DER RUKUN (second)</label>
+<select id="wb_wait"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+<small>Jitna zyada, utni der tak NOVA aapki baat poori hone ka intezaar karta hai.</small>
 <div id="wb_l"></div>
 <small id="wb_sv"></small>
 </div>
 <div id="st_box"><!-- FIXTEST-UI -->
 <b>TEST REPORT (apne aap chalta hai)</b>
 <small>App install hone ke baad khud jaanch karta hai (torch, volume, mic, awaaz sunna, screen padhna, 5 web browsers). Aapko kuch dabana nahi hai. Neeche taza report dikhti hai. Koi call, message ya payment nahi hota.</small>
+<div class="row"><button class="sm" id="st_run">SELF TEST CHALAO</button><button class="sm" id="st_clr">GALTIYAN SAAF</button></div>
+<div class="row"><button class="sm" id="st_free">FREE IMAGE TEST</button><button class="sm" id="st_img">GEMINI IMAGE TEST</button></div>
 <div class="row"><button class="sm" id="st_err">AKHRI GALTIYAN</button><button class="sm" id="st_pow">BATTERY / AUTOSTART</button></div>
 <pre id="st_out"></pre>
 <div class="row"><button class="sm" id="st_copy">COPY REPORT</button><button class="sm" id="st_share">SHARE</button></div>
@@ -654,6 +659,8 @@ button.icb svg{stroke:var(--mink)!important}
 <div class="row"><button class="sm" id="mem_exp">EXPORT (FILE)</button><button class="sm" id="mem_imp">IMPORT (FILE)</button></div>
 </div>
 <div class="row"><button class="sm" id="mem_show">DIKHAO</button><button class="sm" id="mem_del">SAB HATAO</button></div>
+<div class="row"><button class="sm" id="mem_copy">YAAD KA TEXT COPY</button></div>
+<small id="mem_copys"></small>
 </div>
 
 <div class="box">
@@ -734,6 +741,9 @@ button.icb svg{stroke:var(--mink)!important}
 <label style="margin-top:0">AUTO REPLY (WhatsApp / Instagram)</label>
 <label class="chk"><input type="checkbox" id="ar_on"> Naya message aate hi NOVA turant jawab bheje (poochhe bina), baad me bata de</label>
 <textarea id="ar_text" rows="3" maxlength="300" placeholder="Jawab ka text"></textarea>
+<label class="chk"><input type="checkbox" id="ar_ai"> AI SMART JAWAB (chhota jawab AI se banwao)</label>
+<small>ON karne par chat message ka text cloud AI (Groq / OpenRouter ...) ko jata hai. Paise, OTP, link ya lambe number wala message kabhi nahi jata, uska fixed jawab hi jata hai. AI na chale ya 8 second se der ho to bhi fixed jawab jata hai. Ek bande ko ghante mein 2, din mein 80 jawab ki limit wahi rehti hai.</small>
+<small id="ar_ais"></small>
 <div class="row"><button class="sm" id="ar_save">SAVE</button></div>
 <small>Group chat, code/password wale message aur jin notification me Reply button nahi hota unko jawab nahi jata. Ek bande ko 10 min me ek, ghante me 3, din me 80 se zyada nahi. Har kaam upar ghanti wale HISTORY me dikhta hai.</small>
 </div>
@@ -742,7 +752,7 @@ button.icb svg{stroke:var(--mink)!important}
 <label style="margin-top:0">BAAT-CHEET MODE</label>
 <label class="chk"><input type="checkbox" id="cv_on"> Jawab ke baad NOVA 3 baar tak bina "nova" bole sunta rahe</label>
 <small>Band karne par har baat ke liye "nova" bolna padega.</small>
-<label class="chk"><input type="checkbox" id="al_on"> Khud bolo: battery kam ho to NOVA bata de (30 minute mein ek baar)</label>
+<label class="chk"><input type="checkbox" id="al_batt"> Khud bolo: battery kam ho to NOVA bata de (30 minute mein ek baar)</label>
 </div>
 
 <!-- FIXFREE-UI2 -->
@@ -954,10 +964,15 @@ button.icb svg{stroke:var(--mink)!important}
   var sn=g("si_now");if(sn)sn.addEventListener("click",function(){try{Android.runSelfImprove();say("AI se pooch raha hu...",true)}catch(x){}});
   var sf=g("si_ref");if(sf)sf.addEventListener("click",siRender);
   siRender();
-  var alEl=g("al_on");
+  var alEl=g("al_batt");
   if(alEl){try{alEl.checked=!!Android.getAlerts()}catch(x){}
     alEl.addEventListener("change",function(){
       try{Android.setAlerts(alEl.checked);say(alEl.checked?"Battery alert on":"Battery alert off",true)}catch(x){say("Switch save nahi hua",false)}
+    })}
+  var alL=g("al_on");
+  if(alL){try{alL.checked=!!Android.getAutoLearn()}catch(x){}
+    alL.addEventListener("change",function(){
+      try{Android.setAutoLearn(alL.checked);say(alL.checked?"Auto-seekho on":"Auto-seekho off",true)}catch(x){say("Switch save nahi hua",false)}
     })}
   var amEl=g("am_on");
   function brainState(){var st=g("brain_state");if(!st)return;try{
@@ -992,6 +1007,9 @@ button.icb svg{stroke:var(--mink)!important}
   rcState();setInterval(rcState,5000);
   var arOn=g("ar_on"),arTx=g("ar_text"),arSv=g("ar_save");
   try{var ar=JSON.parse(Android.getAutoReply());if(arOn)arOn.checked=!!ar.on;if(arTx)arTx.value=ar.text||""}catch(x){}
+  var arAi=g("ar_ai"),arAis=g("ar_ais");
+  try{if(arAi){arAi.checked=!!Android.getSmartReply();if(arAis)arAis.textContent=Android.smartReplyStatus()||""}}catch(x){}
+  if(arAi)arAi.addEventListener("change",function(){try{Android.setSmartReply(arAi.checked);if(arAis)arAis.textContent=Android.smartReplyStatus()||"";say(arAi.checked?"AI smart jawab ON":"AI smart jawab OFF",true)}catch(x){say("Switch save nahi hua",false)}});
   if(arSv)arSv.addEventListener("click",function(){try{Android.setAutoReply(!!(arOn&&arOn.checked),arTx?arTx.value:"");say("Auto reply save ho gaya",true)}catch(x){say("Save nahi hua",false)}});
   if(arOn)arOn.addEventListener("change",function(){try{Android.setAutoReply(arOn.checked,arTx?arTx.value:"");say(arOn.checked?"Auto reply ON":"Auto reply OFF",true)}catch(x){say("Switch save nahi hua",false)}});
   var hP=g("hist"),hL=g("h_list"),alb=g("alb"),alc=g("alc");
@@ -1003,7 +1021,7 @@ button.icb svg{stroke:var(--mink)!important}
       var heads={sent:"JAWAB BHEJA",failed:"JAWAB NAHI GAYA",skipped:"JAWAB NAHI DIYA",deleted:"JAWAB DELETE KIYA",delete_failed:"DELETE NAHI HUA"};
       var head=heads[e.st]||"KAAM";
       var canDel=(e.st==="sent"||e.st==="delete_failed")&&e.pk;
-      return '<div class="hi '+esc(e.st)+'"><small>'+esc(when)+' | '+esc(e.app)+' | '+esc(e.who)+'</small><b>'+head+'</b>'+(e.in?'<br>Unhone likha: '+esc(e.in):'')+'<br>'+((e.st==="sent"||e.st==="deleted"||e.st==="delete_failed")?'NOVA ne likha: ':'')+esc(e.d)+(e.x?'<br><i>'+esc(e.x)+'</i>':'')+(canDel?'<br><button class="sm hdel" data-ts="'+Number(e.ts)+'">DELETE KARO</button>':'')+'</div>'}).join("")}
+      return '<div class="hi '+esc(e.st)+'"><small>'+esc(when)+' | '+esc(e.app)+' | '+esc(e.who)+'</small><b>'+head+'</b>'+(e.in?'<br>Unhone likha: '+esc(e.in):'')+'<br>'+((e.st==="sent"||e.st==="deleted"||e.st==="delete_failed")?'NOVA ne likha: ':'')+esc(e.d)+(e.src?' <small>['+(e.src==="AI"?'AI jawab':'fixed jawab')+']</small>':'')+(e.x?'<br><i>'+esc(e.x)+'</i>':'')+(canDel?'<br><button class="sm hdel" data-ts="'+Number(e.ts)+'">DELETE KARO</button>':'')+'</div>'}).join("")}
   if(hL)hL.addEventListener("click",function(ev){var b=ev.target;if(!b||!b.getAttribute||!b.classList.contains("hdel"))return;
     try{var r=String(Android.deleteSent(b.getAttribute("data-ts")));if(r==="started"){b.textContent="DELETE ho raha hai...";b.disabled=true}else b.textContent="Nahi hua"}catch(x){b.textContent="Nahi hua"}});
   if(alb)alb.addEventListener("click",function(){histRender();if(hP)hP.style.display="flex";try{Android.markActionsSeen()}catch(x){}alertBadge()});
@@ -1058,6 +1076,7 @@ button.icb svg{stroke:var(--mink)!important}
     else say("Import nahi hua: file khali, bahut badi ya galat hai",false);
     memRender();mst();
   };
+  var mcp=g("mem_copy");if(mcp)mcp.addEventListener("click",function(){var o=g("mem_copys"),t="",r="";try{t=Android.getMemoryText()||"";r=t?Android.copyText(t):"empty"}catch(x){r="fail"}if(o)o.textContent=(r==="ok")?"Yaad ka text copy ho gaya (sirf tum paste karoge)":(r==="empty"?"Abhi kuch yaad nahi hai":"Copy nahi hua")});
   var ms=g("mem_show");
   if(ms){ms.addEventListener("click",function(){
     var l=g("memlist");if(!l)return;
@@ -1785,6 +1804,7 @@ var hst=g('c_hst'),hs=g('c_hs'),hall=g('c_hall');
 function hstat(t,err){hst.textContent=t||'';hst.className='hst'+(err?' err':'')}
 function histRows(q){var r=null;
   try{r=JSON.parse(Android.searchChats(q||''))}catch(e){r=null}
+  if((!r||r.error||!r.items)&&!q){try{var lc=JSON.parse(Android.listChats());if(Array.isArray(lc))r={ok:true,items:lc}}catch(e){}}
   hll.textContent='';
   if(!r||r.error||!r.items){hstat('Chats padh nahi paye.',true);var rb=document.createElement('button');rb.type='button';rb.className='sm';rb.textContent='DOBARA';rb.onclick=function(){histRows(hs.value)};hll.appendChild(rb);return}
   hstat('');hall.style.display=(!q&&!r.items.length)?'none':'';
@@ -1971,6 +1991,10 @@ g('st_copy').onclick=function(){var t=rep||out.textContent;var r='';try{r=Androi
 g('st_share').onclick=function(){try{Android.shareText(rep||out.textContent)}catch(e){}};
 g('st_err').onclick=function(){var r='';try{r=Android.getErrors()}catch(e){r='fail'}rep=(r==='fail')?'':r;out.textContent=(r==='fail')?'Galtiyan padh nahi paya':r;g('st_copy').textContent='COPY REPORT'};
 g('st_pow').onclick=function(){var r='';try{r=Android.openPowerGuide()}catch(e){r='fail'}add(r==='fail'?'Settings khul nahi payi':r)};
+g('st_run').onclick=function(){var r='';try{r=Android.selfTest()}catch(e){r='fail'}rep='';out.textContent='';add(r==='started'?'Self test chal raha hai...':(r==='busy'?'Test pehle se chal raha hai':'Test shuru nahi hua'))};
+g('st_clr').onclick=function(){var r='';try{r=Android.clearErrors()}catch(e){r='fail'}rep='';out.textContent=(r==='ok')?'Galtiyan saaf ho gayi':'Saaf nahi hui'};
+g('st_free').onclick=function(){var r='';try{r=Android.selfTestFree()}catch(e){r='fail'}add(r==='asking'?'Screen par HAAN ya NAHI dabao':(r==='busy'?'Image test pehle se chal raha hai':'Test shuru nahi hua'))};
+g('st_img').onclick=function(){var r='';try{r=Android.selfTestImage()}catch(e){r='fail'}add(r==='asking'?'Screen par HAAN ya NAHI dabao':(r==='nokey'?'Gemini key nahi hai':(r==='busy'?'Image test pehle se chal raha hai':'Test shuru nahi hua')))};
 window.onSelfTest=function(l){add(l)};
 window.onSelfTestDone=function(r){rep=r;out.textContent=r;g('st_copy').textContent='COPY REPORT'};
 window.onAutoTest=function(sm,r){rep=r;out.textContent=r;var e=g('autoT');if(e){e.style.display='';e.textContent=sm}};
@@ -1997,13 +2021,18 @@ function load(){
   try{g('wb_nc').checked=!!Android.getNoiseCancel();g('wb_ncs').textContent=Android.noiseCancelStatus()||''}catch(e){}
   g('wb_web').checked=!!j.web;g('wb_lf').checked=!!j.localFirst;
   g('wb_lr').textContent=j.localReady?'Phone ka offline AI taiyaar hai.':'Phone ka offline AI abhi install nahi hai (Update Center > OFFLINE BRAIN).';
-  var c=g('wb_city');if(document.activeElement!==c)c.value=j.city||'';
+  try{g('wb_web').checked=!!Android.getWebBrowsers();g('wb_lf').checked=!!Android.getLocalFirst()}catch(e){}
+  var c=g('wb_city');if(document.activeElement!==c){var hc='';try{hc=Android.getHomeCity()}catch(e){}c.value=hc||j.city||''}
+  try{g('wb_wait').value=String(Android.getWaitSec())}catch(e){}
   var l=g('wb_l');l.textContent='';
   j.browsers.forEach(function(b){
     var r=document.createElement('div');r.className='wbr';
     var a=document.createElement('span');a.textContent=b.label+' ('+b.calls+' baar, '+b.ok+' theek)';
     var s=document.createElement('i');s.className=b.state;s.textContent=NAMES[b.state]||b.state;
-    r.appendChild(a);r.appendChild(s);l.appendChild(r)
+    var tb=document.createElement('button');tb.type='button';tb.className='sm';tb.textContent='TEST';
+    tb.onclick=function(){var n=g('wbt_'+b.id);if(n)n.textContent='Test chal raha hai...';try{Android.testBrowser(b.id)}catch(e){if(n)n.textContent='Test shuru nahi hua'}};
+    r.appendChild(a);r.appendChild(s);r.appendChild(tb);l.appendChild(r);
+    var tn=document.createElement('small');tn.id='wbt_'+b.id;l.appendChild(tn)
   });
   var v=j.saved||{};
   g('wb_sv').textContent='Aaj: '+(v.webToday|0)+' jawab web se, '+(v.localToday|0)+' phone ke AI se (cloud AI ka load bacha).'
@@ -2013,6 +2042,8 @@ g('wb_lf').onchange=function(){try{Android.setLocalFirst(this.checked)}catch(e){
 g('wb_nc').onchange=function(){var r='';try{Android.setNoiseCancel(this.checked);r=Android.noiseCancelStatus()}catch(e){}g('wb_ncs').textContent=r||''};
 g('wb_lg').onchange=function(){try{Android.setLockGuard(this.checked)}catch(e){}};
 g('wb_city').onchange=function(){try{Android.setHomeCity(this.value)}catch(e){}};
+g('wb_wait').onchange=function(){try{Android.setWaitSec(parseInt(this.value,10))}catch(e){}};
+window.onBrowserTest=function(id,ok,text){var n=g('wbt_'+id);if(n)n.textContent=(ok?'THEEK: ':'NAHI MILA: ')+(text||'')};
 window.wbLoad=load;
 var p=g('panel');if(p&&window.MutationObserver){new MutationObserver(function(){if(p.style.display==='block')load()}).observe(p,{attributes:true,attributeFilter:['style']})}
 setTimeout(load,1500);
@@ -2388,12 +2419,25 @@ function renderSkills(){
    ['PHONE KAABU',[
     ['bolt','Torch, volume, battery, apps, wifi','Bina internet, bina API key.',null,['nova torch jala do'],[]],
     ['call','Call aur message','Naam se call/SMS. Contacts permission chahiye.',!!st.contacts,['nova [naam] ko call karo'],[['CONTACTS ALLOW',call('requestContacts')]]],
+    ['call','Call uthana / kaatna','Call aaye to bolo: call uthao ya call kaato. WhatsApp/Instagram call bhi. Phone lock ho to NOVA chup rehta hai (LockGuard).',B('hasAnswerCalls'),['nova call uthao','nova call kaato'],[['PHONE ALLOW',call('requestAnswerCalls')],['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
+    ['scr','Screenshot','Bolo: screenshot lo. Gallery mein save hota hai.',!!st.acc,['nova screenshot lo'],[['ACCESSIBILITY',call('openAccessibility')]]],
+    ['mute','Ringer: silent / vibrate / normal','Bolo: ringer silent karo, vibrate mode, ringer normal. Silent ke liye Do Not Disturb access chahiye, warna vibrate lagta hai.',B('hasPolicyAccess'),['nova ringer silent karo','nova vibrate mode'],[['ALLOW DND',call('openPolicyAccess')]]],
+    ['bolt','Auto-rotate on / off','Bolo: rotation off karo, auto rotate on karo. Modify system settings permission chahiye (wahi jo brightness ke liye hai).',B('canWriteSettings'),['nova rotation off karo','nova auto rotate on karo'],[['ALLOW BRIGHTNESS',call('openWriteSettings')]]],
+    ['chip','Calendar meeting alert','Agle 7 din ki meeting se 10 minute pehle NOVA yaad dilata hai. Permission sirf is button se maangi jaati hai, awaaz se nahi. Calendar ka text sirf phone par rehta hai.',B('hasCalendarRead'),['nova aaj ki meetings'],[['CALENDAR ALLOW',call('requestCalendarRead')]]],
     ['chip','Timer, alarm, reminder','Offline chalte hain.',null,['set alarm for six thirty am','nova das minute baad chai yaad dilao'],[]],
     ['car','Driving mode','WhatsApp/SMS bol kar sunata hai, reply bolte hi bhej deta hai.',!!st.notifAccess,['driving mode on'],[['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
+    ['car','AI smart jawab','Chat message ka chhota, dostana jawab AI banata hai (Settings mein AI SMART JAWAB ON karo). Paise / OTP / link wale message cloud AI ko nahi jaate, fixed jawab jata hai. AI na chale to bhi fixed jawab. History mein likha aata hai AI ya fixed.',!!st.notifAccess&&B('getSmartReply'),['nova kya tum smart jawab de sakte ho'],[['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
+    ['car','Instagram / WhatsApp jawab','Birthday wish ya achha comment: Thank you likhta hoon aur batata hoon. Beizzati wala: jawab nahi, batata hoon, report karna hota hai. Ek bande ko ghante mein 2 jawab.',!!st.notifAccess,['nova insta comment ka kya karta hai'],[['NOTIFICATION ACCESS',call('openNotificationAccess')]]],
     ['mute','Quiet mode','Jawab sirf screen par, awaaz band.',null,['quiet mode on'],[['ABHI CHUP',call('stopSpeak')]]]]],
    ['SCREEN AUR APPS',[
     ['eye','Screen padhna / samajhna','Screen ka text padhta hai. Protected screens cloud ko kabhi nahi jaati.',!!st.acc,['read the screen','analyze screen'],[['ACCESSIBILITY',call('openAccessibility')]]],
-    ['scr','Agent: doosre app mein kaam','App kholo, sawal poochho, jawab wapas. Bank/payment/password screens par kaam nahi karta.',!!st.acc,['nova agent status','nova kaam chatgpt kholo aur ek joke poochho'],[['ACCESSIBILITY',call('openAccessibility')]]]]],
+    ['scr','Agent: doosre app mein kaam','App kholo, sawal poochho, jawab wapas. Bank/payment/password screen ka text online AI ko nahi jata; direct bolne par tap/type hota hai.',!!st.acc,['nova agent status','nova kaam chatgpt kholo aur ek joke poochho'],[['ACCESSIBILITY',call('openAccessibility')]]],
+    ['scr','Website Chrome mein kholna','Website ka naam bolo, har website alag Chrome tab mein khulti hai. Sirf "youtube kholo" bologe to YouTube app khulta hai.',null,['nova youtube chrome pe kholo','nova youtube google aur flipkart chrome pe kholo'],[]],
+    ['upd','App download (Play Store)','Play Store par Install dabata hoon aur download sach mein shuru hone par hi batata hoon. Paid app, login ya "Install anyway" khud nahi dabata.',!!st.acc,['nova whatsapp download karo'],[['ACCESSIBILITY',call('openAccessibility')]]]]],
+   ['SURAKSHA NIYAM',[
+    ['bolt','Seedha kaam, bina poochhe','Tumhare bolne par tap, type, send, pay, delete seedha hota hai. Bank, UPI aur password screen par bhi.',null,['nova tum bank screen par kaam kar sakte ho'],[]],
+    ['eye','Jahan khud tap nahi karta','Installer, permission, Settings aur Play Store. Isse NOVA apni permission khud nahi de sakta.',null,[],[]],
+    ['mute','Online AI ko kya nahi jata','Bank, payment aur password screen ka text kisi online AI ko nahi bhejta. Password padhta bhi nahi.',null,[],[]]]],
    ['BANAO',[
     ['spark','Photo / image banana','AI se image. Gemini key ya free image option chahiye.',img,['nova ek billi ki photo banao'],[['KEY / OPTION',go('i_on')]]],
     ['bolt','Website banana','Ek line se poori website. AI brain chahiye.',brain,['nova ek restaurant ki website banao'],[['AI KEY',go('s_key')]]],
@@ -3100,7 +3144,7 @@ try{load();paint()}catch(e){}
 (function(){
 function $(i){return document.getElementById(i)}
 var w=$('helpw'),btn=$('c_help');if(!w||!btn)return;
-var CAPS=[{"id": "call", "t": "Call aur SMS", "ex": "nova mummy ko call karo", "d": "Naam bolo, main call ya SMS taiyaar kar deta hoon. Call se pehle aapse haan poochta hoon.", "need": "Contacts permission chahiye."}, {"id": "whatsapp", "t": "WhatsApp message", "ex": "nova Rahul ko WhatsApp karo kal milte hain", "d": "WhatsApp message bhej sakta hoon. Bhejne se pehle aapse haan poochta hoon.", "need": "Accessibility permission chahiye."}, {"id": "alarm", "t": "Alarm, timer, reminder", "ex": "nova subah 6 baje ka alarm lagao", "d": "Alarm, timer aur reminder lagata hoon, bina internet ke.", "need": ""}, {"id": "phone", "t": "Torch, volume, wifi", "ex": "nova torch jala do", "d": "Torch, volume, wifi, bluetooth jaise phone ke kaam, bina internet ke.", "need": ""}, {"id": "apps", "t": "App kholna", "ex": "nova YouTube kholo", "d": "Koi bhi app ya phone ki setting khol deta hoon.", "need": ""}, {"id": "music", "t": "Gaana aur raasta", "ex": "nova Delhi ka raasta dikhao", "d": "YouTube par gaana ya video dhundhta hoon aur Google Maps mein jagah ya raasta dikhata hoon.", "need": "Internet chahiye."}, {"id": "camera", "t": "Camera kholna", "ex": "nova selfie camera kholo", "d": "Camera khol deta hoon (photo ya video). Photo ka button dabana mere haath mein nahi, wo aap dabao.", "need": ""}, {"id": "image", "t": "Photo banana (AI)", "ex": "nova ek billi ki photo banao", "d": "AI se nayi photo banata hoon.", "need": "Gemini key ya free image option chahiye."}, {"id": "website", "t": "Website banana", "ex": "nova ek restaurant ki website banao", "d": "Ek line bolo, poori website ban jaati hai. Baad mein bolo isko professional banao. Chaho to GitHub par publish bhi.", "need": "AI key chahiye, publish ke liye GitHub token."}, {"id": "screen", "t": "Screen padhna aur doosre app mein kaam", "ex": "nova screen padh kar batao", "d": "Screen padh kar samjha sakta hoon aur doosre app mein chhote kaam kar sakta hoon. Bank, payment aur password screen par kabhi nahi.", "need": "Accessibility permission chahiye."}, {"id": "memory", "t": "Yaad rakhna", "ex": "nova yaad rakh mera naam Shiv hai", "d": "Aapki baatein sirf is phone mein yaad rakhta hoon, kahin upload nahi hoti.", "need": ""}, {"id": "learn", "t": "Naya topic seekhna", "ex": "nova solar panel ke baare mein seekho", "d": "Naya topic Wikipedia se seekh leta hoon.", "need": "Internet chahiye."}, {"id": "driving", "t": "Driving mode", "ex": "nova driving mode on", "d": "Gaadi chalate waqt WhatsApp aur SMS bol kar sunata hoon, aur aap bolo to reply bhej deta hoon.", "need": "Notification access chahiye."}, {"id": "recording", "t": "Recording", "ex": "nova background me recording on karo", "d": "Sirf aapke kehne par recording chalata hoon. Status Settings mein dikhta hai.", "need": ""}, {"id": "live", "t": "Mausam, khabar, rate, matlab", "ex": "nova jaipur ka mausam batao", "d": "Mausam, taaza khabar, dollar ya bitcoin ka rate, shabd ka matlab aur kisi cheez ki jankari internet se turant laata hoon, bina kisi key ke. Chhote sawal phone ka offline AI bhi sambhalta hai.", "need": "Internet chahiye."}, {"id": "questions", "t": "Sawal ka jawab", "ex": "nova solar panel kaise kaam karta hai", "d": "Aam sawalon ka jawab deta hoon, hindi, hinglish ya english mein. Live news ya mausam ke liye internet chahiye.", "need": "AI key se behtar jawab milta hai."}];
+var CAPS=[{"id": "call", "t": "Call aur SMS", "ex": "nova mummy ko call karo", "d": "Naam bolo, main call ya SMS taiyaar kar deta hoon. Pehle kaam kar deta hoon, phir bata deta hoon. Settings mein confirm ON karoge to pehle poochunga.", "need": "Contacts permission chahiye."}, {"id": "whatsapp", "t": "WhatsApp message", "ex": "nova Rahul ko WhatsApp karo kal milte hain", "d": "WhatsApp message bhej sakta hoon. Pehle kaam kar deta hoon, phir bata deta hoon. Settings mein confirm ON karoge to pehle poochunga.", "need": "Accessibility permission chahiye."}, {"id": "alarm", "t": "Alarm, timer, reminder", "ex": "nova subah 6 baje ka alarm lagao", "d": "Alarm, timer aur reminder lagata hoon, bina internet ke.", "need": ""}, {"id": "phone", "t": "Torch, volume, wifi", "ex": "nova torch jala do", "d": "Torch, volume, wifi, bluetooth jaise phone ke kaam, bina internet ke.", "need": ""}, {"id": "apps", "t": "App kholna", "ex": "nova YouTube kholo", "d": "Koi bhi app ya phone ki setting khol deta hoon.", "need": ""}, {"id": "chrome", "t": "Website Chrome mein kholna", "ex": "nova youtube google aur flipkart chrome pe kholo", "d": "Website ka naam bolo, main use Chrome mein khol deta hoon. Kai website ek saath bolo to har ek alag tab mein khulti hai.", "need": ""}, {"id": "download", "t": "App download karna", "ex": "nova whatsapp download karo", "d": "App ka naam bolo, main Play Store ka page khol kar Install dabata hoon aur tabhi batata hoon jab download sach mein shuru ho jaye. Paid app ya login ki zaroorat ho to khud nahi dabata.", "need": "Accessibility permission aur Play Store mein Google login chahiye."}, {"id": "music", "t": "Gaana aur raasta", "ex": "nova Delhi ka raasta dikhao", "d": "YouTube par gaana ya video dhundhta hoon aur Google Maps mein jagah ya raasta dikhata hoon.", "need": "Internet chahiye."}, {"id": "camera", "t": "Camera kholna", "ex": "nova selfie camera kholo", "d": "Camera khol deta hoon (photo ya video). Photo ka button dabana mere haath mein nahi, wo aap dabao.", "need": ""}, {"id": "image", "t": "Photo banana (AI)", "ex": "nova ek billi ki photo banao", "d": "AI se nayi photo banata hoon.", "need": "Gemini key ya free image option chahiye."}, {"id": "website", "t": "Website banana", "ex": "nova ek restaurant ki website banao", "d": "Ek line bolo, poori website ban jaati hai. Baad mein bolo isko professional banao. Chaho to GitHub par publish bhi.", "need": "AI key chahiye, publish ke liye GitHub token."}, {"id": "screen", "t": "Screen padhna aur doosre app mein kaam", "ex": "nova screen padh kar batao", "d": "Screen padh kar samjha sakta hoon aur doosre app mein chhote kaam kar sakta hoon. Bank, payment aur password screen ka text kisi online AI ko nahi bhejta, par tum bolo to wahan tap ya type kar deta hoon.", "need": "Accessibility permission chahiye."}, {"id": "memory", "t": "Yaad rakhna", "ex": "nova yaad rakh mera naam Shiv hai", "d": "Aapki baatein sirf is phone mein yaad rakhta hoon, kahin upload nahi hoti.", "need": ""}, {"id": "learn", "t": "Naya topic seekhna", "ex": "nova solar panel ke baare mein seekho", "d": "Naya topic Wikipedia se seekh leta hoon.", "need": "Internet chahiye."}, {"id": "driving", "t": "Driving mode", "ex": "nova driving mode on", "d": "Gaadi chalate waqt WhatsApp aur SMS bol kar sunata hoon, aur aap bolo to reply bhej deta hoon.", "need": "Notification access chahiye."}, {"id": "recording", "t": "Recording", "ex": "nova background me recording on karo", "d": "Sirf aapke kehne par recording chalata hoon. Status Settings mein dikhta hai.", "need": ""}, {"id": "live", "t": "Mausam, khabar, rate, matlab", "ex": "nova jaipur ka mausam batao", "d": "Mausam, taaza khabar, dollar ya bitcoin ka rate, shabd ka matlab aur kisi cheez ki jankari internet se turant laata hoon, bina kisi key ke. Chhote sawal phone ka offline AI bhi sambhalta hai.", "need": "Internet chahiye."}, {"id": "questions", "t": "Sawal ka jawab", "ex": "nova solar panel kaise kaam karta hai", "d": "Aam sawalon ka jawab deta hoon, hindi, hinglish ya english mein. Phone ki permission ka sawal poochho to batata hoon kaun si allow hai aur kaise allow karni hai. Live news ya mausam ke liye internet chahiye.", "need": "AI key se behtar jawab milta hai."}, {"id": "safety", "t": "Suraksha niyam", "ex": "nova tum bank screen par kaam kar sakte ho", "d": "Tumhare bolne par main seedha kaam karta hoon, bina haan-nahi poochhe, bank, UPI aur password screen par bhi. Installer, permission, Settings aur Play Store mein main khud tap nahi karta. Kaam rokna ho to ruko, ruk jao ya bas karo bolo. Bank, payment aur password screen ka text kisi online AI ko nahi bhejta, password padhta bhi nahi.", "need": ""}, {"id": "social", "t": "Instagram aur WhatsApp jawab", "ex": "nova insta comment ka kya karta hai", "d": "Birthday wish ya achha comment aaye to main Thank you likh deta hoon aur tumhe bata deta hoon. Beizzati ya sharam wala message ya comment ho to jawab nahi deta, tumhe batata hoon, Instagram par report karna hota hai. Paise ki baat ho to bina poochhe seedha ek safe jawab bhejta hoon (amount ya detail nahi deta). OTP ya password maange to jawab nahi deta. Ek bande ko ghante mein sirf 2 jawab bhejta hoon.", "need": "Notification access aur auto-jawab ON chahiye."}, {"id": "callanswer", "t": "Call uthana aur kaatna", "ex": "nova call uthao", "d": "Call aaye to bolo: call uthao ya call kaato. WhatsApp ya Instagram call bhi. Phone lock ho to main chup rehta hoon.", "need": "Notification access ya Phone permission chahiye."}, {"id": "phonecontrol", "t": "Screenshot, ringer, rotation", "ex": "nova screenshot lo", "d": "Screenshot leta hoon, ringer silent, vibrate ya normal karta hoon, rotation on ya off karta hoon. Phone ne sach mein badla ho tabhi bolta hoon ho gaya.", "need": "Screenshot ke liye Accessibility, silent ke liye Do Not Disturb access, rotation ke liye Modify system settings chahiye."}, {"id": "smartreply", "t": "AI smart jawab", "ex": "nova kya tum smart jawab de sakte ho", "d": "Settings mein AI SMART JAWAB ON karo to chat message ka chhota jawab AI banata hai. Paise, OTP ya link wala message AI ko nahi jata, uska fixed jawab jata hai. AI na chale to bhi fixed jawab. History mein AI ya fixed likha aata hai.", "need": "Notification access, auto-jawab ON aur AI key chahiye."}, {"id": "calendar", "t": "Calendar aur meetings", "ex": "nova aaj ki meetings", "d": "Aaj ki meetings batata hoon aur agle 7 din ki meeting se 10 minute pehle yaad dilata hoon. Calendar ka text sirf phone par rehta hai.", "need": "Calendar permission chahiye (Skills screen ke button se)."}];
 function J(f){try{return JSON.parse(window.Android[f]())||{}}catch(e){return {}}}
 function B(f){try{return !!window.Android[f]()}catch(e){return false}}
 function go(id){return function(){try{if(window.novaGo)window.novaGo(id)}catch(e){}}}
@@ -3110,12 +3154,16 @@ function ready(id,st,se){
  var img=!!se.hasKey||B('getFreeImg')||B('hasImgKey');
  switch(id){
   case 'call':return !!st.contacts;
-  case 'whatsapp':case 'screen':return !!st.acc;
+  case 'whatsapp':case 'screen':case 'download':return !!st.acc;
   case 'driving':return !!st.notifAccess;
+  case 'callanswer':return B('hasAnswerCalls')||!!st.notifAccess;
+  case 'phonecontrol':return !!st.acc;
+  case 'smartreply':return !!st.notifAccess&&B('getSmartReply');
+  case 'calendar':return B('hasCalendarRead');
   case 'image':return img;
   case 'website':case 'questions':return brain;
   default:return null}}
-var FIX={call:['CONTACTS ALLOW',nat('requestContacts')],whatsapp:['ACCESSIBILITY ON KARO',nat('openAccessibility')],screen:['ACCESSIBILITY ON KARO',nat('openAccessibility')],driving:['NOTIFICATION ACCESS',nat('openNotificationAccess')],image:['KEY / OPTION',go('i_on')],website:['AI KEY DAALO',go('s_key')],questions:['AI KEY DAALO',go('s_key')]};
+var FIX={callanswer:['NOTIFICATION ACCESS',nat('openNotificationAccess')],phonecontrol:['ACCESSIBILITY ON KARO',nat('openAccessibility')],smartreply:['NOTIFICATION ACCESS',nat('openNotificationAccess')],calendar:['CALENDAR ALLOW',nat('requestCalendarRead')],download:['ACCESSIBILITY ON KARO',nat('openAccessibility')],call:['CONTACTS ALLOW',nat('requestContacts')],whatsapp:['ACCESSIBILITY ON KARO',nat('openAccessibility')],screen:['ACCESSIBILITY ON KARO',nat('openAccessibility')],driving:['NOTIFICATION ACCESS',nat('openNotificationAccess')],image:['KEY / OPTION',go('i_on')],website:['AI KEY DAALO',go('s_key')],questions:['AI KEY DAALO',go('s_key')]};
 function close(){w.classList.remove('on');w.setAttribute('aria-hidden','true')}
 function tryIt(t){close();var c=$('chat');if(c&&!c.classList.contains('on')){var cb=$('chatb');if(cb)cb.click()}
  setTimeout(function(){var i=$('c_in');if(i){i.value=t;try{i.focus()}catch(e){}}},220)}

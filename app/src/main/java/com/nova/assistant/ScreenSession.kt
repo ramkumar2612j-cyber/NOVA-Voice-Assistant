@@ -93,8 +93,8 @@ object ScreenSession {
 
     // ---------------------------------------------------------------- screens that never go to the cloud
 
-    /** Same rule the task agent uses (Control.blocked): settings, permission, installer, Play Store, payment / bank, NOVA itself. */
-    fun isProtected(pkg: String?, ownPkg: String): Boolean = Control.blocked(pkg, ownPkg, "tap")
+    /** READ shield (Control.readProtected): settings, permission, installer, Play Store, payment / bank, NOVA itself, unreadable window. Tap / type use Control.blocked. */
+    fun isProtected(pkg: String?, ownPkg: String): Boolean = Control.readProtected(pkg, ownPkg)
 
     // ---------------------------------------------------------------- text
 

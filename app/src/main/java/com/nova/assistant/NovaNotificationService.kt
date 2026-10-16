@@ -28,6 +28,7 @@ class NovaNotificationService : NotificationListenerService() {
         try {
             if (sbn == null) return
             MessageMode.load(this)
+            CallHub.onPosted(sbn)
             handleLock(sbn)
             if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn)
             if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn)
@@ -99,14 +100,32 @@ class NovaNotificationService : NotificationListenerService() {
             if (!ActionLog.autoReplyOn(ctx)) return
             val now = System.currentTimeMillis()
             if (WaBiz.active(now) && (m.pkg == "com.whatsapp" || m.pkg == "com.whatsapp.w4b")) return   // business watch has its own rules
+            // v6.98: Instagram / WhatsApp insult = no reply, owner told; wish or nice comment = fixed thank-you (rules: SocialReplyRules)
+            val soc = if (!isGroup && !m.hidden) SocialReplyRules.decide(m.pkg, m.text) else null
+            if (soc != null && soc.kind == SocialReplyRules.Kind.INSULT) {
+                ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", SocialReplyRules.insultNote(soc.report, true))
+                NovaService.instance?.onSocialInsult(m.sender, m.app, soc.report)
+                return
+            }
+            // v6.99 Part 5: money talk is read, not asked about. Code / OTP = no reply + history note; other money talk = a safe fixed line (PaymentReplyRules).
+            val pay = if (!isGroup && !m.hidden) PaymentReplyRules.decide(m.text) else null
+            if (pay != null && pay.kind == PaymentReplyRules.Kind.SECRET) {
+                ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", PaymentReplyRules.secretNote())
+                return
+            }
             val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: AutoReplyRules.gate.allow(m.sender, now)
             if (reason != null) {
                 if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true))
                 return
             }
-            val text = ActionLog.autoReplyText(ctx)
+            // v6.99 Part 3: fixed thank-you (social) and the owner's fixed text stay the fallback; the AI is asked only when
+            // smart reply is ON and the message is safe for a cloud AI. The AI answer is cleaned; unusable / late = fixed text.
+            val fixed = pay?.reply ?: soc?.reply ?: ActionLog.autoReplyText(ctx)
+            val askAi = pay == null && SmartReplyRules.useAi(ExtCfg.smartReply(ctx), soc?.reply, m.text)
+            val picked = SmartReplyRules.pick(if (askAi) NovaService.instance?.smartReply(m.sender, m.text) else null, fixed)
+            val text = picked.text
             val ok = DrivingBridge.sendReply(ctx, m.key, text)
-            ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
+            ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg, if (pay != null) PaymentReplyRules.note(pay.kind) else SmartReplyRules.note(picked.ai))
             NovaService.instance?.onAutoReplied(m.sender, m.app, text, ok)
         } catch (e: Exception) {
             // one odd notification must never crash the listener
@@ -174,6 +193,7 @@ class NovaNotificationService : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         val k = sbn?.key ?: return
+        CallHub.onRemoved(k)
         DrivingBridge.forget(k)
     }
 }

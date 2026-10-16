@@ -15,6 +15,7 @@ BUTTONS = set(lst('BUTTONS'))
 def const(n): return int(re.search(r'const val ' + n + r' = ([0-9_ *]+)L?', SA).group(1).replace('_', '').replace(' ', '').replace('L', '').replace('*', '*') and eval(re.search(r'const val ' + n + r' = ([0-9_ *]+)L?', SA).group(1).replace('_', '')))
 SNOOZE, HOUR, CAP, GAP, MAXL, MAXLINE = (const(n) for n in ('SNOOZE_MS', 'HOUR_MS', 'HOURLY_CAP', 'MIN_GAP_MS', 'MAX_LINES', 'MAX_LINE'))
 BLOCKED_PK = set(re.findall(r'"([a-z0-9_.]+)"', re.search(r'BLOCKED_PACKAGES = setOf\((.*?)\)\n', CT, re.S).group(1)))
+BLOCKED_PK |= set(re.findall(r'"([a-z0-9_.]+)"', re.search(r'READ_ONLY_SHIELD = setOf\((.*?)\)\n', CT, re.S).group(1)))   # v6.98: bank apps are read-shielded, not tap-blocked
 BLOCKED_FR = re.findall(r'"([a-z]+)"', re.search(r'BLOCKED_FRAGMENTS = listOf\((.*?)\)\n', CT, re.S).group(1))
 
 def protected(pkg): return (not pkg) or pkg == OWN or pkg in BLOCKED_PK or any(f in pkg.lower() for f in BLOCKED_FR)

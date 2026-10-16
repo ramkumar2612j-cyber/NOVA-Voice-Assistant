@@ -113,6 +113,7 @@ class NovaService : Service() {
     private val uttSeq = AtomicInteger(0)
 
     @Volatile private var busy = false              // a turn is being processed
+    @Volatile private var stopEpoch = 0             // v6.99 Part 2: +1 on every spoken STOP; picture / website jobs compare it when they finish
     @Volatile private var listening = false         // the loop is capturing a command / answer
     @Volatile private var pending: Pending? = null
     @Volatile private var contactRetryPending: Pending? = null // user may repeat/correct a contact lookup; never approves an action
@@ -1485,6 +1486,41 @@ class NovaService : Service() {
             else tr("$sender ko $app par jawab nahi bhej paya", "I could not reply to $sender on $app"))
     }
 
+    /** v6.98: an insulting Instagram / WhatsApp message or comment. NOVA did not reply; the text is never read aloud. */
+    fun onSocialInsult(sender: String, app: String, report: Boolean) {
+        if (!alive) return
+        announceIfIdle(tr("$sender ne $app par beizzati wala message ya comment kiya. Jawab nahi diya" + (if (report) ", report karna hai" else ""),
+            "$sender sent an insulting message or comment on $app. I did not reply" + (if (report) " and it needs a report" else "")))
+    }
+
+    private val smartExec: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newCachedThreadPool()
+
+    /**
+     * v6.99 Part 3 AI SMART REPLY. Called from the notification listener AFTER the rate gate allowed a reply.
+     * Returns ONE raw AI reply (the caller cleans it with SmartReplyRules.pick) or null = use the fixed reply.
+     * Runs on a worker thread with a hard timeout (SmartReplyRules.TIMEOUT_MS). Needs: switch ON, free AI chain with a key,
+     * and a message that SmartReplyRules.allowedForAi accepts (no money / OTP / link / long number ever goes to a cloud AI).
+     */
+    fun smartReply(sender: String, text: String): String? {
+        if (!ExtCfg.smartReply(this) || !agentChainReady()) return null
+        if (!SmartReplyRules.allowedForAi(text)) return null
+        return try {
+            val en = cfg.lang == "en"
+            val f = smartExec.submit(java.util.concurrent.Callable<String?> {
+                agentChain(SmartReplyRules.systemPrompt(en), SmartReplyRules.userPrompt(sender, text))
+            })
+            try {
+                f.get(SmartReplyRules.TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            } catch (t: java.util.concurrent.TimeoutException) {
+                f.cancel(true)
+                null
+            }
+        } catch (t: Throwable) {
+            ErrLog.add("SmartReply", t.javaClass.simpleName)
+            null
+        }
+    }
+
     fun onMessageModeMessage(m: Driving.Msg) {
         if (!alive || !MessageMode.enabled) return
         val hint = m.canReply && !m.hidden && MessageMode.inbox.unreadCount() <= 1 && !ActionLog.autoReplyOn(this)
@@ -1575,6 +1611,10 @@ class NovaService : Service() {
         }
         Driving.enabled = true
         drivingHintShown = false
+        if (ExtCfg.skipOrderConfirm(this)) return tr(
+            "Driving mode chalu. Naye messages main bol kar sunaunga. Jawab bologe to seedha bhej dunga aur bhejne ke baad bata dunga.",
+            "Driving mode is on. I will read new messages aloud, and I send a reply at once when you order it, then tell you."
+        )
         return tr(
             "Driving mode chalu. Naye messages main bol kar sunaunga. Jawab bhejne se pehle main aapse haan poochunga.",
             "Driving mode is on. I will read new messages aloud, and I always ask for your yes before sending a reply."
@@ -2031,6 +2071,21 @@ class NovaService : Service() {
                 lastKind = "app_control"
                 return appRes.msg
             }
+        }
+        // v6.97 wip14: "<site> chrome pe kholo", "youtube google aur flipkart kholo" (one Chrome tab each). Local rules, no AI call, so it is fast.
+        // A plain single "youtube kholo" is NOT taken here: it keeps the old open-the-app path.
+        val webReq = if (text.isBlank()) null else OpenWebRules.parseOpen(text)
+        if (webReq != null) {
+            lastTurnLocal = true
+            lastKind = "web_open"
+            return openWeb(webReq)
+        }
+        // v6.97 wip14 (Part 4): "<app> download karo" -> Play Store page, Install pressed only as PlayInstallRules allows, honest result.
+        val dlReq = if (text.isBlank()) null else OpenWebRules.parseDownload(text)
+        if (dlReq != null) {
+            lastTurnLocal = true
+            lastKind = "app_download"
+            return downloadApp(dlReq)
         }
         // General project/research/creation jobs are routed after the specialist builders so they cannot steal them.
         if (text.isNotBlank() && AgentRules.isTask(text)) {
@@ -2532,7 +2587,7 @@ class NovaService : Service() {
                 }
             },
             { id -> id != "pollinations" || keyless },
-            FallbackContext.systemWith(FallbackContext.systemWith(FreeProviders.systemPrompt(en) + " " + HelpGuide.aiFacts() + " " + SourceMap.aiFacts() + (if (withFacts) chainFacts(said, en) else ""), fallbackTaskLine(en)), fallbackCutNote(en)),
+            FallbackContext.systemWith(FallbackContext.systemWith(FreeProviders.systemPrompt(en) + " " + HelpGuide.aiFacts() + " " + SourceMap.aiFacts() + " " + PhoneFacts.aiFacts(this) + (if (withFacts) chainFacts(said, en) else ""), fallbackTaskLine(en)), fallbackCutNote(en)),
             said,
             freeCooldowns,
             { System.currentTimeMillis() },
@@ -2724,6 +2779,7 @@ class NovaService : Service() {
     private fun runCommand(c: Logic.Cmd): String = when (c.kind) {
         "stop" -> {
             agentCancel = true
+            stopEpoch++
             connQueue.clear()
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "Owner said stop") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
             agentOutcome = AgentTaskRules.State.CANCELLED
@@ -2802,6 +2858,28 @@ class NovaService : Service() {
             tr("Theek hai, ab jawab bol kar bhi dunga", "Okay, I will speak my replies again")
         }
         "unlock" -> unlockPhone()
+        PhoneVoiceRules.K_SHOT -> {
+            val en = cfg.lang == "en"
+            if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) PhoneActions.failText("no_acc", true, en)
+            else {
+                val sc = NovaAccessibilityService.screenshotToGallery()
+                if (sc.ok) PhoneVoiceRules.doneText(c.kind, c.arg, en)
+                else PhoneActions.failText(if (sc.code == "old_android") "old_android" else "failed_shot", true, en)
+            }
+        }
+        PhoneVoiceRules.K_RINGER -> {
+            val r = PhoneActions.setRinger(this, c.arg)
+            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, true, cfg.lang == "en")
+        }
+        PhoneVoiceRules.K_ROTATION -> {
+            val r = PhoneActions.setRotation(this, c.arg == "on")
+            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, true, cfg.lang == "en")
+        }
+        PhoneVoiceRules.K_ANSWER, PhoneVoiceRules.K_REJECT -> {
+            val ans = c.kind == PhoneVoiceRules.K_ANSWER
+            val r = if (ans) PhoneActions.answerCall(this) else PhoneActions.rejectCall(this)
+            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, ans, cfg.lang == "en")
+        }
         UnsupportedRules.KIND -> UnsupportedRules.reply(c.arg, cfg.lang == "en")   // v6.74: switch off / restart / factory reset: said clearly, nothing attempted
         PersonalMemory.K_SAVE -> memSave(c.arg)
         PersonalMemory.K_LIST -> memList()
@@ -3092,7 +3170,7 @@ class NovaService : Service() {
                 "settings" -> openSettings(c.arg, c.num == 2)
                 "camera" -> launch(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), null, "Camera")
                 "call" -> callTool(c.arg)
-                "open_app" -> openApp(c.arg)
+                "open_app" -> openAppOrSite(c.arg)
                 "timer" -> timerTool(c.num, c.arg)
                 "alarm" -> alarmTool(c.num / 60, c.num % 60, c.arg)
                 "alarm_any" -> Timers.resolveAny(c.num, java.time.LocalTime.now()).let { alarmTool(it / 60, it % 60, c.arg) }
@@ -3147,13 +3225,18 @@ class NovaService : Service() {
             tr("Internet nahi hai; photo queue mein save kar di. Net aane par try hogi; screen-agent tasks auto-repeat nahi honge.", "No internet; image saved to queue and will retry when online. Screen-agent tasks are never replayed.")
         else tr("Queue full ya save error; photo queue nahi hui.", "Queue is full or could not save the image task.")
         imageRunning = true
+        val epoch = stopEpoch
         val subject = req.subject
         Thread({
             var spoken = ""
             try {
                 val r = FreeImage.run(this, subject)
                 val img = r.img
-                if (r.ok && img != null) {
+                if (StopRules.wasStopped(epoch, stopEpoch)) {
+                    val why = tr("Roka gaya, photo nahi rakhi", "Stopped, the picture was not kept")
+                    imageListener?.invoke(false, why, "", "")
+                    spoken = why
+                } else if (r.ok && img != null) {
                     val saved = ImageGen.saveToGallery(this, img)
                     val thumb = ImageGen.b64(ImageGen.shrink(img, 1024) ?: img)
                     imageListener?.invoke(true, r.msg, thumb, saved ?: "")
@@ -3199,6 +3282,7 @@ class NovaService : Service() {
             tr("Internet nahi hai; seekhne ka topic queue mein save hai. Net aane par try hoga.", "No internet; learning topic is queued and will retry when online.")
         else tr("Queue full ya save error; task queue nahi hua.", "Queue is full or the task could not be saved.")
         learnRunning = true
+        val epoch = stopEpoch
         val topic = req.topic
         Thread({
             var spoken = ""
@@ -3211,7 +3295,9 @@ class NovaService : Service() {
                     val t = r.text
                     if (t != null) { note = LearnRules.cleanNote(t); src = "ai" }
                 }
-                if (note != null) {
+                if (note != null && StopRules.wasStopped(epoch, stopEpoch)) {
+                    spoken = tr("Roka gaya, kuch yaad nahi rakha", "Stopped, nothing was kept")
+                } else if (note != null) {
                     if (ExtCfg.autoLearn(this)) {   // v6.37: kept at once, no RAKHO needed (text only; HATAO in KYA SEEKHA deletes it)
                         LearnStore.addKept(this, topic, note, src)
                         learnListener?.invoke()
@@ -3710,6 +3796,7 @@ class NovaService : Service() {
             tr("Internet nahi hai; website queue mein save hai. Net aane par banegi.", "No internet; website is queued and will be built when online.")
         else tr("Queue full ya save error; website queue nahi hui.", "Queue is full or the website task could not be saved.")
         siteRunning = true
+        val epoch = stopEpoch
         val subject = req.subject
         val rawSaid = req.raw
         val baseHtml = if (req.followUp) lastSiteHtml else null
@@ -3717,7 +3804,11 @@ class NovaService : Service() {
             var spoken = ""
             try {
                 val r = SiteGen.generate(this, subject, rawSaid, baseHtml)
-                if (r.ok) {
+                if (StopRules.wasStopped(epoch, stopEpoch)) {
+                    val why = tr("Roka gaya, website nahi rakhi", "Stopped, the website was not kept")
+                    siteListener?.invoke(false, why, "", "")
+                    spoken = why
+                } else if (r.ok) {
                     lastSiteSubject = subject
                     lastSiteHtml = r.html
                     lastSiteAtMs = System.currentTimeMillis()
@@ -4167,7 +4258,7 @@ class NovaService : Service() {
                 continue
             }
             val pkg = snap.first
-            val shielded = pkg.isNotEmpty() && Control.blocked(pkg, packageName, "tap")
+            val shielded = pkg.isNotEmpty() && Control.readProtected(pkg, packageName)
             val nodes: List<AgentRules.Node> = if (shielded) emptyList() else snap.second   // protected screens are never sent to the cloud
             agentMark(AgentTaskRules.State.PLANNING, "Planning step $step")
             val prompt = AgentRules.userPrompt(fullTask, step, pkg, nodes, hist)
@@ -4314,7 +4405,7 @@ class NovaService : Service() {
 
     /** One separate model call compares the observed final screen against the original contract. */
     private fun agentVerify(task: String, pkg: String, nodes: List<AgentRules.Node>, claimed: String, hist: List<String>): AgentRules.Verification? {
-        if (pkg.isNotEmpty() && Control.blocked(pkg, packageName, "tap")) return null
+        if (pkg.isNotEmpty() && Control.readProtected(pkg, packageName)) return null
         if (nodes.isEmpty()) return null
         val screen = nodes.take(75).joinToString("\n") { AgentRules.nodeLine(it) }.take(5500)
         val shot = try { NovaAccessibilityService.agentScreenshot() } catch (e: Throwable) { null }
@@ -4572,7 +4663,7 @@ class NovaService : Service() {
         val label = labels[idx]
         val q = req.query
         if (Control.blocked(pkg, packageName, "type")) {
-            return R(false, tr("$label me main search nahi karunga: ye paise ya security wala app hai", "I will not search inside $label: it is a payment or security app"))
+            return R(false, tr("$label me main search nahi karunga: ye Settings, installer ya Play Store jaisa system app hai", "I will not search inside $label: it is a system app (Settings, installer, Play Store)"))
         }
         if (req.play) {
             val play = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
@@ -4739,8 +4830,130 @@ class NovaService : Service() {
         return launch(li, pkg, labels[idx])
     }
 
+    // ---------------------------------------------------------------- v6.97 wip14: websites in Chrome tabs
+
+    private val CHROME_PKG = "com.android.chrome"
+
+    /** True when an installed app matches the spoken name (the same matching openApp uses). */
+    private fun appInstalled(name: String): Boolean {
+        val q = name.trim()
+        if (q.isEmpty()) return false
+        val normalized = Logic.norm(q).replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
+        when (normalized) {
+            "whatsapp", "wa" -> return WhatsAppTarget.isInstalled(packageManager, WhatsAppTarget.App.MESSENGER)
+            "whatsapp business", "wa business" -> return WhatsAppTarget.isInstalled(packageManager, WhatsAppTarget.App.BUSINESS)
+        }
+        val pm = packageManager
+        val list = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+        return Logic.bestAppIndex(q, list.map { it.loadLabel(pm).toString() }) >= 0
+    }
+
+    /** One website = one Chrome tab (a VIEW intent without Browser.EXTRA_APPLICATION_ID makes Chrome open a NEW tab). Default browser if Chrome is missing. */
+    private fun openChromeTab(url: String, label: String): R {
+        val uri = try { Uri.parse(url) } catch (e: Exception) { null }
+        val scheme = uri?.scheme?.lowercase()
+        if (uri == null || (scheme != "http" && scheme != "https") || uri.host.isNullOrBlank())
+            return R(false, tr("$label ka address sahi nahi laga", "The address for $label looked wrong"))
+        val hasChrome = packageManager.getLaunchIntentForPackage(CHROME_PKG) != null
+        val i = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+        if (hasChrome) i.setPackage(CHROME_PKG)
+        return launch(i, if (hasChrome) CHROME_PKG else null, label)
+    }
+
+    /**
+     * Old behaviour first: an installed app that matches the name opens. Only when NO app matches, the name is opened as a website in Chrome
+     * (known site, else www.<word>.com, several words = a Google search) and the answer says so.
+     */
+    private fun openAppOrSite(name: String): R {
+        if (appInstalled(name)) return openApp(name)
+        val url = OpenWebRules.siteUrl(name, guess = true) ?: return openApp(name)
+        val label = OpenWebRules.labelFor(name)
+        val r = openChromeTab(url, label)
+        if (!r.ok) return openApp(name)
+        // A several-word name that is not a known site becomes a Google search, not a website: say exactly that.
+        return if (url.startsWith("https://www.google.com/search?q="))
+            R(true, tr("$label naam ka app nahi mila, isliye Chrome mein Google search khol diya", "I found no app called $label, so I opened a Google search in Chrome"))
+        else R(true, tr("$label naam ka app nahi mila, isliye website Chrome mein khol di", "I found no app called $label, so I opened the website in Chrome"))
+    }
+
+    /** Several names in one sentence: every website gets its own Chrome tab, every app opens as an app. The answer lists only what really opened. */
+    private fun openWeb(req: OpenWebRules.OpenReq): String {
+        val opened = ArrayList<String>()
+        val failed = ArrayList<String>()
+        var tabs = 0
+        var idx = 0
+        for (t in req.targets) {
+            if (!alive) break
+            if (idx++ > 0) { try { Thread.sleep(600) } catch (e: InterruptedException) { break } }   // let Chrome finish the previous tab first
+            val r: R = when {
+                t.web -> openChromeTab(t.url ?: "", t.label).also { if (it.ok) tabs++ }
+                appInstalled(t.name) -> openApp(t.name)
+                t.url != null -> openChromeTab(t.url, t.label).also { if (it.ok) tabs++ }
+                else -> R(false, tr("${t.label} naam ka app nahi mila", "I found no app called ${t.label}"))
+            }
+            if (r.ok) opened.add(t.label) else failed.add(t.label)
+        }
+        val head = when {
+            opened.isEmpty() -> ""
+            opened.size == 1 && tabs == 1 -> tr("${opened[0]} Chrome mein khul gaya", "${opened[0]} is open in Chrome")
+            tabs == opened.size -> tr("${opened.size} website alag-alag tab mein khul gayi: ${opened.joinToString(", ")}", "Opened ${opened.size} websites in separate Chrome tabs: ${opened.joinToString(", ")}")
+            else -> tr("${opened.joinToString(", ")} khul gaye", "Opened ${opened.joinToString(", ")}")
+        }
+        val bad = if (failed.isEmpty()) "" else tr("Ye nahi khul paye: ${failed.joinToString(", ")}", "Could not open: ${failed.joinToString(", ")}")
+        val more = if (req.truncated) tr("Sirf pehle ${OpenWebRules.MAX_TARGETS} khole, baaki dobara bolo", "I opened only the first ${OpenWebRules.MAX_TARGETS}, ask again for the rest") else ""
+        return listOf(head, bad, more).filter { it.isNotBlank() }.joinToString(". ")
+    }
+
+    // ---------------------------------------------------------------- v6.97 wip14 (Part 4): app download from the Play Store
+    private val PLAY_PKG = "com.android.vending"
+
+    /**
+     * Opens the app's Play Store page and presses ONLY the exact "Install" button (NovaAccessibilityService.playInstall, armed 60 s, page title checked).
+     * Known app = details page. Unknown app = Play search, first result only when its title is exactly the spoken name.
+     * The reply says "download start ho gaya" only when Cancel / Downloading / Installing / Pending was really seen after the press.
+     * Several apps in one sentence: the first only, the rest are listed. Worker thread only (it waits for the screen).
+     */
+    private fun downloadApp(req: OpenWebRules.DownloadReq): String {
+        val label = req.label
+        val pkg = req.pkg
+        val more = if (req.rest.isEmpty()) "" else tr(". Baaki (${req.rest.joinToString(", ")}) ek-ek karke bolo", ". Ask for the others (${req.rest.joinToString(", ")}) one at a time")
+        if (packageManager.getLaunchIntentForPackage(PLAY_PKG) == null)
+            return tr("Is phone par Play Store nahi mila", "Play Store was not found on this phone")
+        if (pkg != null && packageManager.getLaunchIntentForPackage(pkg) != null)
+            return tr("$label pehle se installed hai sir", "$label is already installed") + more
+        val acc = NovaAccessibilityService.isEnabled(this)
+        val key = pkg ?: ("q:" + req.name.trim().lowercase())
+        if (acc) PlayInstallRules.arm(key, System.currentTimeMillis())
+        val uri = if (pkg != null) "market://details?id=$pkg" else "market://search?q=" + enc(req.name) + "&c=apps"
+        val opened = launch(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(PLAY_PKG), PLAY_PKG, "Play Store")
+        if (!opened.ok) { PlayInstallRules.disarm(key); return opened.msg }
+        if (!acc) return tr("$label ka Play Store page khol diya. NOVA Phone Control (Accessibility) band hai, isliye Install aap dabao", "I opened the Play Store for $label. NOVA Phone Control (Accessibility) is off, so please press Install yourself") + more
+        if (pkg == null) {
+            val found = NovaAccessibilityService.playOpenResult(req.name) { !alive }
+            if (!found.ok) {
+                PlayInstallRules.disarm(key)
+                return tr("Play Store mein '${req.label}' naam ka app pakka nahi mila. Search khula hai, aap apna app chuno aur Install dabao", "I could not find an app named exactly '${req.label}' in the Play Store. The search is open, please pick the app and press Install") + more
+            }
+        }
+        val res = NovaAccessibilityService.playInstall(key, label) { !alive }
+        PlayInstallRules.disarm(key)
+        val msg = when (res.code) {
+            "started" -> tr("$label ka download start ho gaya sir", "The download of $label has started")
+            "installed" -> tr("$label pehle se installed hai sir", "$label is already installed")
+            "need_login" -> tr("Play Store mein Google account login nahi hai. Pehle login karo, phir dobara bolo", "You are not signed in to the Play Store. Sign in first, then ask again")
+            "paid" -> tr("$label paid app hai, main price wala button nahi dabata. Aap khud dekh lo", "$label is a paid app, I never press a price button. Please check it yourself")
+            "tap_failed" -> tr("Install button dabane mein dikkat aayi. Play Store mein aap dabao", "I could not press the Install button. Please press it in the Play Store")
+            "unconfirmed" -> tr("Install dabaya par download shuru hone ki pushti nahi hui. Play Store mein dekh lo", "I pressed Install but could not confirm that the download began. Please check the Play Store")
+            "interrupted" -> tr("Download ka kaam beech mein roka gaya, kuch pakka nahi hua. Play Store mein dekh lo", "The download job was interrupted, nothing is confirmed. Please check the Play Store")
+            "not_armed" -> tr("Install ki ijazat ka samay khatam ho gaya, dobara bolo", "The install window ran out, please ask again")
+            "no_acc" -> tr("NOVA Phone Control (Accessibility) band hai, isliye Install aap dabao", "NOVA Phone Control (Accessibility) is off, so please press Install yourself")
+            else -> tr("$label ka sahi Play Store page nahi mila, kuch dabaya nahi. Play Store mein aap dekh lo", "I did not reach the right Play Store page for $label and pressed nothing. Please check the Play Store")
+        }
+        return msg + more
+    }
+
     // ---------------------------------------------------------------- contacts, call, sms, WhatsApp
-    private val NUMBER_RE = Regex("^[+0-9 \\-]{5,}$")
+    private val NUMBER_RE =Regex("^[+0-9 \\-]{5,}$")
 
     /** What happens when the owner picks one of the displayed candidates (popup tap or spoken name). Set per command: call / SMS / WhatsApp. */
     @Volatile private var contactChoiceAction: ((ContactCandidate) -> Unit)? = null
@@ -5055,7 +5268,7 @@ class NovaService : Service() {
     private fun runTool(name: String, a: JSONObject): String {
         val r: R = try {
             when (name) {
-                "open_app" -> openApp(a.optString("name"))
+                "open_app" -> openAppOrSite(a.optString("name"))
                 "open_url" -> openUrl(a.optString("url"))
                 "call" -> callTool(a.optString("who"))
                 "sms" -> smsTool(a.optString("to"), a.optString("message"))

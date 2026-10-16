@@ -4,12 +4,14 @@ package com.nova.assistant
  * Pure rules for voice screen control (tap / type / scroll / swipe). No Android classes, so every rule
  * here is unit-testable. The Accessibility service does the actual work; these rules decide WHAT is allowed.
  *
- * Safety model:
- *  - Risky labels (send, pay, delete, buy, ...) always need a spoken local "yes" first.
- *  - tap/type are refused in the package installer, permission screens, system Settings, the Play Store,
- *    payment/banking apps and NOVA's own screen, so NOVA can never grant itself permissions, install
- *    something, change security settings or move money by itself. Scrolling is allowed everywhere.
- *  - Password fields are never typed into or read.
+ * Safety model (v6.98, owner decision 16 Oct 2026: NOVA acts on his spoken order directly):
+ *  - tap/type are refused ONLY in the package installer, permission screens, system Settings and the Play Store
+ *    (so NOVA cannot grant itself permissions, install something or change device security by itself).
+ *    Banking / payment / wallet apps, NOVA's own screens, windows whose package cannot be read and password
+ *    fields are NOT blocked any more: NOVA taps / types there when the owner orders it. Scrolling is allowed everywhere.
+ *  - Risky labels (send, pay, delete, ...) no longer need a spoken yes (see AgentRules.check, ExtCfg.skipRiskyConfirm).
+ *  - What NOVA READS is a separate rule: [readProtected] keeps bank / payment / settings / own / unreadable screens
+ *    and password text OUT of screen reading and out of every cloud AI call.
  */
 object Control {
 
@@ -18,13 +20,18 @@ object Control {
         "erase", "reset", "submit", "post", "confirm", "bhejo", "bhej", "hatao", "kharido"
     )
 
+    /** Places where tap / type is refused. */
     private val BLOCKED_PACKAGES = setOf(
         "com.android.packageinstaller",
         "com.google.android.packageinstaller",
         "com.google.android.permissioncontroller",
         "com.android.permissioncontroller",
         "com.android.settings",
-        "com.android.vending",
+        "com.android.vending"
+    )
+
+    /** Packages whose screen text is never read or sent to a cloud AI (bank / payment apps), kept from the old rule. */
+    private val READ_ONLY_SHIELD = setOf(
         "com.google.android.apps.nbu.paisa.user",
         "com.phonepe.app",
         "net.one97.paytm",
@@ -36,12 +43,18 @@ object Control {
     fun isRiskyLabel(label: String): Boolean =
         Logic.norm(label).split(" ").any { it in RISKY }
 
-    /** kind is "tap", "type" or "scroll". Scroll is harmless, everything else is blocked in sensitive places. */
+    /** kind is "tap", "type" or "scroll". Scroll is harmless; tap / type are refused only in installer, permission, Settings and Play Store. */
     fun blocked(pkg: String?, ownPkg: String, kind: String): Boolean {
-        if (pkg == null || pkg.isEmpty()) return true            // no readable window: do not act blind
         if (kind == "scroll") return false
+        if (pkg == null || pkg.isEmpty()) return false           // v6.98 owner: an unreadable window may still be acted on
+        return pkg in BLOCKED_PACKAGES
+    }
+
+    /** The OLD strict rule, now used only for READING the screen / talking to a cloud AI (never for tap / type). */
+    fun readProtected(pkg: String?, ownPkg: String): Boolean {
+        if (pkg == null || pkg.isEmpty()) return true            // no readable window: read nothing
         if (pkg == ownPkg) return true
-        if (pkg in BLOCKED_PACKAGES) return true
+        if (pkg in BLOCKED_PACKAGES || pkg in READ_ONLY_SHIELD) return true
         val p = pkg.lowercase()
         return BLOCKED_FRAGMENTS.any { it in p }
     }

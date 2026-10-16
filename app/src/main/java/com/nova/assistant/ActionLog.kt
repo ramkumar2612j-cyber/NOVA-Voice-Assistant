@@ -26,8 +26,8 @@ object ActionLog {
         p(ctx).edit().putBoolean(KEY_AR_ON, on).putString(KEY_AR_TEXT, AutoReplyRules.cleanText(text)).apply()
     }
 
-    /** status: "sent", "failed" or "skipped". */
-    @Synchronized fun add(ctx: Context, app: String, sender: String, incoming: String, status: String, detail: String, pkg: String = "") {
+    /** status: "sent", "failed" or "skipped". src: "AI" or "fixed" for a sent reply ("" = not a reply). */
+    @Synchronized fun add(ctx: Context, app: String, sender: String, incoming: String, status: String, detail: String, pkg: String = "", src: String = "") {
         try {
             val sp = p(ctx)
             val old = try { JSONArray(sp.getString(KEY_LOG, "[]") ?: "[]") } catch (e: Exception) { JSONArray() }
@@ -38,6 +38,7 @@ object ActionLog {
                 .put("in", incoming.take(80))
                 .put("st", status)
                 .put("pk", pkg)
+                .put("src", src.take(8))
                 .put("d", detail.take(MAX)))
             val out = JSONArray()
             for (i in maxOf(0, old.length() - MAX) until old.length()) out.put(old.get(i))

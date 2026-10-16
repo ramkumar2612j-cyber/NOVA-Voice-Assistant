@@ -98,7 +98,7 @@ object ExtCfg {
         } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
     }
 
-    /** v6.38 owner request: no spoken yes/no for risky taps, deletes, bulk sends. Default ON = never ask. Hard-blocked screens (bank, payment, password, Settings, installer) stay blocked. */
+    /** v6.38 owner request: no spoken yes/no for risky taps, deletes, bulk sends. Default ON = never ask. v6.98: also no spoken yes in the agent (AgentRules.check). Only Settings, installer, permission screens and the Play Store stay blocked for tap / type. */
     fun skipRiskyConfirm(ctx: Context): Boolean = try {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("skip_risky_confirm", true)
     } catch (e: Exception) { true }
@@ -107,6 +107,15 @@ object ExtCfg {
     fun skipOrderConfirm(ctx: Context): Boolean = try {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("skip_order_confirm", true)
     } catch (e: Exception) { true }
+
+    /** v6.99 Part 3 AI SMART REPLY: a plain chat message gets ONE short AI reply instead of the fixed text. Default OFF (the message text goes to a cloud AI). */
+    fun smartReply(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("smart_reply", false)
+    } catch (e: Exception) { false }
+
+    fun setSmartReply(ctx: Context, on: Boolean) {
+        try { ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean("smart_reply", on).apply() } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
 
     private const val FREE_CHAIN = "free_chain"
     private const val FREE_KEYLESS = "free_keyless"

@@ -30,7 +30,7 @@ check("the service never handles or stores a token itself", "connectorPaste" not
 check("HTTPS only, no redirects", 'u.protocol != "https"' in api and "instanceFollowRedirects = false" in api)
 check("token only in Authorization header", '"Authorization"' in api and not re.search(r'[?&](access_token|token|key)=', api))
 check("custom MCP url validated (https, public host)", "mcpUrlOk" in api and "mcpUrlOk" in main)
-check("no new Android permissions", len(re.findall(r"<uses-permission", manifest)) == 26)   # v6.98: +BLUETOOTH_CONNECT, +BLUETOOTH(<=30), +MODIFY_AUDIO_SETTINGS (watch mic); connectors themselves add none
+check("no new Android permissions", len(re.findall(r"<uses-permission", manifest)) == 27)   # v6.99 Part 1: +ANSWER_PHONE_CALLS (call uthana). v6.98: +BLUETOOTH_CONNECT, +BLUETOOTH(<=30), +MODIFY_AUDIO_SETTINGS (watch mic); connectors themselves add none
 check("no forbidden permissions added", "READ_CLIPBOARD" not in manifest)
 check("UI: tab + view + sheet", all(x in ui for x in ('id="nova-conn-v686"', "t_conn", "v_conn", "connectorUseClip", "connectorRun", "onConnRun", "onConn=")))
 check("UI: write needs its own confirm step", "HAAN, KARO" in ui and "READ + WRITE" in ui)

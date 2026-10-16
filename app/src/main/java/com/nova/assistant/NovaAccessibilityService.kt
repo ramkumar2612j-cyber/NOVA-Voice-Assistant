@@ -159,7 +159,6 @@ class NovaAccessibilityService : AccessibilityService() {
             val root = s.rootInActiveWindow ?: return Ctl(false, "no_window")
             if (Control.blocked(root.packageName?.toString(), s.packageName, "type")) return Ctl(false, "blocked")
             val node = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return Ctl(false, "no_focus")
-            if (node.isPassword) return Ctl(false, "password")
             if (!node.isEditable) return Ctl(false, "no_focus")
             val old = node.text?.toString() ?: ""
             val hint = node.hintText?.toString()
@@ -169,8 +168,8 @@ class NovaAccessibilityService : AccessibilityService() {
 
         /**
          * v6.92: inside the app that is now in front: find (or open) its search box, type [query], press search,
-         * and when [tapResult] is true tap the first result that mentions the query. Never types into password
-         * fields and never works in banking / settings / installer screens (Control.blocked).
+         * and when [tapResult] is true tap the first result that mentions the query. Password fields are typed into only when
+         * the owner orders it (v6.98); never works in settings / installer / Play Store screens (Control.blocked).
          */
         fun searchInApp(query: String, tapResult: Boolean): Ctl {
             val s = instance ?: return Ctl(false, "no_acc")
@@ -332,7 +331,6 @@ class NovaAccessibilityService : AccessibilityService() {
         fun agentTap(index: Int, long: Boolean): Ctl {
             val s = instance ?: return Ctl(false, "no_acc")
             val n = agentNode(index) ?: return Ctl(false, "not_found")
-            if (n.isPassword) return Ctl(false, "password")
             if (!long && s.clickNode(n)) return Ctl(true, "ok")
             val r = Rect()
             n.getBoundsInScreen(r)
@@ -344,7 +342,6 @@ class NovaAccessibilityService : AccessibilityService() {
         fun agentType(index: Int, text: String): Ctl {
             if (index < 0) return typeText(text)
             val n = agentNode(index) ?: return Ctl(false, "not_found")
-            if (n.isPassword) return Ctl(false, "password")
             if (!n.isEditable) return Ctl(false, "no_focus")
             return setTextChecked(n, text)
         }
@@ -472,6 +469,140 @@ class NovaAccessibilityService : AccessibilityService() {
             } catch (e: Exception) {
                 // node went away while walking: ignore
             }
+        }
+
+        // ------------------------------------------------------------------ v6.97 wip14 (Part 4): Play Store install = a SEPARATE narrow path
+        // Control.blocked() still refuses every voice "tap" / "type" in com.android.vending (nothing above changed).
+        // Only the two functions below may act there, and only as PlayInstallRules allows:
+        // armed for this key (60 s), the page title is the asked app, and the pressed node's text is exactly "Install".
+        private const val PLAY_PKG = "com.android.vending"
+
+        /** The Play Store window, or null (never NOVA's own window, never another app). */
+        private fun playRoot(s: NovaAccessibilityService): AccessibilityNodeInfo? {
+            val r = s.rootInActiveWindow
+            if (r != null && r.packageName?.toString() == PLAY_PKG) return r
+            val alt = otherAppRoot(s)
+            return if (alt != null && alt.packageName?.toString() == PLAY_PKG) alt else null
+        }
+
+        private fun playLines(root: AccessibilityNodeInfo): List<String> {
+            val out = ArrayList<String>()
+            collect(root, 0, out, false)
+            return out
+        }
+
+        private fun topOf(n: AccessibilityNodeInfo): Int {
+            val r = Rect()
+            n.getBoundsInScreen(r)
+            return r.top
+        }
+
+        /** The top-most visible, enabled node whose whole text is exactly "Install" ("Install anyway", "Installs", "Uninstall" never match). */
+        private fun exactInstallNode(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            val found = ArrayList<AccessibilityNodeInfo>()
+            try {
+                val list = root.findAccessibilityNodeInfosByText("Install") ?: return null
+                for (n in list) {
+                    val t = (n.text?.toString() ?: n.contentDescription?.toString() ?: "").trim()
+                    if (t.equals("Install", ignoreCase = true) && n.isVisibleToUser && n.isEnabled && !n.isPassword) found.add(n)
+                }
+            } catch (e: Exception) {
+                return null
+            }
+            return found.minByOrNull { topOf(it) }
+        }
+
+        /**
+         * Presses Install on the Play Store page of ONE app and reports what it really saw. Blocking (up to about 20 s): call from a worker thread.
+         * [key] = the key NovaService armed in PlayInstallRules (the package id, or "q:<name>" for an unknown app). One press at most.
+         * Codes: started / installed (ok) | need_login / paid / no_acc / not_armed / no_page / tap_failed / unconfirmed / interrupted (not ok).
+         */
+        fun playInstall(key: String, label: String, cancel: () -> Boolean = { false }): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            if (!PlayInstallRules.armedFor(key, System.currentTimeMillis())) return Ctl(false, "not_armed")
+            var tapped = false
+            val t0 = SystemClock.elapsedRealtime()
+            loop@ while (SystemClock.elapsedRealtime() - t0 < 14_000L) {
+                if (cancel()) return Ctl(false, "interrupted")
+                val root = playRoot(s)
+                if (root != null) {
+                    val lines = playLines(root)
+                    if (!PlayInstallRules.pageMatches(lines, label)) {
+                        // Not the asked app's page (yet). Only a sign-in screen is worth reporting.
+                        if (PlayInstallRules.decide(lines, false) == PlayInstallRules.Decision.NEED_LOGIN) return Ctl(false, "need_login")
+                    } else {
+                        when (PlayInstallRules.decide(lines, false)) {
+                            PlayInstallRules.Decision.INSTALLED -> return Ctl(true, "installed")
+                            PlayInstallRules.Decision.NEED_LOGIN -> return Ctl(false, "need_login")
+                            PlayInstallRules.Decision.PAID -> return Ctl(false, "paid")
+                            PlayInstallRules.Decision.TAP -> {
+                                if (!PlayInstallRules.mayTap(key, label, lines, System.currentTimeMillis())) return Ctl(false, "not_armed")
+                                val node = exactInstallNode(root)
+                                if (node != null) {
+                                    PlayInstallRules.disarm(key)          // one press only, whatever happens next
+                                    if (!s.clickNode(node)) return Ctl(false, "tap_failed")
+                                    tapped = true
+                                    break@loop
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+                try { Thread.sleep(500) } catch (e: InterruptedException) { return Ctl(false, "interrupted") }
+            }
+            if (!tapped) return Ctl(false, "no_page")
+            val v0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - v0 < 6_000L) {
+                if (cancel()) return Ctl(false, "interrupted")
+                try { Thread.sleep(500) } catch (e: InterruptedException) { return Ctl(false, "interrupted") }
+                val root = playRoot(s) ?: continue
+                val lines = playLines(root)
+                if (!PlayInstallRules.pageMatches(lines, label)) continue
+                when (PlayInstallRules.decide(lines, true)) {
+                    PlayInstallRules.Decision.STARTED -> return Ctl(true, "started")
+                    PlayInstallRules.Decision.NEED_LOGIN -> return Ctl(false, "need_login")
+                    else -> {}
+                }
+            }
+            return Ctl(false, "unconfirmed")
+        }
+
+        private fun collectPlayHits(n: AccessibilityNodeInfo?, depth: Int, spoken: String, out: ArrayList<AccessibilityNodeInfo>) {
+            if (n == null || depth > 30 || out.size >= 10) return
+            try {
+                if (!n.isVisibleToUser) return
+                val t = n.text?.toString()
+                if (!t.isNullOrBlank() && !n.isEditable && !n.isPassword && PlayInstallRules.searchResultMatches(t, spoken)) out.add(n)
+                for (i in 0 until n.childCount) collectPlayHits(n.getChild(i), depth + 1, spoken, out)
+            } catch (e: Exception) {
+                // node went away while walking: ignore
+            }
+        }
+
+        /**
+         * Unknown app name: in the Play SEARCH results tap the first result whose title is exactly the spoken name (PlayInstallRules.searchResultMatches).
+         * The search box can show the same words, so when two nodes match the second one (the first is the box) is used. Wrong tap is harmless:
+         * playInstall then finds no matching page title and presses nothing. Blocking (up to about 10 s): worker thread only.
+         */
+        fun playOpenResult(spoken: String, cancel: () -> Boolean = { false }): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            val t0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - t0 < 10_000L) {
+                if (cancel()) return Ctl(false, "interrupted")
+                val root = playRoot(s)
+                if (root != null) {
+                    val hits = ArrayList<AccessibilityNodeInfo>()
+                    collectPlayHits(root, 0, spoken, hits)
+                    if (hits.isNotEmpty()) {
+                        val sorted = hits.sortedBy { topOf(it) }
+                        val pick = if (sorted.size >= 2) sorted[1] else sorted[0]
+                        return if (s.clickNode(pick)) Ctl(true, "ok") else Ctl(false, "tap_failed")
+                    }
+                }
+                try { Thread.sleep(500) } catch (e: InterruptedException) { return Ctl(false, "interrupted") }
+            }
+            return Ctl(false, "not_found")
         }
 
         /** Cancels pending scans at once when monitoring is switched off. */

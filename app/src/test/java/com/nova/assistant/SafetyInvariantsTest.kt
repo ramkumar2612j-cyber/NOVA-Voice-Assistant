@@ -38,18 +38,21 @@ class SafetyInvariantsTest {
 
     // ---- tap/type never work in sensitive places
     @Test fun sensitiveAppsAreBlockedForTapAndType() {
+        // v6.98 owner decision: tap / type are refused only in installer, permission, Settings and the Play Store
         val sensitive = listOf(
             "com.android.packageinstaller", "com.google.android.packageinstaller",
             "com.google.android.permissioncontroller", "com.android.permissioncontroller",
-            "com.android.settings", "com.android.vending",
-            "com.phonepe.app", "net.one97.paytm", "in.org.npci.upiapp",
-            "com.google.android.apps.nbu.paisa.user", "com.somebank.mobile", "com.example.wallet", own
+            "com.android.settings", "com.android.vending"
         )
         for (p in sensitive) for (k in listOf("tap", "type")) {
             assertTrue("$k must be blocked in $p", Control.blocked(p, own, k))
         }
-        assertTrue(Control.blocked(null, own, "tap"))
-        assertTrue(Control.blocked("", own, "type"))
+        for (p in listOf("com.phonepe.app", "net.one97.paytm", "in.org.npci.upiapp", "com.google.android.apps.nbu.paisa.user", "com.somebank.mobile", "com.example.wallet", own)) {
+            assertFalse("owner allows tap in $p", Control.blocked(p, own, "tap"))
+            assertTrue("but its screen text is never read: $p", Control.readProtected(p, own))
+        }
+        assertFalse(Control.blocked(null, own, "tap"))
+        assertFalse(Control.blocked("", own, "type"))
         assertFalse(Control.blocked("com.android.settings", own, "scroll"))
         assertFalse(Control.blocked("com.android.chrome", own, "tap"))
     }
@@ -113,9 +116,9 @@ class SafetyInvariantsTest {
     // ---- Part 11: protected packages stay blocked, including text/screen analysis.
     @Test fun protectedScreenPackagePolicyRemainsBlocked() {
         for (pkg in listOf("com.android.settings", "com.phonepe.app", "net.one97.paytm", "com.example.wallet", own)) {
-            assertTrue(ScreenSession.isProtected(pkg, own))
-            assertTrue(Control.blocked(pkg, own, "tap"))
-            assertTrue(Control.blocked(pkg, own, "type"))
+            assertTrue(ScreenSession.isProtected(pkg, own))      // read shield stays
+            assertEquals(pkg == "com.android.settings", Control.blocked(pkg, own, "tap"))
+            assertEquals(pkg == "com.android.settings", Control.blocked(pkg, own, "type"))
         }
     }
 

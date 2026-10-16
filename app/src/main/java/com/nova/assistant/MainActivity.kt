@@ -387,7 +387,7 @@ class MainActivity : Activity() {
             e.apply()
         }
         val ask = ArrayList<String>()
-        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.CALL_PHONE)) {
+        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.CALL_PHONE, Manifest.permission.ANSWER_PHONE_CALLS)) {
             if (!granted(p)) ask.add(p)
         }
         if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS)) ask.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -1533,6 +1533,49 @@ class MainActivity : Activity() {
             return if (BrainStore.get(this@MainActivity).removeSkill(name)) "ok" else "not_found"
         }
 
+        // ---- v6.99 Part 1 + 2: call answer permission, Do Not Disturb access (silent ringer), write-settings state ----
+        @JavascriptInterface
+        fun hasAnswerCalls(): Boolean = Build.VERSION.SDK_INT < 28 || granted(Manifest.permission.ANSWER_PHONE_CALLS)
+
+        @JavascriptInterface
+        fun requestAnswerCalls(): String {
+            if (hasAnswerCalls()) return "granted"
+            runOnUiThread { requestPermissions(arrayOf(Manifest.permission.ANSWER_PHONE_CALLS), REQ_CALL) }
+            return "asked"
+        }
+
+        @JavascriptInterface
+        fun hasPolicyAccess(): Boolean = PhoneActions.policyAccess(this@MainActivity)
+
+        @JavascriptInterface
+        fun openPolicyAccess() {
+            runOnUiThread {
+                try { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) } catch (e: Exception) { ErrLog.add("MainActivity", e.toString()) }
+            }
+        }
+
+        @JavascriptInterface
+        fun canWriteSettings(): Boolean = Settings.System.canWrite(this@MainActivity)
+
+        // ---- v6.99 Part 3: AI SMART REPLY ----
+        @JavascriptInterface
+        fun getSmartReply(): Boolean = ExtCfg.smartReply(this@MainActivity)
+
+        @JavascriptInterface
+        fun setSmartReply(on: Boolean): String { ExtCfg.setSmartReply(this@MainActivity, on); return "ok" }
+
+        /** One line: what smart reply needs and whether it has it. Never prints a key. */
+        @JavascriptInterface
+        fun smartReplyStatus(): String = try {
+            val ctx = this@MainActivity
+            val n = DrivingBridge.listenerEnabled(ctx)
+            val k = ExtCfg.freeChain(ctx) && (SecureStore.hasGroq(ctx) || SecureStore.hasSlot(ctx, "openrouter") || SecureStore.hasSlot(ctx, "zai") || SecureStore.hasSlot(ctx, "zai2") || SecureStore.hasSlot(ctx, "zai3"))
+            val r = ActionLog.autoReplyOn(ctx)
+            (if (n) "Notification access ON" else "Notification access OFF") + " | " +
+                (if (r) "Auto jawab ON" else "Auto jawab OFF") + " | " +
+                (if (k) "AI key ON" else "AI key nahi (fixed jawab hi jayega)")
+        } catch (e: Throwable) { "?" }
+
         // ---- v6.98 LOCK GUARD ----
         @JavascriptInterface
         fun getLockGuard(): Boolean = ExtCfg.lockGuard(this@MainActivity)
@@ -1665,6 +1708,9 @@ class MainActivity : Activity() {
             runOnUiThread { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS), REQ_CONTACTS) }
             return "asked"
         }
+
+        @JavascriptInterface
+        fun hasCalendarRead(): Boolean = CalendarRead.permitted(this@MainActivity)
 
         /** Calendar permission is requested only from this explicit in-app button tap, never from voice. */
         @JavascriptInterface
