@@ -1,0 +1,94 @@
+name: Unpack zip and build NOVA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'NOVA-Voice-Assistant.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack zip into main
+        run: |
+          if [ ! -f NOVA-Voice-Assistant.zip ]; then
+            echo "Zip nahi mili, unpack skip, repo ka maujooda code build hoga"
+            exit 0
+          fi
+          rm -rf /tmp/u && mkdir /tmp/u
+          unzip -q NOVA-Voice-Assistant.zip -d /tmp/u
+          cnt=$(ls -A /tmp/u | wc -l)
+          first=$(ls -A /tmp/u | head -1)
+          if [ "$cnt" -eq 1 ] && [ -d "/tmp/u/$first" ]; then
+            SRC="/tmp/u/$first"
+          else
+            SRC=/tmp/u
+          fi
+          rsync -a --exclude='/.github' "$SRC"/ ./
+          rm -f NOVA-Voice-Assistant.zip
+          chmod +x gradlew tools/*.sh 2>/dev/null || true
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Unpack NOVA-Voice-Assistant.zip into main" || echo "Koi change nahi"
+          git push origin HEAD:main
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set versionCode above older installs (run number + 2000)
+        run: echo "NOVA_VERSION_CODE=$((2000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: Install Android SDK 34
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager 'platforms;android-34' 'build-tools;34.0.0' || echo 'sdkmanager skipped, using preinstalled SDK'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Source contract checks
+        run: ./tools/run_all_checks.sh
+
+      - name: Prepare and validate offline Vosk model
+        run: ./tools/prepare_vosk_model.sh
+
+      - name: Run unit tests and assemble debug
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+
+      - name: Upload debug APK (artifact)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Publish APK to Releases (direct download)
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          cp "$APK" NOVA.apk
+          gh release delete nova-latest --cleanup-tag -y || true
+          gh release create nova-latest NOVA.apk --target main \
+            --title "NOVA latest build $GITHUB_RUN_NUMBER" \
+            --notes "Build number $GITHUB_RUN_NUMBER"
