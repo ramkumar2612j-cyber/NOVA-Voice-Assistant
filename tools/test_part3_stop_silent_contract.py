@@ -16,7 +16,7 @@ checks = {
  'home UI exposes SILENT toggle': 'id="silent"' in ui and 'Android.setSilentMode(!on)' in ui,
  'silent state persists in SharedPreferences': 'getBoolean("silentMode", false)' in cfg and 'putBoolean("silentMode", v)' in cfg,
  'settings bridge reads and writes the same persistent setting': 'fun setSilentMode(on: Boolean)' in act and 'fun getSilentMode(): Boolean = cfg.silentMode' in act,
- 'HAAN/NAHI remain independent controls': 'btnYes.contains(x, y)' in hud and 'btnNo.contains(x, y)' in hud and 'while NOVA waits for HAAN / NAHI' in hud,
+ 'HAAN/NAHI remain independent controls': 'inside(btnYes' in hud and 'inside(btnNo' in hud and 'while NOVA waits for HAAN / NAHI' in hud,
 }
 for name, ok in checks.items(): print(('PASS ' if ok else 'FAIL ') + name)
 failed = [name for name, ok in checks.items() if not ok]

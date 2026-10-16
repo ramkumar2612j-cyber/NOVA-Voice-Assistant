@@ -24,8 +24,8 @@ need('min-height:var(--v76-tap)!important' in ui, '44px .sm rule missing')
 need('#tabs .tb em{font-size:7.5px' in ui, '320px CONNECT label rule missing')
 
 # 3. native HUD: STOP and HAAN/NAHI are separate, hit areas match the drawn rectangles, labels readable
-need(hud.count('(margin + 2f * d)..(margin + 62f * d)') == 2 and 'RectF(margin + 2f * d, top + 10f * d, margin + 62f * d' in hud, 'STOP hit area != drawn rect')
-need(hud.count('(margin + 66f * d)..(margin + 146f * d)') == 2 and 'margin + 66f * d, top + 10f * d, margin + 146f * d' in hud, 'SILENT hit area != drawn rect')
+need('btnStop.set(' in hud and 'hitControl' in hud and 'inside(btnStop' in hud, 'STOP hit area is not the drawn rect')
+need('btnDots.set(' in hud and 'inside(btnDots' in hud, 'three dots hit area is not the drawn rect')
 need('val bh = 44f * d' in hud and 'onAnswerTap?.invoke(true)' in hud and 'onAnswerTap?.invoke(false)' in hud, 'HAAN/NAHI 44dp or callbacks missing')
 need('onStop?.invoke()' in hud and 'btnText.textSize = 11f * d' in hud, 'STOP callback/size missing')
 
