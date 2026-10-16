@@ -16,7 +16,7 @@ if 'window.onBrowserTest' not in UI: bad.append('browser test result handler mis
 for t in ['callanswer', 'phonecontrol', 'smartreply', 'calendar']:
     if 'Topic("%s"' % t not in HG: bad.append('help topic missing in Kotlin: ' + t)
     if '"id": "%s"' % t not in UI: bad.append('help topic missing in ui.html CAPS: ' + t)
-if "setOf(\"chrome\", \"download\", \"safety\", \"social\", \"callanswer\", \"phonecontrol\", \"smartreply\")" not in HG: bad.append('new topics must be PRIORITY (screen / call / questions words would hijack them)')
+if "setOf(\"chrome\", \"download\", \"safety\", \"social\", \"callanswer\", \"phonecontrol\", \"smartreply\", \"calendar\")" not in HG: bad.append('new topics must be PRIORITY (screen / call / questions words would hijack them)')
 for s in ['Samajh: call uthao / call kaato', 'Samajh: screenshot, ringer, rotation', 'Samajh: AI smart jawab', 'Taiyaar: Calendar meeting yaad dilana'.replace('Taiyaar: ', '')]:
     if s not in FC: bad.append('FeatureCheck missing: ' + s)
 # every Android.x( the page calls must exist in the bridge

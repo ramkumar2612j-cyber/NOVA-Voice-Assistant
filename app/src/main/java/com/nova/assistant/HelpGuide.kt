@@ -46,7 +46,7 @@ object HelpGuide {
         "tumhare features", "tumhari features", "aapke features", "apke features", "feature batao", "features batao",
         "kaise use", "kaise chalate", "kaise chalau", "kaise chalana", "how to use", "how do i use", "nova help", "help menu", "need help"
     )
-    private val PRIORITY = setOf("chrome", "download", "safety", "social", "callanswer", "phonecontrol", "smartreply")
+    private val PRIORITY = setOf("chrome", "download", "safety", "social", "callanswer", "phonecontrol", "smartreply", "calendar")
     private val SHORT_HELP = setOf("help", "madad", "madat")
     private val Q_FIRST = setOf("kya", "kyaa", "can", "could", "do", "does", "are", "is")
     private val ABILITY = listOf("kar sakte", "kar sakta", "kar sakti", "kar paoge", "kar pate", "kar paate", "sakte ho", "sakta hai", "sakti hai", "can you", "could you", "do you", "are you able", "able to", "karte ho")

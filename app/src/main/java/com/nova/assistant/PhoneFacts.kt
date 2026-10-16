@@ -30,7 +30,7 @@ object PhoneFacts {
 
     private const val RULES =
         "HOW TO ACT: when the user orders a task, do it first and tell the result after; do not ask for permission in words for ordinary tasks. " +
-            "Android itself shows each permission box only once, so if something is NOT allowed yet, say in one short line which one and the tap path from the list, then do the rest. " +
+            "Android itself shows each permission box only once, so if something is not allowed yet, say in one short line which one and the tap path from the list, then do the rest. " +
             "Never say a task is done unless NOVA really did it. "
 
     /** Pure: builds the fact text from a status map (missing key = not allowed). */

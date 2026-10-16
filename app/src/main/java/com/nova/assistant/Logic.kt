@@ -463,7 +463,7 @@ object Logic {
 
         if (has("volume", "awaaz", "awaz")) {
             if (negated) return null
-            if (has("mute", "silent")) return Cmd("volume", "mute")
+            if (has("mute", "silent", "band", "bandh", "off")) return Cmd("volume", "mute")
             if (has("max", "maximum", "full")) return Cmd("volume", "max")
             if (has("down", "lower", "decrease", "kam", "reduce", "low")) return Cmd("volume", "down")
             if (has("up", "raise", "increase", "badha", "badhao", "higher", "high")) return Cmd("volume", "up")
