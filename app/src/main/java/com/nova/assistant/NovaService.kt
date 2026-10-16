@@ -99,7 +99,10 @@ class NovaService : Service() {
     }
 
     /** An action that waits for the user's spoken "yes" (call, WhatsApp send). Expires after PENDING_TTL_MS. */
-    private class Pending(val prompt: String, val createdAt: Long, val onNo: (() -> Unit)? = null, val run: () -> String)
+    private class Pending(val prompt: String, val createdAt: Long, val onNo: (() -> Unit)? = null, val run: () -> String) {
+        /** music "try another app?" question: a song name instead of yes/no asks again instead of cancelling */
+        @Volatile var reaskOnUnclear = false
+    }
 
     /** v6.67: a yes/no lives 30 s; a question asked by a running job (list number, message) gets 60 s because speaking it takes time too. */
     /** Only a plain yes/no question gets buttons; a question answered by a name, a number or a dictated message does not. */
@@ -122,10 +125,25 @@ class NovaService : Service() {
         if (!alive) return "off"
         val p = pendingRaw
         if (!plainYesNo(p)) return "none"
-        if (busy) return "busy"
+        val said = if (yes) tr("haan", "yes") else tr("nahi", "no")
+        if (busy) {
+            // the tap is not lost while NOVA is still speaking or working: it waits (up to 10 s) and then answers the same question
+            Thread {
+                var n = 0
+                while (busy && n < 40) {
+                    try { Thread.sleep(250) } catch (x: InterruptedException) { return@Thread }
+                    n++
+                }
+                if (!busy && alive && pendingRaw === p) {
+                    busy = true
+                    mode("think")
+                    processAnswer(said)
+                }
+            }.start()
+            return "ok"
+        }
         busy = true
         mode("think")
-        val said = if (yes) tr("haan", "yes") else tr("nahi", "no")
         Thread { processAnswer(said) }.start()
         return "ok"
     }
@@ -401,6 +419,7 @@ class NovaService : Service() {
         try { registerSysReceiver(userPresentRx, IntentFilter(Intent.ACTION_USER_PRESENT)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }   // v6.40: morning greeting on the first phone open   // v6.40: 50/40/30/20/10 % alerts + 5 % family message
         hud = NovaHud(this).also {
             it.onAnswer = { yes -> answerPending(yes) }
+            it.onTyped = { text -> typed(text) }
             it.silentOn = cfg.silentMode
             it.onSilentToggle = { cfg.silentMode = !cfg.silentMode; cfg.silentMode }
             it.onStop = {
@@ -2808,7 +2827,7 @@ class NovaService : Service() {
                             songChosen(picked)
                             tr("${labels[picked]} chala raha hoon", "Playing ${labels[picked]}")
                         }
-                        Logic.parseAnswer(text) == false || Regex("cancel|rehne do|mat|nahi|band").containsMatchIn(Logic.norm(text)) -> {
+                        Logic.parseAnswer(text) == false || Regex("\\b(cancel|rehne do|mat|nahi|band)\\b").containsMatchIn(Logic.norm(text)) -> {
                             h.post { clearSongChoice() }
                             tr("Theek hai, gaana chunna cancel kar diya", "Okay, cancelled the song choice")
                         }
@@ -2854,7 +2873,10 @@ class NovaService : Service() {
                 else -> when (Logic.parseAnswer(text)) {
                     true -> p.run()
                     false -> { p.onNo?.invoke(); tr("Theek hai, cancel kar diya", "Okay, cancelled") }
-                    null -> tr("Samajh nahi aaya, isliye cancel kar diya", "I did not understand, so I cancelled it")
+                    null -> if (p.reaskOnUnclear) {
+                        pending = p
+                        tr("Gaane ka naam nahi, sirf haan ya na bolo (ya HAAN / NAHI dabao)", "Please say only yes or no (or tap YES / NO)")
+                    } else tr("Samajh nahi aaya, isliye cancel kar diya", "I did not understand, so I cancelled it")
                 }
             }
         } catch (t: Throwable) {
@@ -4908,6 +4930,7 @@ class NovaService : Service() {
         pending = Pending(prompt, System.currentTimeMillis(), onNo = null, run = {
             musicPlay(MusicPlayRules.Request(alt.key, alt.label, alt.packages, req.query), seen).msg
         })
+        pending?.reaskOnUnclear = true
         return prompt
     }
 
