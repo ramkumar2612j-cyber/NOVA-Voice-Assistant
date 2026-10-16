@@ -40,6 +40,12 @@ jobs:
           git commit -m "Unpack NOVA-Voice-Assistant.zip into main" || echo "Koi change nahi"
           git push origin HEAD:main
 
+      - name: Source check ke liye build.yml ki copy (commit nahi hoti)
+        run: |
+          if [ ! -f .github/workflows/build.yml ]; then
+            cp .github/workflows/unpack.yml .github/workflows/build.yml
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
