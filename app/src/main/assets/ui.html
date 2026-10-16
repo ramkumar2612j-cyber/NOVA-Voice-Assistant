@@ -3192,5 +3192,18 @@ if(lg&&window.MutationObserver){new MutationObserver(function(ms){ms.forEach(fun
   var o=el('button','hwopen','POORI LIST DEKHO');o.type='button';o.onclick=open;n.appendChild(el('br'));n.appendChild(o)}}catch(e){}})})}).observe(lg,{childList:true})}
 })();
 </script>
+<script id="nova-ver-badge">
+(function(){
+function put(){try{
+var st=JSON.parse(Android.getStatus()||'{}');
+var t='v'+(st.versionName||'?')+' \u00b7 build '+(st.versionCode||'?');
+var d=document.getElementById('nova_ver');
+if(!d){d=document.createElement('div');d.id='nova_ver';
+d.style.cssText='position:fixed;right:8px;bottom:2px;z-index:2147483000;font:9px/1.2 monospace;color:#7fe8ff;opacity:.55;pointer-events:none;letter-spacing:.5px';
+(document.body||document.documentElement).appendChild(d);}
+d.textContent=t;}catch(e){}}
+put();setTimeout(put,1500);setTimeout(put,5000);
+})();
+</script>
 </body></html>
 

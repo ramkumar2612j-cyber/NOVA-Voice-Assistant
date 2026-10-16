@@ -1,3 +1,8 @@
+# v6.99 AUTOPSY (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
+- Full static autopsy of the zip: 205 bridge methods, every one is used by ui.html, every ui.html Android.* call has a Kotlin method, every Kotlin->UI callback has a handler, 0 duplicate ids, all 23 script blocks parse, all 6 tabs (HOME, SKILLS, LIMITS, CONNECT, CHAT, SETUP) render in headless Chromium with a fake bridge and 0 JS errors, manifest declares every service / receiver class. Python contracts 66/66 PASS. Nothing was missing or unwired in the source.
+- Likely reason new / old features were not seen on the phone: an OLD APK was installed. Old workflow uploaded the APK only if JUnit also passed, so one failing test meant no new APK. Fixed: assembleDebug runs first and the APK is uploaded before the unit tests.
+- New: small label "v6.99 . build N" bottom-right in the app, so you can see at once whether the new APK is installed.
+
 # v6.99 FINAL - PART 7: help / MADAD text knows the new features (Kotlin + ui.html CAPS, still 24 topics)
 - social: money talk safe reply + no reply to OTP / password; safety: stop phrases; questions: phone permission answers (online AI only). Contracts 66/66. Compile / JUnit / phone NOT RUN.
 
