@@ -25,9 +25,10 @@ object ToolVerify {
         "torch" to Level.VERIFIED, "torch_on" to Level.VERIFIED, "torch_off" to Level.VERIFIED,
         "volume" to Level.VERIFIED,
         "brightness" to Level.VERIFIED, "brightness_set" to Level.VERIFIED, "brightness_step" to Level.VERIFIED,
+        "ringer" to Level.VERIFIED, "rotation" to Level.VERIFIED,   // Part 9: read back from AudioManager / Settings.System
         "open_app" to Level.PARTIAL, "open_url" to Level.PARTIAL, "navigate" to Level.PARTIAL, "play_music" to Level.PARTIAL,
         "camera" to Level.PARTIAL, "settings" to Level.PARTIAL, "global" to Level.PARTIAL, "global_action" to Level.PARTIAL,
-        "call" to Level.PARTIAL, "call_answer" to Level.PARTIAL, "call_reject" to Level.PARTIAL, "screenshot" to Level.PARTIAL, "ringer" to Level.PARTIAL, "rotation" to Level.PARTIAL, "search_web" to Level.PARTIAL,
+        "call" to Level.PARTIAL, "search_web" to Level.PARTIAL,
         "tap" to Level.PARTIAL, "type" to Level.PARTIAL, "scroll" to Level.PARTIAL,
         "sms" to Level.HANDOFF, "whatsapp" to Level.HANDOFF, "calendar_event" to Level.HANDOFF,
         "alarm" to Level.UNVERIFIABLE, "alarm_any" to Level.UNVERIFIABLE, "timer" to Level.UNVERIFIABLE

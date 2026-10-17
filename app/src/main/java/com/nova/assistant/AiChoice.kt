@@ -8,16 +8,18 @@ package com.nova.assistant
 object AiChoice {
     const val AUTO = "auto"
     const val GEMINI = "gemini"
+    /** wip11: the phone's own offline AI answers first (no internet, no key). */
+    const val LOCAL = "local"
 
     enum class GeminiMode { FIRST, AFTER_FREE, NEVER }
 
     /** Unknown / empty values become "auto" so a damaged setting can never leave NOVA without an AI. */
     fun clean(raw: String?, providerIds: Collection<String>): String {
         val v = raw?.trim()?.lowercase().orEmpty()
-        return if (v == GEMINI || v in providerIds) v else AUTO
+        return if (v == GEMINI || v == LOCAL || v in providerIds) v else AUTO
     }
 
-    private fun isFree(choice: String) = choice != AUTO && choice != GEMINI
+    private fun isFree(choice: String) = choice != AUTO && choice != GEMINI && choice != LOCAL
 
     /** Gemini (the only AI that can run phone tools itself) goes first for auto/gemini; after the free chain when a free AI was chosen. */
     fun geminiMode(choice: String, fallback: Boolean): GeminiMode = when {
@@ -41,6 +43,7 @@ object AiChoice {
     fun chipLabel(choice: String): String = "AI: " + when (choice) {
         AUTO -> "AUTO"
         GEMINI -> "GEMINI"
+        LOCAL -> "PHONE AI"
         else -> choice.uppercase()
     }
 }

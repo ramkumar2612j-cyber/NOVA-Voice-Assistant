@@ -7,7 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** v6.98 lock guard: which notification is an important alert, what is said, and the quiet rule. Pure rules only. */
+/** v6.97-wip9 lock guard: which notification is an important alert, what is said, and the quiet rule. Pure rules only. */
 class LockGuardTest {
     private val ring = listOf("Answer", "Decline")
 

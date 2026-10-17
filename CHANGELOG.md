@@ -1,107 +1,34 @@
-# v6.99 AUTOPSY (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- Full static autopsy of the zip: 205 bridge methods, every one is used by ui.html, every ui.html Android.* call has a Kotlin method, every Kotlin->UI callback has a handler, 0 duplicate ids, all 23 script blocks parse, all 6 tabs (HOME, SKILLS, LIMITS, CONNECT, CHAT, SETUP) render in headless Chromium with a fake bridge and 0 JS errors, manifest declares every service / receiver class. Python contracts 66/66 PASS. Nothing was missing or unwired in the source.
-- Likely reason new / old features were not seen on the phone: an OLD APK was installed. Old workflow uploaded the APK only if JUnit also passed, so one failing test meant no new APK. Fixed: assembleDebug runs first and the APK is uploaded before the unit tests.
-- New: small label "v6.99 . build N" bottom-right in the app, so you can see at once whether the new APK is installed.
+## v6.97-wip9 - screen se pehchano + baat-cheet (compile / phone par NOT RUN)
+- "ye kaun si movie hai" / "is gaane ka naam batao" / "who is this actor": NOVA screenshot leta hai aur Google Search se naam batata hai (ScreenSession.Intent.IDENTIFY, sirf isi sawal par search). "screen analyse karo aur batao ye kaun si movie hai" bhi isi raste par jaata hai. Protected screen par kabhi nahi. Popup mein koi button nahi chahiye.
+- Baat-cheet mode (jawab ke baad dobara sunna) default ON, 6 follow-up tak (pehle OFF aur 3). Settings mein BAAT-CHEET switch se band hota hai.
+- SKILLS screen mein naya group "NAYE KAAM": screen pehchano, baat-cheet, 5 browsers + offline AI, ringer/DND, Lock Guard.
+- Tests: ScreenSessionTest.identifyQuestionsWantScreenAndSearch (JUnit NOT RUN); tools/run_all_checks.sh = 69/69 PASS (RUN).
 
-# v6.99 FINAL - PART 7: help / MADAD text knows the new features (Kotlin + ui.html CAPS, still 24 topics)
-- social: money talk safe reply + no reply to OTP / password; safety: stop phrases; questions: phone permission answers (online AI only). Contracts 66/66. Compile / JUnit / phone NOT RUN.
+## Part 2 (skills list)
+- MADAD list, HelpGuide.TOPICS aur aiFacts mein 15 naye topics (31 total): WhatsApp Business, Auto-reply, Connectors, Routines, Lock Guard, Nickname + ROZ KA SUDHAAR, Battery guide, Gmail, Lambe kaam, Screen alerts, Watch mic, Quiet/Silent, Offline AI pack, Leads, API limits/Update Center. HelpGuideTest.kt aur test_help_contract.py update. Details: PART2_STATUS.md
 
-# v6.99 FINAL - PART 6: last code items (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- Spoken stop now also stops the learn job from saving (stopEpoch, same as picture / website). Publish and connector jobs are NOT stopped after start: their action has already happened, so a fake 'stopped' would be false.
-- Driving-mode intro no longer says it always asks yes before sending: with the default (skip_order_confirm = true) it says it sends at once and tells after. With confirm ON the old line is used.
-- FACT CHECK of earlier notes: with the defaults skip_order_confirm = true and skip_risky_confirm = true, askFirst runs everything at once, even must=true (payment-like taps, bulk send). Only turning confirm ON in Settings brings the yes/no back.
-- Contracts 66/66 (test_stop_contract now expects 3 jobs).
+## v7.4 - understands roundabout commands
+- PhoneActionRules.likelyAction: much wider filter (verb stems, device words, indirect cues like "andhera hai" / "bahut shor hai", polite "kya tum ... sakte ho", Hindi in Devanagari, up to 80 words) so ghuma-phira ke bole command reach the action model; plain questions still skip it.
+- Action prompt (Hinglish + English) now teaches intent-first understanding with examples and allows up to 3 actions in one answer ({"actions":[...]}), parsed by PhoneActionRules.parseAll; NovaService runs them in order and stops at a call/WhatsApp confirmation.
+- Gemini voice prompt also told to act on hints, not only direct commands.
+- Tests: PhoneActionUnderstandTest (JUnit, still to run on GitHub Actions).
 
-# v6.99 FINAL - PART 5: money talk in WhatsApp / chat auto reply, no asking (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- New PaymentReplyRules.kt, wired in NovaNotificationService.autoReply: NOVA reads the message and answers with a safe fixed line that fits it: paise maange (REPLY_ASK), payment ho gaya? (REPLY_PAID), UPI / account / QR details maange (REPLY_DETAILS), other money talk (REPLY_ASK). No AI, no amount, no detail, no yes to paying.
-- OTP / PIN / CVV / password / Aadhaar / KYC / card number: NO reply, history note 'scam ho sakta hai'.
-- Needs: auto-reply switch ON + Notification access (unchanged). Per-person limit stays 2 per hour, 80 per day. Groups and Business-watch chats unchanged.
-- Tests: PaymentReplyRulesTest 4 (written, NOT RUN), tools/test_payment_reply_contract.py (PASS); test_autoreply_contract.py updated for the new history-note line. Contracts 66/66.
-- LIMIT: replies are fixed lines, not written by AI; they never agree to pay or share details. Driving-mode reply (reads message aloud, asks before sending) is a separate flow and unchanged.
+## v7.3 - ChatGPT/Claude-style typed chat
+- Typed chat turn ("rich"): backup AIs (Groq/Qwen/GLM/OpenRouter) give full structured answers (2000 tokens, lists, code, "Samjha:" line); Gemini gets a typed-chat note that lifts the read-aloud / 8-sentence rules. Spoken commands keep the short plain rules.
+- Live web context for backup AIs on typed questions (WebContext.kt): Gemini Google Search, else Google News / DuckDuckGo / Wikipedia; "Sources:" line added.
+- ui.html: light markdown in AI bubbles (headings, bold, inline code, lists, code blocks) built from DOM nodes only; COPY on code blocks and long AI messages.
+- Speech: markdown/code stripped before text-to-speech (FreeProviders.speakable).
+- Faster thinking: Gemini 2.5 Flash gets thinkingBudget=0 (GeminiSpeed.kt), retried without it on HTTP 400.
+- Website jobs start with a "Samjha: subject, style, photos, new/edit" line (SiteSummary.kt).
+- MADAD "questions" topic updated. Tests: RichChatTest, WebContextTest, NovaV73Test, tools/test_rich_chat_contract.py (compile + JUnit still to be run on GitHub Actions).
 
-# v6.99 FINAL - PART 4: NOVA knows its phone + act first, tell after (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- New PhoneFacts.kt: phone model, Android version, which of 11 accesses are allowed right now (mic, contacts, call, answer calls, calendar, camera, notifications, accessibility, notification access, overlay, modify settings) and the exact tap path for each missing one. Added to the online AI prompt chain next to HelpGuide.aiFacts. Only yes/no status goes out.
-- Same facts carry the rule: do the ordered task first, tell the result after, name a missing permission in one line.
-- HelpGuide call / whatsapp (Kotlin + ui.html CAPS): 'I do it first and tell you after; confirm ON in Settings = I ask first' (defaults skip_order_confirm / skip_risky_confirm are already true in ExtCfg).
-- Audit (static): 188 UI bridge calls all have a Kotlin method; all Kotlin->UI callbacks have a handler; manifest declares 27 permissions, runtime ones are requested in one batch then special-access screens in sequence.
-- Tests: PhoneFactsTest 3 (written, NOT RUN), tools/test_phonefacts_contract.py (PASS). Python contracts 65/65.
-- LIMITS: Android never lets an app skip its permission boxes or the Accessibility / Notification-access switches: the owner taps Allow once each. Payment-like taps (must=true) still ask. Only the online AI chain gets PhoneFacts; offline / local answers do not.
-
-# v6.99 3-PART FINISH - PART 3 of 3: download / install speech spellings (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- BUG FOUND: the Hindi word for download (Devanagari) becomes 'daunlod' and install becomes 'instol' in HindiRoman, and neither was in the verb list, so Hindi-typed or Hindi-heard download orders were ignored.
-- OpenWebRules: one shared DL_SPELLINGS set (33 spellings) feeds DL_VERBS and the open-rule BLOCK; norm() joins 'down load / down lod' into 'download'. HelpGuide download topic understands the same misspellings.
-- Tests: 3 new JUnit tests in OpenWebRulesTest (written, NOT RUN), tools/test_download_spellings_contract.py (PASS).
-- LIMIT: the real Hindi / Hinglish spelling Vosk or Groq gives for 'download' on the owner's phone is NOT known; if a spelling is still missed, send the exact text from the history screen and it is added to DL_SPELLINGS.
-
-# v6.99 3-PART FINISH - PART 2 of 3: spoken STOP (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- New StopRules.kt: whole-utterance stop phrases (ruko, ruk jao, roko, bas karo, rehne do, mat karo, stop it, cancel karo ...); Logic.classify uses it.
-- NovaService: every spoken stop bumps stopEpoch; the picture and website jobs compare it when they finish and then discard the result with 'Roka gaya' (nothing saved, no false 'ban gayi').
-- Tests: StopRulesTest.kt (written, NOT RUN), tools/test_stop_contract.py (PASS).
-- LIMITS: the network call itself is not aborted, only its result is dropped. Stop is NOT heard while NOVA is thinking in one turn (mic is muted by design: busy) or while NOVA is speaking (own-voice echo). learn / publish / connector jobs do not check stop yet.
-
-# v6.99 3-PART FINISH - PART 1 of 3: stale help text + version label (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- HelpGuide call / whatsapp topics (Kotlin + ui.html CAPS) no longer say NOVA always asks haan; they say yes/no is asked only while confirmation is not switched off in Settings (matches ExtCfg.skipOrderConfirm in NovaService).
-- versionName 6.97 -> 6.99 (build.gradle.kts, build.yml summary, test_android_runtime_contract.py).
-- Plan: Part 2 = spoken STOP interrupts a running turn; Part 3 = Hindi/Hinglish spellings of download.
-
-# v6.99 FINAL (Parts 4 + 5) (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-## Part 4: buttons for the 15 settings that had a bridge method but no UI
-- Test report box: SELF TEST CHALAO (selfTest), GALTIYAN SAAF (clearErrors), FREE IMAGE TEST (selfTestFree), GEMINI IMAGE TEST (selfTestImage). Image tests still ask HAAN / NAHI on screen first and report through onSelfTest.
-- Browsers box: every browser row has a TEST button (testBrowser, result in window.onBrowserTest); BOLNE KE BAAD KITNI DER RUKUN select 2-10 s (getWaitSec / setWaitSec); WEB BROWSERS / LOCAL FIRST / city now also read through getWebBrowsers / getLocalFirst / getHomeCity.
-- Memory: YAAD KA TEXT COPY button (getMemoryText + copyText, only on tap). Chat history: if searchChats fails the list falls back to listChats.
-- Skills: new card "Calendar meeting alert" with CALENDAR ALLOW (requestCalendarRead, only from this tap) and new bridge hasCalendarRead.
-- REAL BUG FIXED: two checkboxes shared the id al_on, so the "Auto-seekho" switch was wired to the battery alert and the battery switch was never wired. Now al_on = Auto-seekho (getAutoLearn / setAutoLearn) and al_batt = battery alert (getAlerts / setAlerts).
-## Part 5: NOVA knows the new features
-- HelpGuide: 4 new topics (callanswer, phonecontrol, smartreply, calendar), 24 topics = ui.html CAPS (test_help_contract). The first three are PRIORITY so words like "call", "screen", "jawab" do not send the question to an older topic. general() and the cloud AI facts mention them. MADAD popup ready() / FIX updated.
-- FeatureCheck: 4 new "Samajh" sentence checks (call uthao / kaato, screenshot / ringer / rotation, AI smart jawab, help topics) and 6 readiness rows (call answer, DND, auto-rotate, screenshot, smart jawab, calendar).
-- Tests: HelpGuideTest +2, tools/test_part4_part5_contract.py. Python contracts 62/62 PASS.
-- Still stale on purpose (owner has not agreed to change): HelpGuide "whatsapp" and "call" topics still say NOVA asks "haan" first, but confirmations are OFF by default. versionName NOT bumped (pinned 6.97).
-
-# v6.99 Part 3 (WIP) AI SMART REPLY (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- New switch "AI SMART JAWAB" (Settings, under the auto-reply text), default OFF. ON = for a plain chat message NOVA asks the free AI chain (Groq / OpenRouter / Z.ai keys, same chain as the agent) for ONE short reply instead of the fixed text.
-- Order in NovaNotificationService.autoReply is unchanged up to the rate gate: insult = no reply (returns before any AI call), group / code / no Reply button / limits as before (2 per hour, 10 min cooldown, 80 per day). Only after the gate allowed a reply: SmartReplyRules.useAi (switch ON + no social thank-you + allowedForAi) -> NovaService.smartReply (worker thread, hard 8 s timeout, cancel) -> SmartReplyRules.pick cleans the answer; unusable / late / no key = the old fixed text. A reply is never empty.
-- Money, OTP, password, bank, link and 4+ digit numbers never go to a cloud AI (allowedForAi) and are never accepted back (sanitize).
-- History: ActionLog entries get a "src" field ("AI" or "fixed"); the history screen shows [AI jawab] / [fixed jawab]. The "d" field is still the exact sent text (MessageDelete needs it).
-- UI: toggle + warning "message ka text cloud AI ko jata hai", status line (Notification access / Auto jawab / AI key), Skills card "AI smart jawab". Bridge: getSmartReply, setSmartReply, smartReplyStatus.
-- Tests: SmartReplyRulesTest (13), tools/test_smart_reply_contract.py. Two stale pins updated on purpose: test_autoreply_contract (ActionLog.add call now carries the src note) and test_connectors_contract (27 permissions: ANSWER_PHONE_CALLS came in Part 1). Python contracts 61/61 PASS.
-- Limits (honest): the AI answer is asked on the notification-listener thread, so with the switch ON one slow reply can hold that listener up to 8 s; smart reply needs the NOVA service running (instance) and an AI key, otherwise the fixed text is sent; the sender name is sent to the AI together with the message text.
-
-# v6.99 Part 2 (WIP)
-- Voice "screenshot lo", "ringer silent / vibrate mode / ringer normal", "rotation off / auto rotate on": all five PhoneVoiceRules kinds are now active in Logic.classify. NovaService.runCommand branches; PhoneActions.setRinger / setRotation read the result back (ok only when the phone really changed). Silent without Do Not Disturb access = vibrate + clear message; rotation without Modify-system-settings = clear message.
-- UI: Skills screen has 4 new cards (Call uthana/kaatna, Screenshot, Ringer, Auto-rotate) with permission buttons. New bridge: hasAnswerCalls, requestAnswerCalls, hasPolicyAccess, openPolicyAccess, canWriteSettings.
-- Tests: PhoneVoiceRulesTest extended. Python contract checks in tools/ re-run: all pass (structural). Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED.
-
-# v6.99 Part 1 (WIP)
-- Voice "call uthao / call utha lo / answer call" and "call kaato / reject call / hang up": PhoneVoiceRules.kt, PhoneActions.kt (CallHub keeps the ringing call's Answer/Decline buttons; TelecomManager fallback needs ANSWER_PHONE_CALLS, now in the manifest and the permission list).
-- Logic.classify checks these BEFORE "call <name>".
-- PhoneVoiceRulesTest added. NOT compiled, NOT tested on a phone.
-- SmartReplyRules.kt is in the zip for Part 3 but not wired yet.
-
-# v6.97 wip16 INSTAGRAM + WHATSAPP SMART REPLIES (owner request 16 Oct 2026; Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- New SocialReplyRules.kt (pure, local keywords, no AI call): insult / shaming message or comment -> NO reply, owner told (never read aloud), Instagram marks "needs report"; birthday / festival wish or a nice comment -> fixed "Thank you" reply + owner told by the existing onAutoReplied; questions / prices / unknown -> old auto-reply rules unchanged. Other apps unchanged.
-- Limit per person lowered to 2 replies per hour (AutoReplyRules.SENDER_PER_HOUR 3 -> 2; the 10 min cooldown and 80 per day stay). AutoReplyRulesTest + test_autoreply_contract updated.
-- Wiring: NovaNotificationService.autoReply (insult check before the gate and the send), NovaService.onSocialInsult. NOVA KNOWS + UI: HelpGuide topic "social" (20 topics = ui.html CAPS), Skills card "Instagram / WhatsApp jawab", FeatureCheck line, SocialReplyRulesTest (7 tests), HelpGuideTest.socialTopicIsFound, tools/test_social_reply_contract.py. Python contracts 60/60 PASS.
-- NOT DONE (honest): (1) the reel / post caption is not read, only the comment text is classified; (2) the Instagram "Report" taps are NOT automated (the menu cannot be driven or verified without the phone): NOVA only tells the owner "report karna hai"; (3) works only when the notification has the data (Instagram comment notifications may have no inline Reply, then nothing is sent); (4) keyword rules can miss a new insult or wrongly flag a joke.
-
-# v6.97 wip15 OWNER SAFETY DECISION (16 Oct 2026): NOVA acts directly on the owner's spoken order (Kotlin compile + JUnit + phone = NOT RUN / NOT TESTED)
-- Removed for tap / type: the bank / UPI / wallet / payment block (packages + words), the block on NOVA's own screens, the block on windows whose package cannot be read, and the password-field typing refusal (typeText, agentType, agentTap).
-- Removed: AgentRules money / security-label DENY and the CONFIRM (spoken yes) verdict for risky labels (send, pay, delete, buy, ...). Control.RISKY list and ExtCfg.skipRiskyConfirm (default ON) are kept.
-- STILL blocked for tap / type: package installer, permission screens, system Settings, Play Store generic tap (the narrow Install path from wip14 is unchanged). Reason: NOVA must not grant itself permissions or change device security.
-- STILL protected for READING (new Control.readProtected, used by ScreenSession.isProtected and the cloud-AI shield): bank / payment / settings / NOVA itself / unreadable window, and password text is never read. Bank and password screen text is never sent to an online AI.
-- Texts updated (HelpGuide Kotlin + ui.html): "bank / payment / password: no" became "text is not sent to any online AI; tap / type happens when you order it".
-- NOVA KNOWS + UI (wip15): HelpGuide topic "safety" (19 topics, Kotlin = ui.html CAPS), Skills screen group "SURAKSHA NIYAM" (3 cards), FeatureCheck "Samajh: suraksha niyam", HelpGuideTest.safetyTopicIsFoundAndBeatsScreenTopic (NOT RUN).
-- Audit of the older pending list against the code (static, not run): free AI chain (Groq, Qwen, GLM, OpenRouter, Pollinations ...), own Groq key slot, SelfImprove, scheduled voice tasks (ScheduledTaskRules/Store), HealthCheck + SelfTest + ConfigReport, NovaCloudQueueWorker notifications, HindiRoman + Understand already exist. Nothing new was invented for them in wip15.
-- Tests changed on purpose: ControlTest, SafetyInvariantsTest, AgentRulesTest, AgentRulesPart6Test; contracts test_screen_alert_contract, test_tool_verify_contract. Python contracts 59/59 PASS. versionName NOT bumped.
-
-# v6.97 wip14 OPEN WEBSITES IN CHROME TABS + PLAY STORE DOWNLOAD BY VOICE (written; Kotlin compile of Parts 2-4 + JUnit + phone = NOT RUN / NOT TESTED)
-- Voice: "youtube chrome pe kholo" opens a Chrome tab; "youtube, google aur flipkart kholo" opens each site in its OWN tab (max 8). A plain "youtube kholo" still opens the YouTube APP (old path unchanged). When no installed app matches a spoken name, the name is opened as a website (known site / www.<word>.com) or, for several unknown words, a Google SEARCH, and the reply says exactly which.
-- Voice: "whatsapp download karo" opens that app's Play Store page and presses ONLY the exact "Install" button, then says "download start ho gaya sir" ONLY after Cancel / Downloading / Installing / Pending was really seen. Already installed -> says so, Play Store not opened. Paid app, Sign in, "Install anyway", Update are never pressed. Unknown app name: Play search, first result only if its title equals the spoken name exactly. Several apps in one sentence: the first, the rest are listed. Accessibility OFF: page opens, the owner presses Install.
-- Safety shape: Control.blocked still refuses every voice tap in com.android.vending; the install press is a SEPARATE path (PlayInstallRules + NovaAccessibilityService.playInstall): armed 60 s per key, page title must match, one press, then disarm.
-- New: OpenWebRules.kt (Part 1), PlayInstallRules.kt (Part 3), NovaService openWeb / openAppOrSite / downloadApp (Parts 2, 4), NovaAccessibilityService.playInstall / playOpenResult (Part 4), tests OpenWebRulesTest, OpenWebRoutingTest, PlayInstallRulesTest, tools/test_open_web_download_contract.py.
-- Part 5 review: WhatsApp direct send untouched (diff shows no changed line near askFirst / skip*Confirm / claimAction / contacts). Waits shortened (page 14 s, confirm 6 s, search 10 s) + cancel hook. Spoken STOP still cannot interrupt a running turn (NOT FIXED).
-- NOVA KNOWS it (added after the 6 parts): HelpGuide topics chrome + download (voice/chat "tum kya kar sakte ho", "kya tum app download kar sakte ho", and the cloud AI facts), MADAD popup in ui.html (18 topics, Accessibility fix button for download), Skills screen entries with tap-to-try example commands, FeatureCheck self-test sentences + readiness line. NOT compiled / NOT run / NOT tested on a phone.
-- versionName NOT bumped (tools/test_android_runtime_contract.py pins 6.97).
-- Limits: English Play Store only; an app whose Play title is longer than its label (e.g. "Truecaller: Caller ID...") is not matched and nothing is pressed; an unknown-name search can reach another developer's app with the identical title; Hindi/Hinglish ASR spelling of "download" NOT TESTED.
+# wip13 (music commands)
+- NEW MusicCatalog.kt: key-less song catalogue (iTunes Search, titles + artists only) used just to tell similar songs apart. Offline = skipped.
+- CHANGED NovaService music flow: musicBegin -> (similar songs? popup/voice choice) -> musicPlay -> verifyPlayback. Success is reported only when the music app's own media session (Notification access ON) shows the song playing; otherwise NOT_PLAYING / PLAYING_OTHER / PLAYING_UNCONFIRMED / CANNOT_TELL are said honestly.
+- NEW: a different music app is never tried by itself. NOVA asks "<app> par try karun?" (real yes/no, not skippable) and only then tries it.
+- NEW: songChoiceListener popup in MainActivity ("Kaun sa gaana?") plus spoken pick (number or name).
+- RESTORED: .github/workflows/build.yml (was missing from wip12 zip; recreated from docs/BUILD.md; fixes tools/test_vosk_model_packaging.py).
+- NEW tests: MusicPlayRulesTest (extended), MusicCatalogTest, tools/test_music_play_contract.py. Kotlin was NOT compiled in the sandbox (no kotlinc, no network): first real compile is GitHub Actions.
 
 # v6.97 (wip8) 5 KEY-LESS BROWSERS + LOCAL-FIRST AI + LOCK GUARD + ADAPTIVE LISTENING
 - Compile + 834 JUnit tests RUN (kotlinc 1.9.24, real org.json); phone behaviour NOT tested.
@@ -492,3 +419,25 @@ Older history: [docs/PROGRESS.md](docs/PROGRESS.md) and [docs/archive/](docs/arc
 - Integrated a conservative clarification preflight in `NovaService`; it intercepts only low-confidence requests when existing deterministic handlers do not already own them. Existing contact, WhatsApp, app launch, permission, confirmation, and result handlers remain authoritative.
 - Added `IntentParserTest` for call/message/open-app intent, Hindi/Hinglish variants, app-specific routing, ambiguous/negated commands, stage separation, duplicate guard, and safe fallback.
 - Verification: relevant Python regression/contract checks passed. Gradle unit tests and Android build could not run because Gradle 8.7 is not cached and network DNS to `services.gradle.org` is unavailable. Real-device verification remains deferred until all five parts are complete.
+
+## Part 9D - DND access wiring
+- Manifest: ACCESS_NOTIFICATION_POLICY. Bridge openDndAccess + `dnd` state. UI: DND rows (permissions, Settings, SAARE FEATURES). FeatureStatus: ringer + rotation/screenshot rows. Contract: test_part9d_dnd_wiring_contract.py.
+
+## Part 10 - chat auto-start
+- ui.html: autoStartSend (NOVA off + chat send = auto toggle + resend). test_part10_chat_autostart_contract.py.
+
+## Part 10B - 5 sec live status + AutoTest watcher
+- ui.html fsLoad 5000 ms; AutoTest 5 sec watcher + stop() on pause; SelfTest checks DND/ringer/screenshot/rotation/AI SMART; test_part10_autotest_5s_contract.py.
+
+## v7.20 (Part 6, static only)
+- Skills screen: +8 entries (photo edit, website gallery media, WhatsApp Business watch, verified music play, my chats, watch mic, wait slider, battery SOS). New guard test_part6_skills_contract.py. No Kotlin changes.
+
+## v7.21 (Part 7, static + headless render)
+- HelpGuide +6 topics (Kotlin + ui CAPS), HelpGuidePart7Test; ui.html p7_polish CSS; tools/test_ui_render_smoke.py; tools/KNOWN_STALE_GUARDS.txt + runner label.
+
+## v7.34 PART 5 (add-only)
+AutoTrace.kt + AutoTraceTest.kt, NovaService auto log (History "NOVA AUTO") + "auto kya samjha" route, HealthCheck AUTO TRACE section, MainActivity.uiLog bridge, ui.html p5_log, tools/test_part5_contract.py + test_part5_render.py. See NEXT_ACCOUNT_PROMPT_FULL_v7_34_PART5.md.
+
+## v7.35 AUTO VERIFY (add-only)
+FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all understood features (old FeatureCheck + Parts 1-5 + commands + state + page wiring); ui.html p6_verify + p6_box; bridges verifyPage / verifyNow; HealthCheck "AUTO VERIFY" line; NovaService route "auto verify status"; History "NOVA VERIFY"; tools/test_part6_contract.py + test_part6_render.py. See NEXT_ACCOUNT_PROMPT_FULL_v7_35_PART5_VERIFY.md.
+(v7.35 evidence) Real kotlinc 1.9.24 compile of main + test = 0 errors; JUnit 1117 run, only the 3 known stale fail. Gradle APK build still only in GitHub Actions.

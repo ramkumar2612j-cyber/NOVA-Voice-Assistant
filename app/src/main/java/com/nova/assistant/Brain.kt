@@ -36,7 +36,7 @@ object Brain {
     /** Command kinds a skill step (or a learned shortcut) may use. No tap/type (they depend on the screen). */
     val SAFE_KINDS = setOf(
         "battery", "time", "date", "torch_on", "torch_off", "volume", "brightness_set", "brightness_step",
-        "media", "global", "settings", "camera", "open_app", "scroll"
+        "media", "global", "settings", "camera", "open_app", "scroll", "ringer", "rotation"
     )
 
     private val NUMBER_WORDS = setOf(

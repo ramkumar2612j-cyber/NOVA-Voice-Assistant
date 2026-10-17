@@ -41,7 +41,8 @@ check("if (ExtCfg.skipRiskyConfirm(this)) return run()" in NS, "askFirst must ru
 LAUNCH = block(NS, "private fun launch(")
 check("startFromService" in LAUNCH and "sendViaPendingIntent" in LAUNCH and "notifyOpen" not in LAUNCH, "launch(): 3 silent ways and no notification expected")
 check("MAX_STEPS = 60" in AR and "MAX_MS = 600000L" in AR, "agent caps changed unexpectedly")
-check("Verdict.CONFIRM" not in AR.split("fun check(")[1].split("fun ")[0] and "it in HARD" not in AR.split("fun check(")[1].split("fun ")[0], "v6.98 owner decision: AgentRules.check no longer refuses or asks for risky / money labels")
+check("isAiSend(label(node))" in AR, "AgentRules.check must use isAiSend for the AI-app send")
+check("pkg in AI_APPS && risky.all { it in SEND_OK }" in AR and "&& isAiSend" in AR, "AI-app send rule changed unexpectedly")
 
 # 3. Python port of ToolVerify.classify, compared with the expectations written in ToolVerifyTest
 def classify(msg):

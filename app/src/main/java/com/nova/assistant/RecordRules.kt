@@ -171,6 +171,7 @@ object RecordRules {
         "start_failed" -> if (en) "Recording could not start: $arg" else "Recording shuru nahi ho payi: $arg"
         "saved" -> if (en) "Recording stopped and saved: $arg" else "Recording band ho gayi aur save ho gayi: $arg"
         "saved_none" -> if (en) "Recording stopped but nothing could be saved (too short or the phone refused)." else "Recording band ho gayi par kuch save nahi ho paya (bahut chhoti thi ya phone ne mana kiya)."
+        "writer_err" -> if (en) "Warning: the recording stopped working part-way, so it may be shorter than the time shown." else "Dhyan do: recording beech mein ruk gayi thi, isliye file dikhaye gaye time se chhoti ho sakti hai."
         "auto_max" -> if (en) "3 hours reached, so I stopped and saved. Say start again to continue." else "3 ghante poore ho gaye, isliye rok kar save kar diya. Dobara shuru karne ke liye bolo."
         "auto_space" -> if (en) "The phone is almost full, so I stopped and saved." else "Phone lagbhag full hai, isliye rok kar save kar diya."
         "auto_error" -> if (en) "The recorder had a problem, so I stopped and saved what I had." else "Recorder mein dikkat aayi, isliye jo record hua tha wo save kar diya."

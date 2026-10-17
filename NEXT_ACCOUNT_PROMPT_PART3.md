@@ -1,34 +1,12 @@
-# NOVA - Part 3 of 5 (agla account yehi prompt use kare)
+NOVA Android app, Kotlin package com.nova.assistant. Base ZIP: NOVA-WIP-v75-PART3-PARTIAL.zip. Read AUTOPSY_PART1.md, PART2_STATUS.md and PART3_STATUS.md first. Owner is non-technical, Hinglish, phone-only. Deliver whole ZIP, no manual edits.
 
-Hinglish mein, chhota aur seedha jawab do. Pehle audit, phir kaam. Jo feature chal raha hai use mat todo, jo ban chuka hai dobara mat banao. Fake "complete" mat bolo.
+STRICT: preserve all old features/screens/settings/API/fallbacks/permissions and v6.57 lead-routing fix. No mock/demo/fake success. Any unrun build/JUnit/device test must be marked NOT TESTED. Run `bash tools/run_all_checks.sh`; keep `ui.html` CAPS, HelpGuide.TOPICS and aiFacts topic contract equal. Keep prior ZIP untouched.
 
-Project: NOVA-Voice-Assistant.zip (isi zip ko patch karo, naya zip wapas do, naam exactly NOVA-Voice-Assistant.zip).
-Compile sirf GitHub Actions par hota hai. Jo compile/test nahi hua wo saaf likho (PASS / FAIL / NOT TESTED).
-
-## 5 parts ka plan
-1. Call uthana / reject voice se  -> DONE (compile NOT RUN)
-2. Voice screenshot, ringer, auto-rotation + UI cards  -> DONE (compile NOT RUN)
-3. AI SMART reply (Instagram/WhatsApp)  -> YE KARNA HAI
-4. Jin 15 settings ke bridge methods ka UI button nahi hai unke buttons
-   (listChats, selfTest, selfTestFree, selfTestImage, clearErrors, getWaitSec, setWaitSec, getMemoryText, getAutoLearn, setAutoLearn, getWebBrowsers, getLocalFirst, getHomeCity, testBrowser, requestCalendarRead)
-5. NOVA ki help/knowledge (HelpGuide, FeatureCheck/FeatureStatus) mein saare naye features + final tests + final zip
-
-## Part 3 ka kaam (AI smart reply)
-- SmartReplyRules.kt pehle se zip mein hai (pure rules: allowedForAi, systemPrompt, userPrompt, sanitize, choose). Wired nahi hai, test nahi hai.
-- ExtCfg mein smartReply switch (default OFF). Settings mein toggle + saaf line: "message ka text cloud AI ko jata hai".
-- NovaNotificationService.autoReply: insult wala rasta SocialReplyRules se pehle jaisa rahe. Jab smartReply ON ho, SmartReplyRules.allowedForAi(text) true ho, to NovaService ka naya public smartReply(sender, text) (private agentChain use kare, worker thread par, timeout ~8 sec) ek chhota jawab banaye. Fail / None -> purana fixed jawab (SmartReplyRules.choose). Jawab kabhi khaali nahi.
-- AutoReplyRules ki limits (2 per ghanta, 10 min cooldown, 80 per din) waisi hi.
-- Paise/OTP/link/number wale message cloud AI ko KABHI nahi jaate.
-- SmartReplyRulesTest likho. ui.html mein toggle + Skills card (state: switch ON + notifAccess).
-- ActionLog mein jawab ka note "AI" ya "fixed" dikhe.
-
-## Mat karna
-- PIN / password se phone unlock KABHI nahi (owner ne nahi manga).
-- LockGuard ka behaviour mat badlo.
-- Koi yes/no sawal nahi, kaam poora karo.
-
-## Har part ke baad do
-1. Updated NOVA-Voice-Assistant.zip
-2. Build/test report: modified files, har feature PASS / FAIL / NOT TESTED, bache bugs
-3. Agle part ka chhota prompt
-4. Continuation notes (done, pending, architecture decisions, next steps)
+PART 3 REMAINING — finish before Part 4:
+1. Implement real STOP button in NovaHud. Must stop current TTS, safely cancel current agent/background job and stop listening. Do not accidentally execute/send a pending call/WhatsApp halfway; pending confirmations must be cancelled safely. HAAN/NAHI must remain visible while waiting, and stray taps must not dismiss question. Wire through NovaService, not just visual.
+2. Add persistent SILENT switch on home, settings and popup; ON suppresses ordinary speech but work continues and answers stay visible in chat/card. Voice silent on/off. Preserve old CHUP, quiet mode and chat-speak setting separately. Safety confirmations and genuinely critical alerts policy must be explicit and tested. Restart persistence.
+3. Messages screen should show full readable answer card/chat in silent mode; use existing holdMs safely.
+4. Finish Part 2 remaining items only if safe: voice routes for Auto-reply, Routines, Lock Guard, Battery guide, Offline AI pack, API limits; add honest FeatureStatus rows.
+5. Add tests for STOP (speech+job+listening), SILENT on/off, visible silent answer, restart persistence, and STOP during HAAN/NAHI. Add tests to run_all_checks where appropriate.
+6. Verify full Python checks. Attempt Gradle build/JUnit only if environment supports it. Do not claim build pass without actual result.
+7. Update PART3_STATUS.md honestly. Once Part 3 truly done, create NEXT_ACCOUNT_PROMPT_PART4.md for modern UI redesign and deliver full ZIP with exact name NOVA-WIP-v75-PART3.zip. Do not start redesign until Part 3 is complete.

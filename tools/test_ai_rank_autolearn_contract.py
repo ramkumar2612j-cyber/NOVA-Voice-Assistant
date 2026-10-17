@@ -5,8 +5,8 @@ J = R / "java/com/nova/assistant"
 ns = (J / "NovaService.kt").read_text(); rk = (J / "ProviderRanker.kt").read_text(); al = (J / "AutoLearnRules.kt").read_text()
 ls = (J / "LearnStore.kt").read_text(); ui = (R / "assets/ui.html").read_text(); ma = (J / "MainActivity.kt").read_text()
 checks = {
-    "all 3 free-chain runs use the ranked order": ns.count("            rankedProviders(),\n") == 3,
-    "all 3 free-chain runs teach the ranking": ns.count("rankedCall(p, body, key)") == 3,
+    "all 4 free-chain runs use the ranked order": ns.count("            rankedProviders(),\n") == 4,
+    "all 4 free-chain runs (chat, phone action, voice, Part 7 smart reply) teach the ranking": ns.count("rankedCall(p, body, key)") == 4,
     "rankedCall ignores nothing but the store decides offline/timeout": "ProviderRankStore.record" in ns and "null" in rk and "code in 100..597" in rk,
     "ranking only reorders (no provider added or dropped)": ".map { it.value }" in rk and "sortedWith" in rk,
     "Gemini (the only tool-capable AI) path is unchanged: still first and separate": "askCloud(pcm, said)" in ns and "1) Gemini" in ns,

@@ -27,9 +27,9 @@ class AutoReplyRulesTest {
         assertNull(g.allow("Raj", t0))
         assertEquals("cooldown", g.allow("Raj", t0 + 60_000L))
         assertNull(g.allow("Raj", t0 + 11 * 60_000L))
-        assertEquals("limit", g.allow("Raj", t0 + 22 * 60_000L))        // 3rd inside one hour (owner: 2 per person per hour)
-        assertEquals("limit", g.allow("Raj", t0 + 33 * 60_000L))
-        assertNull(g.allow("Raj", t0 + 83 * 60_000L))                        // window moved on
+        assertNull(g.allow("Raj", t0 + 22 * 60_000L))
+        assertEquals("limit", g.allow("Raj", t0 + 33 * 60_000L))        // 4th inside one hour
+        assertNull(g.allow("Raj", t0 + 61 * 60_000L + 22 * 60_000L))    // window moved on
         assertNull(g.allow("Sima", t0 + 1000L))                         // other senders unaffected
     }
 

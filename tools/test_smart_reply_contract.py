@@ -1,35 +1,38 @@
-"""v6.99 Part 3 AI smart reply contract (static): default OFF, gate before AI, fixed fallback, safe text only, hard timeout, history note."""
+#!/usr/bin/env python3
+"""Part 7 contract: AI smart reply is wired end to end (rules, service call, listener hook, bridge, UI toggle) and OFF by default."""
 import os, re, sys
-H = os.path.dirname(os.path.abspath(__file__))
-def rd(f, base='app/src/main/java/com/nova/assistant'): return open(os.path.join(H, '..', base, f), encoding='utf-8').read()
-SR, NN, NS, EC, AL, MA = rd('SmartReplyRules.kt'), rd('NovaNotificationService.kt'), rd('NovaService.kt'), rd('ExtCfg.kt'), rd('ActionLog.kt'), rd('MainActivity.kt')
-UI = rd('ui.html', 'app/src/main/assets')
-AR = rd('AutoReplyRules.kt')
+here = os.path.dirname(os.path.abspath(__file__)); root = os.path.join(here, '..', 'app/src/main')
+def rd(p): return open(os.path.join(root, p), encoding='utf-8').read()
+J = 'java/com/nova/assistant/'
+rules, svc, lst, al, ma, ui = rd(J+'SmartReplyRules.kt'), rd(J+'NovaService.kt'), rd(J+'NovaNotificationService.kt'), rd(J+'ActionLog.kt'), rd(J+'MainActivity.kt'), rd('assets/ui.html')
 bad = []
-if not re.search(r'fun smartReply\(ctx: Context\): Boolean = try \{\s*ctx\.getSharedPreferences\(PREF, Context\.MODE_PRIVATE\)\.getBoolean\("smart_reply", false\)', EC): bad.append('smart reply must default OFF')
-i, j, k = NN.find('AutoReplyRules.gate.allow'), NN.find('SmartReplyRules.useAi'), NN.find('DrivingBridge.sendReply(ctx, m.key, text)')
-if not (0 < i < j < k): bad.append('order must be: rate gate -> AI decision -> send')
-if 'SocialReplyRules.Kind.INSULT' not in NN or NN.find('Kind.INSULT') > NN.find('SmartReplyRules.useAi'): bad.append('insult path must return before any AI call')
-if 'soc?.reply ?: ActionLog.autoReplyText' not in NN: bad.append('fixed text must stay the fallback')
-if 'SmartReplyRules.pick(' not in NN or 'SmartReplyRules.note(picked.ai)' not in NN: bad.append('AI answer must be cleaned and noted in the history')
-if 'fun useAi(enabled: Boolean, socialReply: String?, text: String): Boolean =\n        enabled && socialReply == null && allowedForAi(text)' not in SR: bad.append('useAi must need switch + no social reply + safe text')
-if 'TIMEOUT_MS = 8_000L' not in SR: bad.append('timeout must be 8 s')
-m = re.search(r'fun smartReply\(sender: String, text: String\): String\? \{(.*?)\n    \}\n', NS, re.S)
-if not m: bad.append('NovaService.smartReply missing')
-else:
-    b = m.group(1)
-    if 'ExtCfg.smartReply(this)' not in b or 'agentChainReady()' not in b: bad.append('smartReply must check the switch and the chain')
-    if b.find('SmartReplyRules.allowedForAi(text)') < 0 or b.find('allowedForAi') > b.find('agentChain('): bad.append('allowedForAi must run before the AI call')
-    if 'TimeUnit.MILLISECONDS' not in b or 'f.cancel(true)' not in b: bad.append('hard timeout + cancel missing')
-if 'SENDER_PER_HOUR = 2' not in AR or 'DAY_CAP = 80' not in AR or 'SENDER_COOLDOWN_MS = 600_000L' not in AR: bad.append('rate limits must stay 2/hour, 10 min, 80/day')
-if '"src"' not in AL: bad.append('ActionLog must store src (AI / fixed)')
-if '.put("d", detail.take(MAX))' not in AL: bad.append('log detail must stay the sent text (MessageDelete uses it)')
-for f in ('getSmartReply', 'setSmartReply', 'smartReplyStatus'):
-    if 'fun %s(' % f not in MA: bad.append('bridge %s missing' % f)
-    if 'Android.%s(' % f not in UI: bad.append('ui.html never calls %s' % f)
-if 'id="ar_ai"' not in UI or 'cloud AI' not in UI: bad.append('UI toggle + cloud-AI warning missing')
-if 'AI smart jawab' not in UI: bad.append('Skills card missing')
-if "'AI jawab'" not in UI: bad.append('history tag missing')
-if re.search(r'\b(Context|android\.)', SR.replace('Context.MODE', '')): bad.append('rules file must stay pure')
-if bad: print('FAIL', *bad, sep='\n  '); sys.exit(1)
+def need(c, m):
+    if not c: bad.append(m)
+need('getBoolean(KEY_AR_SMART, false)' in al, 'smart reply must default OFF')
+need('fun smartDraft(' in svc and 'fun onSmartReplied(' in svc, 'NovaService smartDraft/onSmartReplied missing')
+need('SmartReplyRules.systemPrompt(' in svc and 'SmartReplyRules.unsafeReason(' in svc, 'service must use the safe prompt and the unsafe-text check')
+need('Thread {' in lst and 'smartAutoReply' in lst, 'AI call must run on its own thread, not the notification main thread')
+need('AutoReplyRules.skipReason(' in lst and 'm.hidden' in lst, 'old skip rules (groups, codes, no reply button) must stay')
+need('GmailStore.notifyPhone(' in lst and 'ActionLog.add(' in lst, 'owner must be informed (notification + history)')
+need('getSmartReply' in ma and 'setSmartReply' in ma and 'id="ar_smart"' in ui and 'Android.setSmartReply' in ui, 'bridge / UI toggle missing')
+need('[OWNER]' in rules and '[SKIP]' in rules and 'NEVER invent or guess a fact' in rules and 'NEVER give or promise prices' not in rules, 'prompt must stop invented facts but allow money talk (Part 10)')
+need("assistant of" in rules, 'AI must say it is the assistant, not pretend to be the owner')
+# Part 8: business watch + owner name
+need('private fun bizSmart(' in lst and 'bizSmart(pkg, key, title, body' in lst, 'Business Watch smart reply hook missing')
+need('WaBiz.autoReply' in lst and 'd.item.draft.isNotBlank()' in lst, 'business smart reply must need watch AUTO ON and never replace the catalogue answer')
+need('smartAutoReply(ctx, m, true)' in lst and 'business: Boolean' in svc and 'business: Boolean = false' in rules, 'business flag must reach the prompt')
+need('do NOT know stock' in rules, 'business prompt must stop stock / size / rate claims')
+need('fun cleanName(' in rules and 'KEY_AR_OWNER' in al and 'ActionLog.ownerName(this)' in svc, 'owner name must be cleaned, stored and sent to the AI')
+need('getOwnerName' in ma and 'setOwnerName' in ma and 'id="ar_owner"' in ui and 'Android.setOwnerName' in ui, 'owner name bridge / UI missing')
+need('SmartReplyRules.seen.fresh(' in lst, 'repeat notifications must be answered once')
+# Part 8: voice on/off must always ask first
+need('"smart_on" -> smartReplyVoice(true)' in svc and 'private fun smartReplyVoice(' in svc and 'private fun autoReplyVoice(' in svc, 'voice switches missing in NovaService')
+need(svc.count('askFirst(q, on)') == 2, 'voice ON/OFF of smart reply and auto reply must go through askFirst (HAAN/NAHI)')
+need('SmartReplyRules.command(n)' in rd(J+'Logic.kt'), 'Logic must call SmartReplyRules.command')
+need('QUESTION_WORD' in rules and 'on == off' in rules, 'voice parser must ignore questions and unclear sentences')
+# Part 10: owner facts + only secrets held back
+need('fun addFact(' in rules and 'SmartReplyRules.convo.facts(sender)' in svc and 'SmartReplyRules.convo.addFact(name, message)' in svc, 'owner facts must reach the AI prompt')
+need('MONEY' not in rules and 'SECRET' in rules, 'money/link/number blocking must be gone, secrets kept')
+if bad:
+    print('FAIL'); [print(' -', b) for b in bad]; sys.exit(1)
 print('PASS smart reply contract')

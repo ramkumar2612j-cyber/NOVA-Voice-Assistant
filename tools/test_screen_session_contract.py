@@ -83,7 +83,7 @@ need('if (screenOpen() ||' in NS.split('private fun utteranceEnded')[1][:700], '
 h = NS.split('private fun handle(')[1]
 need(h.index('screenFollow(pcm, text)') < h.index('AgentRules.isTask(text)'), 'session follow-up is checked before the task agent')
 need(h.index('agentRunning && text.isNotBlank()') < h.index('screenFollow(pcm, text)'), 'a running agent keeps priority over the session')
-a = NS.split('private fun analyzeScreen()')[1].split('private fun screenFollow')[0]
+a = NS.split('private fun analyzeScreen(')[1].split('private fun screenFollow')[0]
 need('screenGate(' in a and 'ScreenSession.start(' in a, 'analyzeScreen starts a session and uses the gate')
 g = NS.split('private fun screenGate')[1].split('private fun screenTalk')[0]
 need('ScreenSession.isProtected(scrPkg, packageName)' in g, 'protected screens are gated')

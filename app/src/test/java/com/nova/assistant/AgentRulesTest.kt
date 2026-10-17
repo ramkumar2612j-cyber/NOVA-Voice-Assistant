@@ -75,11 +75,11 @@ class AgentRulesTest {
         assertEquals("down", AgentRules.parse("{\"act\":\"scroll\",\"dir\":\"sideways\"}")?.dir)
     }
 
-    @Test fun payAndSecurityLabelsAreAllowedByOwnerDecision() {
+    @Test fun payAndSecurityLabelsAreDenied() {
         val a = AgentRules.Action("tap", 0)
         for (label in listOf("Buy now", "Upgrade to Plus", "Subscribe", "Pay", "Enter password", "Transfer money")) {
             val c = AgentRules.check(a, node(0, label), "com.openai.chatgpt", own)
-            assertEquals(label, AgentRules.Verdict.OK, c.v)   // v6.98 owner decision
+            assertEquals(label, AgentRules.Verdict.DENY, c.v)
         }
     }
 
@@ -88,21 +88,21 @@ class AgentRulesTest {
         val send = node(0, "", "Send message")
         assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, send, "com.openai.chatgpt", own).v)
         assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, send, "com.google.android.apps.bard", own).v)
-        assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, send, "com.whatsapp", own).v)   // v6.98
+        assertEquals(AgentRules.Verdict.CONFIRM, AgentRules.check(a, send, "com.whatsapp", own).v)
     }
 
     @Test fun deleteAndPostAlwaysAskEvenInAiApps() {
         val a = AgentRules.Action("tap", 0)
-        assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, node(0, "Delete chat"), "com.openai.chatgpt", own).v)
-        assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, node(0, "Post"), "com.openai.chatgpt", own).v)
+        assertEquals(AgentRules.Verdict.CONFIRM, AgentRules.check(a, node(0, "Delete chat"), "com.openai.chatgpt", own).v)
+        assertEquals(AgentRules.Verdict.CONFIRM, AgentRules.check(a, node(0, "Post"), "com.openai.chatgpt", own).v)
     }
 
     @Test fun protectedScreensAreRefused() {
         val a = AgentRules.Action("tap", 0)
         assertEquals(AgentRules.Verdict.DENY, AgentRules.check(a, node(0, "Allow"), "com.google.android.permissioncontroller", own).v)
         assertEquals(AgentRules.Verdict.DENY, AgentRules.check(a, node(0, "OK"), "com.android.settings", own).v)
-        assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, node(0, "OK"), own, own).v)    // v6.98 owner decision
-        assertEquals(AgentRules.Verdict.OK, AgentRules.check(a, node(0, "OK"), "", own).v)
+        assertEquals(AgentRules.Verdict.DENY, AgentRules.check(a, node(0, "OK"), own, own).v)
+        assertEquals(AgentRules.Verdict.DENY, AgentRules.check(a, node(0, "OK"), "", own).v)
     }
 
     @Test fun missingItemAndBadTypingAreDenied() {

@@ -70,7 +70,7 @@ object ContactRequestParser {
             "lock", "unlock", "silent", "silence", "mute", "sound", "awaaz", "awaz", "ki", "poori", "full",
             "band", "kam", "badhao", "zyaada", "zyada", "up", "down", "off", "on", "airplane", "mode", "data",
             "hotspot", "dnd", "do not disturb", "location", "flashlight", "saver",
-            "restart", "reboot", "shutdown", "power", "reset", "wipe", "format", "sleep"
+            "vibrate", "vibration", "ringer", "rotate", "rotation", "autorotate", "landscape", "portrait", "restart", "reboot", "shutdown", "power", "reset", "wipe", "format", "sleep"
         )
         if (name in nonContactTargets || name.split(" ").any { it in nonContactTargets }) return null
         return ContactRequest(name, false, true)

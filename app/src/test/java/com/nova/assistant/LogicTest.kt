@@ -371,4 +371,15 @@ class LogicTest {
         assertTrue(Logic.HISTORY_MAX % 2 == 0)
         assertNotNull(Logic.DEFAULT_WAKE)
     }
+
+    // ---- Part 9B (NOT RUN: Kotlin was not compiled in the sandbox)
+    @Test fun part9bRingerAndRotationByVoice() {
+        assertEquals(cmd("ringer", "vibrate"), Logic.classify("nova phone vibrate par karo"))
+        assertEquals(cmd("ringer", "normal"), Logic.classify("ringer normal karo"))
+        assertEquals(cmd("ringer", "silent"), Logic.classify("ringer silent karo"))
+        assertEquals(cmd("rotation", "auto_off"), Logic.classify("auto rotate off karo"))
+        assertEquals(cmd("rotation", "auto_on"), Logic.classify("rotation on karo"))
+        assertEquals(cmd("rotation", "landscape"), Logic.classify("screen landscape lock karo"))
+        assertNull(Logic.classify("vibrate off karo"))   // never guess
+    }
 }

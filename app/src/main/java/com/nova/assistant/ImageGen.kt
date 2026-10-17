@@ -198,6 +198,7 @@ object ImageGen {
 
     /** Saves into Gallery > Pictures > NOVA (Android 10+). Returns a short place name, or null on failure. */
     fun saveToGallery(ctx: Context, data: ByteArray): String? {
+        var pendingUri: android.net.Uri? = null   // v7.12: a failed save must not leave a hidden IS_PENDING row behind
         try {
             val isPng = data.size > 4 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte()
             val ext = if (isPng) "png" else "jpg"
@@ -211,7 +212,8 @@ object ImageGen {
                 cv.put(MediaStore.Images.Media.IS_PENDING, 1)
                 val res = ctx.contentResolver
                 val uri = res.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv) ?: return null
-                val os = res.openOutputStream(uri) ?: return null
+                pendingUri = uri
+                val os = res.openOutputStream(uri) ?: run { try { res.delete(uri, null, null) } catch (ignored: Throwable) { }; return null }
                 os.use { it.write(data) }
                 val done = ContentValues()
                 done.put(MediaStore.Images.Media.IS_PENDING, 0)
@@ -223,6 +225,7 @@ object ImageGen {
             File(dir, name).writeBytes(data)
             return "App folder (Android/data/com.nova.assistant/files/Pictures)"
         } catch (e: Throwable) {
+            try { pendingUri?.let { ctx.contentResolver.delete(it, null, null) } } catch (ignored: Throwable) { }
             return null
         }
     }

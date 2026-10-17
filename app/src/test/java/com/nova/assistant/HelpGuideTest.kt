@@ -25,16 +25,6 @@ class HelpGuideTest {
         assertEquals("camera", HelpGuide.topicFor("kya tum camera chala sakte ho")?.id)
     }
 
-    @Test fun newWebAndDownloadTopicsAreFound() {
-        assertEquals("download", HelpGuide.topicFor("kya tum app download kar sakte ho")?.id)
-        assertEquals("download", HelpGuide.topicFor("kya tum whatsapp download kar sakte ho")?.id)
-        assertEquals("chrome", HelpGuide.topicFor("can you open websites in chrome")?.id)
-        assertEquals("whatsapp", HelpGuide.topicFor("kya tum whatsapp kar sakte ho")?.id)
-        assertFalse(HelpGuide.isAsk("whatsapp download karo"))
-        assertFalse(HelpGuide.isAsk("youtube chrome pe kholo"))
-        assertTrue(HelpGuide.general(false).contains("Chrome") && HelpGuide.general(false).contains("download"))
-    }
-
     @Test fun phoneNumberIsNeverAHelpAsk() {
         assertNull(HelpGuide.topicFor("kya tum 9876543210 ko call kar sakte ho"))
     }
@@ -53,31 +43,23 @@ class HelpGuideTest {
         assertFalse(f.contains("$"))
     }
 
-    @Test fun safetyTopicIsFoundAndBeatsScreenTopic() {
-        assertEquals("safety", HelpGuide.topicFor("kya tum bank screen par kaam kar sakte ho")?.id)
-        assertEquals("safety", HelpGuide.topicFor("can you work on password screens")?.id)
-        assertTrue(HelpGuide.answer("kya tum bank screen par kaam kar sakte ho", false).startsWith("Haan!"))
-    }
-
-    @Test fun socialTopicIsFound() {
-        assertEquals("social", HelpGuide.topicFor("kya tum insta comment ka jawab de sakte ho")?.id)
-    }
-
-    @Test fun newPhoneTopicsAreFoundAndBeatTheOlderOnes() {
-        assertEquals("callanswer", HelpGuide.topicFor("kya tum call uthao kar sakte ho")?.id)
-        assertEquals("callanswer", HelpGuide.topicFor("can you answer call")?.id)
-        assertEquals("call", HelpGuide.topicFor("can you call my mom")?.id)
-        assertEquals("phonecontrol", HelpGuide.topicFor("kya tum screenshot le sakte ho")?.id)
-        assertEquals("phonecontrol", HelpGuide.topicFor("can you set ringer to vibrate")?.id)
-        assertEquals("smartreply", HelpGuide.topicFor("nova kya tum smart jawab de sakte ho")?.id)
-        assertEquals("social", HelpGuide.topicFor("kya tum insta comment ka jawab de sakte ho")?.id)
-        assertEquals("calendar", HelpGuide.topicFor("kya tum meeting yaad dila sakte ho")?.id)
-    }
-
-    @Test fun everyTopicExampleOrQuestionReachesItsTopic() {
+    @Test fun part2TopicsExistAndAreFound() {
         val ids = HelpGuide.TOPICS.map { it.id }
-        for (id in listOf("callanswer", "phonecontrol", "smartreply", "calendar")) assertTrue(id, id in ids)
-        assertEquals(24, ids.size)
+        for (id in listOf("wabiz", "autoreply", "connectors", "routines", "lockguard", "teach", "powerguide", "gmail", "agent", "screenalert", "watchmic", "quiet", "offlineai", "leads", "limits"))
+            assertTrue(id, id in ids)
         assertEquals(ids.size, ids.toSet().size)
+        assertEquals("wabiz", HelpGuide.topicFor("kya tum business watch kar sakte ho")?.id)
+        assertEquals("gmail", HelpGuide.topicFor("can you read my gmail")?.id)
+        assertEquals("connectors", HelpGuide.topicFor("kya tum github ka kaam kar sakte ho")?.id)
+        assertEquals("quiet", HelpGuide.topicFor("kya tum quiet mode kar sakte ho")?.id)
+        assertEquals("offlineai", HelpGuide.topicFor("can you work with offline ai")?.id)
+        assertEquals("lockguard", HelpGuide.topicFor("kya tum lock guard kar sakte ho")?.id)
+    }
+
+    @Test fun everyTopicHasExampleAndDescription() {
+        for (tp in HelpGuide.TOPICS) {
+            assertTrue(tp.id, tp.hi.isNotBlank() && tp.en.isNotBlank() && tp.example.isNotBlank() && tp.descHi.isNotBlank() && tp.descEn.isNotBlank())
+            assertTrue(tp.id, HelpGuide.topicLine(tp, false).startsWith("Haan!"))
+        }
     }
 }

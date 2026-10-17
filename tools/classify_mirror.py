@@ -442,6 +442,15 @@ def logic_classify(text):
         num = logic_parse_number(t)
         if num is not None: return ("volume", "set", max(0, min(100, num)))
         return None
+    if (not negated) and size <= 6:
+        if has("vibrate","vibration") and not has("off","band","bandh","stop","disable","camera","alarm"): return ("ringer", "vibrate", 0)
+        if has("ringer") and has("silent"): return ("ringer", "silent", 0)
+        if has("ringer") and has("normal","on","chalu"): return ("ringer", "normal", 0)
+        if has("portrait","landscape") and has("screen","rotate","rotation","lock","orientation") and not has("camera","photo","selfie","image"):
+            return ("rotation", "portrait" if has("portrait") else "landscape", 0)
+        if has("rotate","rotation","autorotate"):
+            if has("off","band","bandh","lock","stop","disable"): return ("rotation", "auto_off", 0)
+            if has("on","chalu","chalao","start","enable"): return ("rotation", "auto_on", 0)
     if has("brightness","brightnes"):
         if negated: return None
         num = logic_parse_number(t)

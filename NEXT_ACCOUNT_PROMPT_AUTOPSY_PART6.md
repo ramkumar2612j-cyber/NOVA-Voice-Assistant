@@ -1,0 +1,4 @@
+# NOVA AUTOPSY - remaining R3 of 5. Paste first + attach NOVA-Voice-Assistant.zip
+Owner: not a programmer, Android phone only. Hinglish, SHORT, ONE step at a time. PASS / FAIL / NOT TESTED. NEVER remove a feature. Zip name exactly NOVA-Voice-Assistant.zip. After EVERY part give the zip (compulsory).
+Plan: R1 connectors/web/learning DONE (docs/AUTOPSY_PART4.md); R2 open web/download/teach/photo DONE (docs/AUTOPSY_PART5.md); R3 video + recordings; R4 routines / scheduled tasks / settings; R5 self test + final report + final zip.
+Job R3: trace VideoRecordService, RecordSession, RecordingManager, RecordRules, RecordingVoiceRules, BackgroundVideoRules and their NovaService/MainActivity entry points. Find silent stops (permission, foreground-service type, early return, swallowed exception, false success). Fix only proven bugs, one test per fix in tools/test_autopsy_part6_contract.py.

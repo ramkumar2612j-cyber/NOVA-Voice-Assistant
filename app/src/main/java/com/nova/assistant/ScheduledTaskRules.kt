@@ -145,11 +145,11 @@ object ScheduledTaskRules {
             val ko = t.indexOf("ko")
             if (ko > 0) recipient = t[ko - 1].take(60)
             val sendAt = t.indexOfLast { it in SEND_WORDS }.let { if (it < 0) t.size else it }
-            val par = t.indexOf("par").let { if (it >= 0) it else -1 }
+            val par = t.indexOfFirst { it == "par" || it == "pe" || it == "pr" }   // v7.22 PART 8/9: "whatsapp pe hello" works like "whatsapp par hello"
             if (par >= 0 && par + 1 < sendAt) {
                 message = t.subList(par + 1, sendAt).filterNot { it in setOf("message", "bhejo", "bhejna", "send", "whatsapp", "sms", "telegram") }.joinToString(" ").take(300)
             }
-            if (message.isBlank()) message = t.drop(afterTime).filterNot { it in setOf("ye", "message", "bhejo", "bhejna", "send", "whatsapp", "sms", "telegram", "par", "roz", "daily") }.take(40).joinToString(" ").take(300)
+            if (message.isBlank()) message = t.drop(if (ko >= afterTime) ko + 1 else afterTime).filterNot { it in setOf("ye", "message", "bhejo", "bhejna", "send", "whatsapp", "sms", "telegram", "par", "pe", "pr", "roz", "daily") }.take(40).joinToString(" ").take(300)
         }
         return Spec(hour, minute, isRepeat, kind, label, recipient, channel, message, days, prio, note)
     }

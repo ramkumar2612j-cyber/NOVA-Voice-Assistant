@@ -23,7 +23,7 @@ for f, t in (("AgentRules.kt", AR), ("NovaAccessibilityService.kt", AS), ("NovaS
 # ---- (2) wiring
 check("trigger calls AgentRules.isTask", "AgentRules.isTask(text)" in NS and "AgentRules.isTask(groqText)" in NS)
 check("agent starts on the spoken task without redundant yes/no; risky actions still confirm", "return agentStart(task)" in NS and "individual risky actions still stop for the required local spoken yes/no" in NS and "Verdict.CONFIRM" in NS)
-check("stop cancels the agent", re.search(r'"stop" -> \{\s+agentCancel = true', NS) is not None)
+check("stop cancels the agent", re.search(r'"stop" -> \{[^}]{0,200}?agentCancel = true', NS) is not None)
 check("every action goes through AgentRules.check before agentDo", NS.index("AgentRules.check(") < NS.index("val res = agentDo(a)"))
 check("DENY and CONFIRM are both handled", "Verdict.DENY" in NS and "Verdict.CONFIRM" in NS)
 check("step and time caps used", "AgentRules.MAX_STEPS" in NS and "AgentRules.MAX_MS" in NS)

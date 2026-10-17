@@ -17,7 +17,7 @@ class ScheduledTaskReceiver : BroadcastReceiver() {
             val lid = intent.getStringExtra(ScheduledTaskStore.EXTRA_ID).orEmpty()
             val le = ScheduledTaskStore.get(context, lid) ?: return
             val sv = NovaService.instance
-            if (sv != null && NovaService.running) sv.onLeadTime(le)
+            if (sv != null && NovaService.running && sv.isAliveNow()) sv.onLeadTime(le)
             return
         }
         if (intent?.action != ScheduledTaskStore.ACTION_FIRE) return
@@ -25,11 +25,26 @@ class ScheduledTaskReceiver : BroadcastReceiver() {
         if (id.isBlank()) return
         val entry = ScheduledTaskStore.consume(context, id) ?: return
         val service = NovaService.instance
-        if (service != null && NovaService.running) {
+        if (service != null && NovaService.running && service.isAliveNow()) {
             service.onScheduledTask(entry)
         } else {
             notifySkipped(context, entry)
         }
+    }
+
+    /** v7.12: one notice for one-shot jobs that were due while the phone was off / the app was updated. */
+    fun notifyMissed(context: Context, labels: List<String>) {
+        if (labels.isEmpty()) return
+        try {
+            val nm = context.getSystemService(NotificationManager::class.java) ?: return
+            if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(NotificationChannel("nova_schedule", "NOVA Scheduled Tasks", NotificationManager.IMPORTANCE_HIGH))
+            val open = PendingIntent.getActivity(context, 7431, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val n = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, "nova_schedule") else Notification.Builder(context)
+            n.setContentTitle("NOVA: " + labels.size + " task miss ho gaya")
+                .setContentText(labels.take(3).joinToString(", ") + " - tay waqt par phone band tha / app update hua. Zaroorat ho to dobara set karo.")
+                .setSmallIcon(android.R.drawable.ic_dialog_info).setContentIntent(open).setAutoCancel(true)
+            nm.notify(7431, n.build())
+        } catch (ignored: Exception) { ErrLog.add("ScheduledTaskReceiver", ignored.toString()) }
     }
 
     private fun notifySkipped(context: Context, entry: ScheduledTaskStore.Entry) {

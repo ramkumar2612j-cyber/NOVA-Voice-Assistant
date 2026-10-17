@@ -75,10 +75,10 @@ class VideoRecordService : Service() {
         starting = true
         if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            lastStatus = "permission"; starting = false; stopSelf(); return
+            lastStatus = "permission"; starting = false; notifyResult(lastStatus); stopSelf(); return
         }
         if (Build.VERSION.SDK_INT >= 34 && !NovaService.uiVisible) {
-            lastStatus = "not_visible"; starting = false; stopSelf(); return
+            lastStatus = "not_visible"; starting = false; notifyResult(lastStatus); stopSelf(); return
         }
         try {
             startForegroundCompat(notification(true))
@@ -151,6 +151,7 @@ class VideoRecordService : Service() {
             active = false
             cleanupCapture(finalize = false)
             starting = false
+            notifyResult(lastStatus)
             stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
         }
     }
@@ -180,11 +181,12 @@ class VideoRecordService : Service() {
         starting = true // keep NovaService's AudioRecord paused until MediaRecorder has released the mic
         val f = temp
         val elapsed = System.currentTimeMillis() - startedAt
-        cleanupCapture(finalize = true)
+        val stopOk = cleanupCapture(finalize = true)   // v7.12: false = MediaRecorder.stop() failed, the mp4 may be broken: never exported or called saved
         var saved = false
-        if (f != null && f.exists() && f.length() >= 16_384L) saved = exportVideo(f)
+        if (stopOk && f != null && f.exists() && f.length() >= 16_384L) saved = exportVideo(f)
         lastStatus = when {
             reason == "no_frames" -> "no_frames"
+            !stopOk -> "stop_failed"
             saved && reason == "max" -> "saved_max"
             saved && reason == "space" -> "saved_space"
             saved -> "saved"
@@ -194,12 +196,14 @@ class VideoRecordService : Service() {
         else if (f != null && f.exists() && f.length() < 16_384L) try { f.delete() } catch (ignored: Exception) { }
         starting = false
         try { getSystemService(NotificationManager::class.java).cancel(2) } catch (ignored: Exception) { }
+        notifyResult(lastStatus)   // v7.12: a visible result, also for auto-stops
         stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
     }
 
-    private fun cleanupCapture(finalize: Boolean) {
+    private fun cleanupCapture(finalize: Boolean): Boolean {
         active = false
-        try { recorder?.let { if (finalize) try { it.stop() } catch (ignored: Exception) { }; it.reset(); it.release() } } catch (ignored: Exception) { }
+        var stopOk = true
+        try { recorder?.let { if (finalize) try { it.stop() } catch (ignored: Exception) { stopOk = false; ErrLog.add("VideoRecordService", "MediaRecorder.stop failed: " + ignored) }; it.reset(); it.release() } } catch (ignored: Exception) { }
         recorder = null
         try { camera?.stopPreview() } catch (ignored: Exception) { ErrLog.add("VideoRecordService", ignored.toString()) }
         try { camera?.lock() } catch (ignored: Exception) { ErrLog.add("VideoRecordService", ignored.toString()) }
@@ -207,6 +211,19 @@ class VideoRecordService : Service() {
         camera = null
         try { wake?.let { if (it.isHeld) it.release() } } catch (ignored: Exception) { }
         wake = null
+        return stopOk
+    }
+
+    /** v7.12: the result of a recording (saved / failed / never started) as a normal notification that stays until swiped away. */
+    private fun notifyResult(status: String) {
+        val t = VideoResultRules.forStatus(status) ?: return
+        try {
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+            if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("nova_video", "NOVA video", NotificationManager.IMPORTANCE_LOW))
+            val n = Notification.Builder(this, "nova_video").setContentTitle(t.title).setContentText(t.body)
+                .setStyle(Notification.BigTextStyle().bigText(t.body)).setSmallIcon(android.R.drawable.ic_menu_camera).setAutoCancel(true).build()
+            nm.notify(3, n)
+        } catch (ignored: Exception) { ErrLog.add("VideoRecordService", ignored.toString()) }
     }
 
     private fun exportVideo(file: File): Boolean {

@@ -58,6 +58,8 @@ object HealthCheck {
             sb.append('\n')
         }
         sb.append(ErrLog.dump(System.currentTimeMillis())).append('\n')
+        sb.append(AutoTrace.summary()).append('\n')   // v7.34 PART 5: what the auto routing did
+        sb.append(FeatureVerify.healthLines()).append('\n')   // v7.35: result of the automatic feature + wiring check
         return sb.toString()
     }
 

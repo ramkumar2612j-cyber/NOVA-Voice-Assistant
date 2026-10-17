@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class NovaService : Service() {
 
     companion object {
-        private const val MAX_FOLLOW = 3   // v16: at most 3 follow-up listens in a row without the wake word
+        private const val MAX_FOLLOW = 6   // v6.97-wip9: natural talk, up to 6 follow-up listens in a row without the wake word
         private val NO_FOLLOW_KINDS = setOf("stop", "sleep", "agent", "image", "site", "learn", "publish", "screen_end", "rec")
         const val ACTION_REC_STOP = "com.nova.assistant.REC_STOP"   // PART 6A: the STOP button of the recording notification
         @Volatile var running = false
@@ -77,11 +77,15 @@ class NovaService : Service() {
         @Volatile var uiVisible = false          // set by MainActivity.onResume/onPause (PART 2)
         var listener: ((String, String) -> Unit)? = null
         var contactChoiceListener: ((List<ContactCandidate>, (ContactCandidate?) -> Unit) -> Unit)? = null
+        /** wip13: popup "which song?" - labels in, tapped index (or null = cancel) out. */
+        var songChoiceListener: ((List<String>, (Int?) -> Unit) -> Unit)? = null
         var permRequest: ((String) -> Unit)? = null   // v31: the open app shows the Android permission dialog at the moment a command needs it
         var publishListener: ((Boolean, String, String) -> Unit)? = null   // v16: voice publish finished -> chat screen (ok, message, url)
         var learnListener: (() -> Unit)? = null   // v16: a new note arrived -> refresh Settings > KYA SEEKHA
+        var askListener: ((String) -> Unit)? = null   // v7.1: yes/no question waiting ("" = none) -> chat screen shows HAAN / NAHI
         @Volatile var lastSiteSubject = ""   // v16: the newest built website, so PUBLISH in the chat can send it
         @Volatile var lastSiteHtml = ""
+        @Volatile var lastSiteTemplate = ""   // v7.0: the page with short media tokens (what the AI edits); lastSiteHtml has the photos/videos embedded
         @Volatile var lastSiteAtMs = 0L   // v6.90: a follow-up ("isko professional banao") only refers to a site built in the last 30 minutes
         var siteListener: ((Boolean, String, String, String) -> Unit)? = null   // v16: finished website -> chat screen (ok, message, html, saved place)
         var imageListener: ((Boolean, String, String, String) -> Unit)? = null   // v30: finished picture -> chat screen (ok, message, base64 thumb, saved place)
@@ -95,9 +99,55 @@ class NovaService : Service() {
     }
 
     /** An action that waits for the user's spoken "yes" (call, WhatsApp send). Expires after PENDING_TTL_MS. */
-    private class Pending(val prompt: String, val createdAt: Long, val onNo: (() -> Unit)? = null, val run: () -> String)
+    private class Pending(val prompt: String, val createdAt: Long, val onNo: (() -> Unit)? = null, val run: () -> String) {
+        /** music "try another app?" question: a song name instead of yes/no asks again instead of cancelling */
+        @Volatile var reaskOnUnclear = false
+    }
 
     /** v6.67: a yes/no lives 30 s; a question asked by a running job (list number, message) gets 60 s because speaking it takes time too. */
+    /** Only a plain yes/no question gets buttons; a question answered by a name, a number or a dictated message does not. */
+    private fun plainYesNo(p: Pending?): Boolean = p != null && p !== agentAnsPending && p !== dictatePending && p !== contactRetryPending
+
+    private fun askChanged() {
+        h.post {
+            val p = pendingRaw
+            val yn = plainYesNo(p)
+            try { hud?.setAsk(yn) } catch (e: Throwable) { }
+            try { askListener?.invoke(if (yn) (p?.prompt ?: "") else "") } catch (e: Throwable) { }
+        }
+    }
+
+    /** Prompt of the yes/no question that is waiting right now ("" = none). */
+    fun pendingPromptNow(): String = pendingRaw.let { if (plainYesNo(it)) (it?.prompt ?: "") else "" }
+
+    /** v7.1: the owner TAPPED HAAN / NAHI (floating card or chat). Same path as a spoken answer; ok / none / busy / off. */
+    fun answerPending(yes: Boolean): String {
+        if (!alive) return "off"
+        val p = pendingRaw
+        if (!plainYesNo(p)) return "none"
+        val said = if (yes) tr("haan", "yes") else tr("nahi", "no")
+        if (busy) {
+            // the tap is not lost while NOVA is still speaking or working: it waits (up to 10 s) and then answers the same question
+            Thread {
+                var n = 0
+                while (busy && n < 40) {
+                    try { Thread.sleep(250) } catch (x: InterruptedException) { return@Thread }
+                    n++
+                }
+                if (!busy && alive && pendingRaw === p) {
+                    busy = true
+                    mode("think")
+                    processAnswer(said)
+                }
+            }.start()
+            return "ok"
+        }
+        busy = true
+        mode("think")
+        Thread { processAnswer(said) }.start()
+        return "ok"
+    }
+
     private fun pendingTtl(p: Pending?): Long = if (p != null && p === agentAnsPending) 60000L else Logic.PENDING_TTL_MS
 
     private val h = Handler(Looper.getMainLooper())
@@ -113,9 +163,12 @@ class NovaService : Service() {
     private val uttSeq = AtomicInteger(0)
 
     @Volatile private var busy = false              // a turn is being processed
-    @Volatile private var stopEpoch = 0             // v6.99 Part 2: +1 on every spoken STOP; picture / website jobs compare it when they finish
     @Volatile private var listening = false         // the loop is capturing a command / answer
-    @Volatile private var pending: Pending? = null
+    @Volatile private var pendingRaw: Pending? = null
+    /** v7.1: every change of the waiting yes/no question is mirrored to the floating card and the chat (HAAN / NAHI buttons). */
+    private var pending: Pending?
+        get() = pendingRaw
+        set(v) { pendingRaw = v; askChanged() }
     @Volatile private var contactRetryPending: Pending? = null // user may repeat/correct a contact lookup; never approves an action
 
     // PART 3 (silent turn): set per order when the owner adds "chup rehna" / "bina bole" / "don't speak". See SilentRules.
@@ -218,7 +271,7 @@ class NovaService : Service() {
     @Volatile private var micRef: AudioRecord? = null
     private var watchStopRun: Runnable? = null
 
-    /** v6.98: the calling watch's AI button (Bluetooth voice command) = wake word on the WATCH mic. Ignored while the phone is locked. */
+    /** v6.97-wip9: the calling watch's AI button (Bluetooth voice command) = wake word on the WATCH mic. Ignored while the phone is locked. */
     fun wakeFromWatch(): Boolean {
         if (!alive || busy || lockQuiet()) return false
         val rc = micRef
@@ -237,14 +290,18 @@ class NovaService : Service() {
         return true
     }
 
+    /** v7.08: true only while THIS instance's loop is alive (ScheduledTaskReceiver uses it so a dead loop never swallows a task). */
+    fun isAliveNow(): Boolean = alive
+
     fun wakeNow() { if (alive && !busy && !ttsActive) wakeRequest = true }
 
-    private var overlayNudged = false
+    private var overlayNudgedAt = 0L   // v7.08: re-nudge after OverlayNudgeRules.RENUDGE_MS instead of once per service life
 
     /** The card is a silent no-op without "Display over other apps": say so ONCE, with a tap-to-fix notification. */
     private fun overlayNudge() {
-        if (overlayNudged) return
-        overlayNudged = true
+        val nowMs = System.currentTimeMillis()
+        if (!OverlayNudgeRules.due(overlayNudgedAt, nowMs)) return
+        overlayNudgedAt = nowMs
         val msg = tr(
             "Card dikhane ke liye 'Display over other apps' allow karo. Notification par tap karo.",
             "To see the card, allow 'Display over other apps'. Tap the notification."
@@ -364,7 +421,21 @@ class NovaService : Service() {
         try { registerSysReceiver(batteryLowRx, IntentFilter(Intent.ACTION_BATTERY_LOW)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
         try { registerSysReceiver(batteryWatchRx, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
         try { registerSysReceiver(userPresentRx, IntentFilter(Intent.ACTION_USER_PRESENT)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }   // v6.40: morning greeting on the first phone open   // v6.40: 50/40/30/20/10 % alerts + 5 % family message
-        hud = NovaHud(this)
+        hud = NovaHud(this).also {
+            it.onAnswer = { yes -> answerPending(yes) }
+            it.onTyped = { text -> typed(text) }
+            it.silentOn = cfg.silentMode
+            it.onSilentToggle = { cfg.silentMode = !cfg.silentMode; cfg.silentMode }
+            it.onStop = {
+                // A deliberate STOP never confirms a pending call/message. Destroying the service
+                // cancels the agent token and releases speech + microphone through onDestroy().
+                agentCancel = true
+                pending = null; dictatePending = null; dictTarget = null
+                answerWindow = false; followWindow = false
+                stopSpeaking()
+                stopSelf()
+            }
+        }
         // Android Keystore work (slow on many phones) and the task-ledger repair are not needed to show the screen: background thread.
         val appCtx = applicationContext
         Thread {
@@ -509,7 +580,7 @@ class NovaService : Service() {
             if (st == TextToSpeech.SUCCESS && t != null) {
                 cfg.applyVoice(t)
                 t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(id: String?) {}
+                    override fun onStart(id: String?) { if (id != null && id == curUtt) emit("mode", "speak") }   // v7.12: HUD speaking state
                     override fun onDone(id: String?) { utteranceEnded(id, true) }
                     @Deprecated("Deprecated in Java")
                     override fun onError(id: String?) { utteranceEnded(id, false) }
@@ -525,6 +596,7 @@ class NovaService : Service() {
     private fun utteranceEnded(id: String?, finished: Boolean) {
         if (id == null || id != curUtt) return
         ttsActive = false
+        emit("mode", "speak_end")   // v7.12: HUD leaves the speaking state
         if (finished && id == confirmUtt) answerWindow = true
         if (finished && id == replyUtt) {
             val ss = scrState
@@ -541,20 +613,24 @@ class NovaService : Service() {
             emit("ai", ChatText.clean(text))
             h.post { hud?.setReply(text) }
         }
+        // Persistent SILENT suppresses ordinary speech, but never a safety confirmation.
+        // Text is still emitted above to chat/HUD so the user can read it.
+        if (cfg.silentMode && !confirm) return false
         val t = tts
         if (t == null || !ttsReady) {
             if (confirm) answerWindow = true   // no voice: the user can still read the question and answer
             return false
         }
         cfg.applyVoice(t)
+        val spoken = if (text.contains('\n') || text.contains("```") || text.contains("**")) FreeProviders.speakable(text).ifBlank { text } else text   // v7.3: a long chat answer is read without markdown / code
         val id = "u" + uttSeq.incrementAndGet()
         curUtt = id
         confirmUtt = if (confirm) id else ""
         replyUtt = if (nextFollow && !confirm) id else ""
         nextFollow = false
         ttsActive = true                                 // BEFORE speak(), so the loop can never hear our own voice
-        ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + text.length * 90L)
-        val r = try { t.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
+        ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + spoken.length * 90L)
+        val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
             ttsActive = false
             if (confirm) answerWindow = true
@@ -654,10 +730,11 @@ class NovaService : Service() {
 
     /** Typed chat: runs exactly like a spoken command. A typed "yes" never approves a risky action (that needs the spoken yes). */
     @Volatile private var typedTurn = false   // v6.64: this turn came from the chat box, not from the microphone
+    @Volatile private var richTurn = false    // v7.1: typed chat turn -> ChatGPT/Claude style long answer from the backup AIs (reset in finishTurn)
 
     /** v6.64: the speaker icon on a chat message. Speaks exactly that text once; never starts a command. */
     fun speakClick(text: String) {
-        val t = ChatText.clean(text).take(1500)
+        val t = FreeProviders.speakable(ChatText.clean(text), 1500)
         if (t.isBlank()) return
         h.post { if (alive) { cfg.applyVoice(tts); speak(t, false, false) } }
     }
@@ -666,6 +743,7 @@ class NovaService : Service() {
         if (!alive) return "off"
         if (busy) return "busy"
         typedTurn = true
+        richTurn = true
         busy = true
         turnIsFollow = false   // v33: typed text never counts as a spoken follow-up
         val stamp = System.currentTimeMillis()
@@ -686,7 +764,7 @@ class NovaService : Service() {
     fun speakTest(text: String) { cfg.applyVoice(tts); speak(text, false, false) }
 
     /** Used by the Accessibility alert monitor. False when NOVA is busy / listening / waiting for "yes". */
-    // v6.98 LOCK GUARD: while the phone is locked NOVA hears no commands and reads no normal message. Checked at most every 0.7 s.
+    // v6.97-wip9 LOCK GUARD: while the phone is locked NOVA hears no commands and reads no normal message. Checked at most every 0.7 s.
     @Volatile private var lockQuietAt = 0L
     @Volatile private var lockQuietVal = false
     private fun lockQuiet(): Boolean {
@@ -702,7 +780,7 @@ class NovaService : Service() {
     fun onLockAlertShown(line: String) { if (alive) h.post { sys("LOCK: $line") } }
 
     fun announceIfIdle(text: String): Boolean {
-        if (lockQuiet()) return false   // v6.98: locked phone = no normal message announcements
+        if (lockQuiet()) return false   // v6.97-wip9: locked phone = no normal message announcements
         if (!alive || busy || listening || ttsActive || pending != null || !ttsReady) return false
         if (!ListenGuard.mayAnnounce(lastVoiceAt, System.currentTimeMillis())) return false   // PART 4: never talk over people
         if (Looper.myLooper() == Looper.getMainLooper()) return say(text)
@@ -969,7 +1047,7 @@ class NovaService : Service() {
                     wasBlocked = true
                     continue
                 }
-                if (lockQuiet()) {           // v6.98 LOCK GUARD: locked phone = no wake word, no command, nothing is listened to
+                if (lockQuiet()) {           // v6.97-wip9 LOCK GUARD: locked phone = no wake word, no command, nothing is listened to
                     capturing = false
                     listening = false
                     wasBlocked = true
@@ -1086,7 +1164,7 @@ class NovaService : Service() {
                     // per-setting / fast-command shortcuts so app names and long Hinglish requests are not cut off.
                     val maxMs = if (dictCapture) Logic.MAX_DICTATION_MS else if (answerCapture) Logic.MAX_ANSWER_MS else Logic.MAX_COMMAND_MS
                     val noSpeechMs = if (dictCapture) Logic.NO_SPEECH_DICTATION_MS else if (answerCapture) Logic.NO_SPEECH_ANSWER_MS else Logic.NO_SPEECH_COMMAND_MS
-                    val silenceMs = if (dictCapture) Logic.DICTATION_SILENCE_MS else if (answerCapture) 1500 else CaptureRules.adaptiveSilence(cmdText.toString(), Logic.END_SILENCE_MS)   // v6.98: long or unfinished sentence = a little more time
+                    val silenceMs = if (dictCapture) Logic.DICTATION_SILENCE_MS else if (answerCapture) 1500 else CaptureRules.adaptiveSilence(cmdText.toString(), Logic.END_SILENCE_MS)   // v6.97-wip9: long or unfinished sentence = a little more time
                     val end = endpoint || CaptureRules.shouldEnd(heard, silentMs, totalMs, silenceMs, maxMs, noSpeechMs)
                     if (end) {
                         capturing = false
@@ -1169,6 +1247,7 @@ class NovaService : Service() {
     private fun finishTurn(reply: String, kind: String? = null) {
         val chatQuiet = typedTurn && !ExtCfg.chatSpeak(this)   // v6.64: chat answers are read, not spoken, unless the owner switched speaking ON
         typedTurn = false
+        richTurn = false
         val silent = silentTurn
         val failed = turnFailed
         val oks: List<String> = synchronized(turnOk) { ArrayList(turnOk) }
@@ -1384,6 +1463,8 @@ class NovaService : Service() {
                 "Schedule saved, but Android exact-alarm access is off, so it may be delayed. For exact timing, allow NOVA under Settings > Special app access > Alarms & reminders.")
             "message_incomplete_or_sensitive" -> tr("Message schedule save nahi kiya: contact/text missing hai ya text OTP/password jaisa lagta hai. Sensitive codes schedule nahi karunga.",
                 "I did not save the scheduled message: recipient/text is missing or the text looks like an OTP/password. I will not schedule sensitive codes.")
+            "alarm_failed" -> tr("Schedule list me save hai, lekin Android ne alarm lagane se mana kar diya, isliye time par nahi bajega. NOVA ko dobara kholo ya Alarms & reminders ki permission check karo.",
+                "The schedule is saved, but Android refused to set the alarm, so it will not ring on time. Reopen NOVA or check the Alarms & reminders permission.")
             "limit" -> tr("30 schedules ki limit poori hai. Pehle schedule list mein se kuch hatao.", "The 30-schedule limit is full. Cancel an old one first.")
             else -> tr("Schedule save nahi ho paya.", "Could not save the schedule.")
         }
@@ -1451,7 +1532,7 @@ class NovaService : Service() {
 
     private fun bizAuto(on: Boolean): String {
         if (!WaBiz.active(System.currentTimeMillis())) return tr("Pehle 'business watch 10 ghante' bolo.", "Say business watch 10 hours first.")
-        if (on && WaBiz.catalogue.isEmpty()) return tr("Catalogue khaali hai. Pehle bolo: business catalogue rate matlab kurti 499 se shuru.", "Catalogue is empty. Say: business catalogue rate matlab kurti starts at 499.")
+        if (on && WaBiz.catalogue.isEmpty() && !ActionLog.smartReplyOn(this)) return tr("Catalogue khaali hai. Pehle bolo: business catalogue rate matlab kurti 499 se shuru.", "Catalogue is empty. Say: business catalogue rate matlab kurti starts at 499.")
         WaBiz.setAuto(on)
         return if (on) tr("Auto reply ON: sirf aapke catalogue wale sawaalon ke jawab jayenge. Paise, discount, complaint, order aapko hi batayenge.", "Auto reply on: only questions answered by your catalogue. Money, discount, complaints and orders come to you.")
         else tr("Auto reply band, ab sirf approval mode.", "Auto reply off, approval mode only.")
@@ -1486,39 +1567,85 @@ class NovaService : Service() {
             else tr("$sender ko $app par jawab nahi bhej paya", "I could not reply to $sender on $app"))
     }
 
-    /** v6.98: an insulting Instagram / WhatsApp message or comment. NOVA did not reply; the text is never read aloud. */
-    fun onSocialInsult(sender: String, app: String, report: Boolean) {
-        if (!alive) return
-        announceIfIdle(tr("$sender ne $app par beizzati wala message ya comment kiya. Jawab nahi diya" + (if (report) ", report karna hai" else ""),
-            "$sender sent an insulting message or comment on $app. I did not reply" + (if (report) " and it needs a report" else "")))
+    /**
+     * Part 7 AI SMART REPLY: ONE blocking AI call. Call it from a background thread, never the main thread.
+     * null = no AI answered (the caller then sends the owner's fixed auto-reply text). Safety rules are in SmartReplyRules.
+     */
+    fun smartDraft(sender: String, incoming: String, business: Boolean = false): SmartReplyRules.Result? {
+        if (!alive || !ExtCfg.freeChain(this)) return null
+        val en = cfg.lang == "en"
+        val keyless = ExtCfg.freeKeyless(this)
+        val r = ProviderChain.run(
+            rankedProviders(),
+            { name ->
+                when (name) {
+                    "groq" -> SecureStore.getGroq(this)
+                    "openrouter" -> SecureStore.getSlot(this, "openrouter")
+                    "zai" -> SecureStore.getSlot(this, "zai")
+                    "zai2" -> SecureStore.getSlot(this, "zai2")
+                    "zai3" -> SecureStore.getSlot(this, "zai3")
+                    else -> ""
+                }
+            },
+            { id -> id != "pollinations" || keyless },
+            SmartReplyRules.systemPrompt(ActionLog.ownerName(this), !en, business, SmartReplyRules.convo.facts(sender)),
+            incoming.take(500),
+            freeCooldowns,
+            { System.currentTimeMillis() },
+            budgetMs = 12_000L,
+            turns = SmartReplyRules.convo.turns(sender),
+            accept = { t -> SmartReplyRules.parse(t) != null }
+        ) { p, _, body, key -> rankedCall(p, body, key) }
+        val res = SmartReplyRules.parse(r.text) ?: return null
+        var out = res
+        if (!res.skip) {
+            if (SmartReplyRules.unsafeReason(res.text) != null) out = SmartReplyRules.Result(SmartReplyRules.HOLD_LINE, true, false)
+            else if (!res.needOwner && SmartReplyRules.ownerMust(incoming)) out = SmartReplyRules.Result(res.text, true, false)
+        }
+        SmartReplyRules.convo.add(sender, "user", incoming)
+        if (!out.skip) SmartReplyRules.convo.add(sender, "assistant", out.text)
+        return out
     }
 
-    private val smartExec: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newCachedThreadPool()
-
     /**
-     * v6.99 Part 3 AI SMART REPLY. Called from the notification listener AFTER the rate gate allowed a reply.
-     * Returns ONE raw AI reply (the caller cleans it with SmartReplyRules.pick) or null = use the fixed reply.
-     * Runs on a worker thread with a hard timeout (SmartReplyRules.TIMEOUT_MS). Needs: switch ON, free AI chain with a key,
-     * and a message that SmartReplyRules.allowedForAi accepts (no money / OTP / link / long number ever goes to a cloud AI).
+     * Part 8: AI SMART REPLY on/off by voice. NEVER silent: it always asks "haan ya nahi" first (turning ON uses must=true, so only the owner's
+     * explicit "no risky confirmation" setting can skip it; turning OFF asks like any ordinary task). Nothing else about the rules changes.
      */
-    fun smartReply(sender: String, text: String): String? {
-        if (!ExtCfg.smartReply(this) || !agentChainReady()) return null
-        if (!SmartReplyRules.allowedForAi(text)) return null
-        return try {
-            val en = cfg.lang == "en"
-            val f = smartExec.submit(java.util.concurrent.Callable<String?> {
-                agentChain(SmartReplyRules.systemPrompt(en), SmartReplyRules.userPrompt(sender, text))
-            })
-            try {
-                f.get(SmartReplyRules.TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
-            } catch (t: java.util.concurrent.TimeoutException) {
-                f.cancel(true)
-                null
+    private fun smartReplyVoice(on: Boolean): String {
+        if (ActionLog.smartReplyOn(this) == on) return if (on) tr("AI smart reply pehle se ON hai.", "AI smart reply is already on.") else tr("AI smart reply pehle se band hai.", "AI smart reply is already off.")
+        val q = if (on) tr("AI smart reply ON karun? NOVA aapke assistant ke taur par WhatsApp jaise chat mein khud baat karega, jo use pata nahi wo aapse puchega, aur har baat aapko batayega. Haan ya nahi bolo.",
+            "Turn AI smart reply on? NOVA will chat as your assistant by itself, ask you about anything it does not know, and tell you about every chat. Say yes or no.")
+        else tr("AI smart reply band karun? Phir sirf aapka fixed text jayega. Haan ya nahi bolo.", "Turn AI smart reply off? Only your fixed text will be sent. Say yes or no.")
+        return askFirst(q, on) {
+            ActionLog.setSmartReply(this, on)
+            if (!on) tr("AI smart reply band. Ab sirf fixed text jayega.", "AI smart reply is off. Only your fixed text is sent.")
+            else {
+                val notes = ArrayList<String>()
+                if (!DrivingBridge.listenerEnabled(this)) notes.add(tr("Notification access abhi OFF hai, Android Settings mein NOVA ke liye ON karo, warna jawab nahi jayega.", "Notification access is still off; turn it on for NOVA in Android Settings or no reply goes out."))
+                if (!ActionLog.autoReplyOn(this)) notes.add(tr("Auto reply abhi band hai, wo bhi ON karna padega.", "Auto reply is off; it must be on too."))
+                if (!ExtCfg.freeChain(this)) notes.add(tr("AI chain ON nahi hai, isliye abhi fixed text jayega.", "The AI chain is not on, so the fixed text is sent for now."))
+                tr("AI smart reply ON.", "AI smart reply is on.") + (if (notes.isEmpty()) "" else " " + notes.joinToString(" "))
             }
-        } catch (t: Throwable) {
-            ErrLog.add("SmartReply", t.javaClass.simpleName)
-            null
         }
+    }
+
+    /** Part 8: Auto-reply on/off by voice, same rule: always asks first. The saved reply text is kept as it is. */
+    private fun autoReplyVoice(on: Boolean): String {
+        if (ActionLog.autoReplyOn(this) == on) return if (on) tr("Auto reply pehle se ON hai.", "Auto reply is already on.") else tr("Auto reply pehle se band hai.", "Auto reply is already off.")
+        val q = if (on) tr("Auto reply ON karun? Naya message aate hi NOVA aapke text se jawab bhejega aur baad mein batayega. Haan ya nahi bolo.",
+            "Turn auto reply on? NOVA will answer new messages with your text at once and tell you afterwards. Say yes or no.")
+        else tr("Auto reply band karun? Haan ya nahi bolo.", "Turn auto reply off? Say yes or no.")
+        return askFirst(q, on) {
+            ActionLog.setAutoReply(this, on, ActionLog.autoReplyText(this))
+            if (on) tr("Auto reply ON. Group, code aur bina Reply button wale message ko jawab nahi jayega.", "Auto reply is on. Groups, codes and messages without a Reply button get no answer.")
+            else tr("Auto reply band.", "Auto reply is off.")
+        }
+    }
+
+    /** Part 7: told AFTER the AI chatted for the owner (the phone notification and the history entry are made by the listener). */
+    fun onSmartReplied(line: String) {
+        if (!alive) return
+        announceIfIdle(line)
     }
 
     fun onMessageModeMessage(m: Driving.Msg) {
@@ -1611,10 +1738,6 @@ class NovaService : Service() {
         }
         Driving.enabled = true
         drivingHintShown = false
-        if (ExtCfg.skipOrderConfirm(this)) return tr(
-            "Driving mode chalu. Naye messages main bol kar sunaunga. Jawab bologe to seedha bhej dunga aur bhejne ke baad bata dunga.",
-            "Driving mode is on. I will read new messages aloud, and I send a reply at once when you order it, then tell you."
-        )
         return tr(
             "Driving mode chalu. Naye messages main bol kar sunaunga. Jawab bhejne se pehle main aapse haan poochunga.",
             "Driving mode is on. I will read new messages aloud, and I always ask for your yes before sending a reply."
@@ -1824,6 +1947,7 @@ class NovaService : Service() {
     /** First = true when a recording is running after this call. Second = the text to show / speak. */
     private fun startRecording(): Pair<Boolean, String> {
         if (!alive || instance !== this) return Pair(false, recText("no_nova"))
+        if (VideoRecordService.isBusy()) return Pair(false, recText("start_failed", tr("video recording mic use kar rahi hai, pehle usse band karo", "a video recording is using the microphone, stop it first")))
         if (RecordSession.active) return Pair(true, recText("already", RecordRules.fmtDur(RecordSession.elapsedMs(), enLang())))
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             return Pair(false, recText("start_failed", tr("mic permission nahi hai", "no microphone permission")))
@@ -1868,7 +1992,8 @@ class NovaService : Service() {
             if (s.dropped > 0) t += tr(" (kareeb ${s.dropped / 10 + 1} sec ki awaaz chhoot gayi)", " (about ${s.dropped / 10 + 1} s of audio was skipped)")
             body = recText("saved", t)
         }
-        return if (why == "max" || why == "space" || why == "error") recText("auto_$why") + " " + body else body
+        val warn = if (s.writerError.isNotBlank() && s.files > 0) " " + recText("writer_err") else ""
+        return if (why == "max" || why == "space" || why == "error") recText("auto_$why") + " " + body + warn else body + warn
     }
 
     private fun runRecording(r: RecordRules.Req): String {
@@ -1973,11 +2098,32 @@ class NovaService : Service() {
             return ConfigReport.report(configState(), cfg.lang == "en")
         }
         if (text.isNotBlank() && AgentTaskRules.isStatusQuery(text)) return AgentTaskLedger(this).statusText()
+        // v7.34 PART 5: "auto kya samjha" = the last auto decisions, answered locally from AutoTrace (read-only, no AI call).
+        if (text.isNotBlank() && AutoTrace.isAsk(text)) {
+            lastTurnLocal = true
+            lastKind = "auto_trace"
+            return AutoTrace.summary()
+        }
+        // v7.35 AUTO VERIFY: "auto verify status" / "sab features check" = the last automatic check result, answered locally (read-only, no AI call).
+        if (text.isNotBlank() && FeatureVerify.isAsk(text)) {
+            lastTurnLocal = true
+            lastKind = "auto_verify"
+            return FeatureVerify.healthLines()
+        }
         // v6.91 easy help: "tum kya kar sakte ho" / "kya tum website bana sakte ho" is answered locally (no AI, works offline) for typed chat and voice.
-        if (text.isNotBlank() && HelpGuide.isAsk(text)) {
+        if (text.isNotBlank() && SiteIntent.parse(text) == null && HelpGuide.isAsk(text)) {   // wip11: a "website banao ... nova kya kar sakta h" brief is a BUILD request, not a help question
             lastTurnLocal = true
             lastKind = "help_guide"
             return HelpGuide.answer(text, cfg.lang == "en")
+        }
+        // Part 5: spoken STATUS of Auto-reply / Routines / Lock Guard / Battery alert / Offline pack / API limits. Read-only: it never changes a setting.
+        if (text.isNotBlank()) {
+            val fv = FeatureVoice.key(text)
+            if (fv != null) {
+                lastTurnLocal = true
+                lastKind = "feature_status"
+                return FeatureVoice.reply(fv, FeatureVoice.read(this, fv), cfg.lang == "en")
+            }
         }
         // v6.97 "kahan se jawab": which real source answers which need (SourceMap), answered locally, no AI.
         if (text.isNotBlank() && SourceMap.isAsk(text)) {
@@ -2010,6 +2156,10 @@ class NovaService : Service() {
                 "For leads, open a target business's public listing in Google Maps or your browser, then say 'lead capture'. I can save visible public details and draft outreach; this build does not independently search the web for new leads. I will not create a website for this request."
             )
         }
+        if (text.isNotBlank()) {   // v7.05 H: "vercel par publish karo" / "lovable par daalo"
+            val pt = PublishTarget.parse(text)
+            if (pt != null) { lastTurnLocal = false; lastKind = "publish"; return publishTargetBegin(pt) }
+        }
         if (text.isNotBlank() && SiteIntent.isPublish(text)) {   // v16: website publishing is an explicit special route
             lastTurnLocal = false
             lastKind = "publish"
@@ -2036,6 +2186,9 @@ class NovaService : Service() {
             lastKind = "learn"
             return learnBegin(learnReq)
         }
+        // v7.08 PART 5: website with photo / video words, or "video banao" (old SiteIntent refuses photo words)
+        val mediaAns = if (text.isBlank()) null else mediaRoute(text)
+        if (mediaAns != null) return mediaAns
         val siteReq = if (text.isBlank()) null else (SiteIntent.parse(text) ?: siteFollowUp(text))
         if (siteReq != null) {
             lastTurnLocal = false
@@ -2048,12 +2201,40 @@ class NovaService : Service() {
             lastKind = "image"
             return imageBegin(imgReq)
         }
+        // v7.30 PART 1 AUTO INTENT: free wording ("mujhe ek logo chahiye", "gym ke liye site chahiye") is understood by NOVA itself; no IMAGE / WEBSITE switch. Runs only when every strict route above said no.
+        val autoReq = if (text.isBlank()) null else try { AutoIntent.detect(text, false) } catch (e: Throwable) { null }
+        // v7.34 PART 5: LOG of the auto decision (add-only, runs before the routes below return). Never the full sentence: only kind + short subject.
+        // (kind is compared by name: the old guard tools/test_auto_intent_contract.py forbids the WRITE enum constant inside NovaService.)
+        if (autoReq != null && autoReq.kind.name != "NONE" && autoReq.kind.name != "PHOTO_EDIT") {
+            try {
+                val tk = autoReq.kind.name
+                val isWrite = tk == "WRITE"
+                val tr = if (tk == "SITE") "siteBegin" else if (tk == "IMAGE") "imageBegin" else "ai_chat"
+                val tres = if (isWrite) "hint" else if (autoReq.blocked) "blocked" else "started"
+                AutoTrace.add(tk, autoReq.subject, tr, tres)
+                if (!isWrite) {
+                    ActionLog.add(this, "NOVA AUTO", "NOVA", "", if (autoReq.blocked) "skipped" else "sent", tk + " + " + AutoTrace.cleanSubject(autoReq.subject))
+                }
+            } catch (e: Throwable) {
+                try { ErrLog.add("AutoIntent", "auto log failed: " + (e.message ?: e.javaClass.simpleName)) } catch (e2: Throwable) { }
+            }
+        }
+        if (autoReq != null && autoReq.kind == AutoIntent.Kind.SITE) {
+            lastTurnLocal = false
+            lastKind = "site"
+            return siteBegin(SiteIntent.Parsed(autoReq.subject, autoReq.blocked, text.trim().take(SiteIntent.MAX_RAW)))
+        }
+        if (autoReq != null && autoReq.kind == AutoIntent.Kind.IMAGE) {
+            lastTurnLocal = false
+            lastKind = "image"
+            return imageBegin(ImageIntent.Parsed(autoReq.subject, autoReq.blocked))
+        }
         // v6.60: "<music app> kholo aur <song> play karo" plays for real without any AI call (free AI limits cannot block it).
         val musicReq = if (text.isBlank()) null else MusicPlayRules.parse(text)
         if (musicReq != null) {
             lastTurnLocal = true
             lastKind = "music_play"
-            return musicPlay(musicReq).msg
+            return musicBegin(musicReq)
         }
         // v6.92: any installed app: "<app> me <cheez> search/play karo", "ye share karo". Unknown app name = falls through to normal routing.
         // v6.93: Gmail (send, watch list, important mail). Needs a mail word, so ordinary sentences are untouched.
@@ -2187,12 +2368,20 @@ class NovaService : Service() {
                 return runRecording(gr)
             }
         }
+        if (c == null && groqText.isNotBlank()) {
+            val pt2 = PublishTarget.parse(groqText)
+            if (pt2 != null) { lastTurnLocal = false; lastKind = "publish"; return publishTargetBegin(pt2) }
+        }
         if (c == null && groqText.isNotBlank() && SiteIntent.isPublish(groqText)) {
             lastTurnLocal = false; lastKind = "publish"; return publishBegin()
         }
         if (c == null && groqText.isNotBlank()) {
             val lr = LearnRules.parse(groqText)
             if (lr != null) { lastTurnLocal = false; lastKind = "learn"; return learnBegin(lr) }
+        }
+        if (c == null && groqText.isNotBlank()) {
+            val gm = mediaRoute(groqText)
+            if (gm != null) return gm
         }
         if (c == null && groqText.isNotBlank()) {
             val gs = SiteIntent.parse(groqText) ?: siteFollowUp(groqText)
@@ -2206,7 +2395,7 @@ class NovaService : Service() {
         if (musicReq2 != null) {   // v6.60: same no-AI music play for text heard by the cloud listener
             lastTurnLocal = true
             lastKind = "music_play"
-            return musicPlay(musicReq2).msg
+            return musicBegin(musicReq2)
         }
         val gmCmd2 = if (c == null && groqText.isNotBlank()) GmailRules.parse(groqText) else null
         if (gmCmd2 != null) {   // v6.93: same Gmail commands for text heard by the cloud listener
@@ -2331,15 +2520,27 @@ class NovaService : Service() {
         // The result cannot bypass runTool: calls/WhatsApp still ask spoken yes; unsafe tools are not in the allow-list.
         val aiChoice = ExtCfg.chatAi(this)
         val aiFallback = ExtCfg.chatFallback(this)
+        if (aiChoice == AiChoice.LOCAL && !PhoneActionRules.likelyAction(said)) {   // wip11: owner chose the phone's own offline AI
+            val la = try { localAnswer(said, true, false) } catch (e: Exception) { null }
+            if (la != null) return Routing.CloudResult(la, true)
+            if (!aiFallback) return Routing.CloudResult(tr("Phone ka offline AI abhi jawab nahi de paya. AI CHUNO mein AUTO FALLBACK ON karo ya AUTO chuno.", "The phone's offline AI could not answer. Turn AUTO FALLBACK on in the AI picker, or choose AUTO."), false)
+        }
         if (PhoneActionRules.likelyAction(said) && ExtCfg.freeChain(this) && AiChoice.chainAllowed(aiChoice, aiFallback)) {
-            val act = runFreePhoneAction(said, en)
-            if (act != null) {
+            val acts = runFreePhoneAction(said, en)
+            if (acts.isNotEmpty()) {
                 lastKind = "free_action"
                 cloudActed = true
-                val out = try { runTool(act.tool, JSONObject(act.args)) } catch (toolError: Exception) { ErrLog.add("free-action", toolError.javaClass.simpleName); "FAILED: tool error" }
+                val outs = ArrayList<String>()
+                var allOk = true
+                for (act in acts) {   // v7.4: up to 3 actions in the order asked; a call / WhatsApp confirmation stops the list (the yes decides the rest)
+                    val out = try { runTool(act.tool, JSONObject(act.args)) } catch (toolError: Exception) { ErrLog.add("free-action", toolError.javaClass.simpleName); "FAILED: tool error" }
+                    if (out.startsWith("FAILED", true)) allOk = false
+                    outs.add(out)
+                    if (pending != null) break
+                }
                 val wait = pending
                 if (wait != null) { remember(said, wait.prompt); return Routing.CloudResult(wait.prompt, true, true) }
-                return Routing.CloudResult(out, !out.startsWith("FAILED", true), true)
+                return Routing.CloudResult(outs.joinToString(". "), allOk, true)
             }
         }
         var geminiFail = ""
@@ -2364,12 +2565,15 @@ class NovaService : Service() {
         //    answered locally by LocalChat.preAnswer and never leave the phone. Only the spoken question is sent.
         var chainKind = ""
         if (AiChoice.chainAllowed(aiChoice, aiFallback) && FreeProviders.canUseChain(ExtCfg.freeChain(this), said)) {
-            FreeProviders.chainPreAnswer(said, en)?.let {
+            // v7.2: a typed chat question about live / current facts gets fresh web text first; the "no live source" answer is only for the spoken path or when nothing could be fetched
+            val webItems: List<String> = if (richTurn && WebContext.needsWeb(said)) webItemsFor(said, en) else emptyList()
+            val web = WebContext.block(webItems, en)
+            if (web.isEmpty()) FreeProviders.chainPreAnswer(said, en)?.let {
                 lastKind = "local_chat"
                 lastCloudFail = ""
                 return Routing.CloudResult(it, true)
             }
-            val res = runFreeChain(said, en)
+            val res = runFreeChain(said, en, rich = richTurn, web = web)
             if (res.providerId != null) lastFreeProvider = res.providerId else if (res.tried.isNotEmpty()) lastFreeProvider = res.tried.last() + ":" + res.failKind
             val t = res.text
             if (t != null) {
@@ -2377,7 +2581,7 @@ class NovaService : Service() {
                 lastCloudFail = ""
                 if (geminiFail.isNotEmpty()) quietAlert("backup", tr("Pehla AI nahi chala, backup AI (${res.providerId ?: "free"}) se jawab mil gaya.", "The first AI did not answer, a backup AI (${res.providerId ?: "free"}) answered."))
                 autoLearnFrom(said, t)
-                val guarded = ChatHonesty.guard(LocalChat.guard(said, t, en), en)
+                val guarded = WebContext.withSources(ChatHonesty.guard(LocalChat.guard(said, t, en), en), if (web.isEmpty()) emptyList() else webItems)
                 remember(said, guarded)   // v6.70: the next question, whoever answers it, continues this thread
                 return Routing.CloudResult(guarded, true)
             }
@@ -2545,9 +2749,13 @@ class NovaService : Service() {
     } catch (t: Throwable) { FreeProviders.ordered() }
 
     /** One provider call that also teaches the ranking (success / failure and speed; offline or our own timeout are ignored). */
+    @Volatile private var actionDeadlineMs = 0L   // v7.4: while a command is being understood every call must end inside the 4.5 s budget (0 = no limit)
+
     private fun rankedCall(p: FreeProvider, body: String, key: String): NetAnswer {
         val t0 = System.currentTimeMillis()
-        val r = FreeHttp.post(p, body, key)
+        val dl = actionDeadlineMs
+        val readMs = if (dl > 0L) UnderstandBudget.callTimeoutMs(dl - t0) else 10000
+        val r = if (readMs >= 10000) FreeHttp.post(p, body, key) else FreeHttp.post(p, body, key, minOf(6000, readMs), readMs)
         try { ProviderRankStore.record(this, p.id, r.code, System.currentTimeMillis() - t0) } catch (t: Throwable) { ErrLog.add("NovaService", t.toString()) }
         return r
     }
@@ -2571,10 +2779,34 @@ class NovaService : Service() {
         }, "nova-autolearn").start()
     }
 
+    /**
+     * v7.2: fresh web text for a backup AI (typed chat turn only). Gemini Google-Search grounding first when a Gemini key exists,
+     * then the key-less sources (DuckDuckGo, Wikipedia, Google News). Runs on the turn thread, every fetch has a short timeout, never throws.
+     */
+    private fun webItemsFor(said: String, en: Boolean): List<String> {
+        val items = ArrayList<String>()
+        val q = WebContext.queryOf(said)
+        try {
+            if (SecureStore.getKeys(this).isNotEmpty() || SecureStore.getKey(this).isNotBlank()) {
+                val g = searchWeb(q)
+                if (g.length > 40 && !g.startsWith("search failed") && g != "no result" && g != "no query") items.add("Google Search: " + g)
+            }
+        } catch (t: Throwable) { ErrLog.add("web-context", t.toString()) }
+        try {
+            if (items.isEmpty()) {
+                WebBrowsers.httpGet(WebSources.newsUrl(q), 3500)?.let { b -> WebSources.parseNews(b, q, en, 3)?.let { items.add(it.text) } }
+                WebBrowsers.httpGet(WebSources.ddgUrl(q), 3000)?.let { b -> WebSources.parseDdg(b, en)?.let { items.add(it.text) } }
+                WebBrowsers.httpGet(WebSources.wikiUrl(q), 3000)?.let { b -> WebSources.parseWiki(b, en)?.let { items.add(it.text) } }
+            }
+        } catch (t: Throwable) { ErrLog.add("web-context", t.toString()) }
+        return items
+    }
+
     /** One run of the free chain with the user's own keys. Groq reuses the speech key; OpenRouter has its own slot. */
-    private fun runFreeChain(said: String, en: Boolean, withFacts: Boolean = true): ChainResult {
+    private fun runFreeChain(said: String, en: Boolean, withFacts: Boolean = true, rich: Boolean = false, web: String = ""): ChainResult {
         val keyless = ExtCfg.freeKeyless(this)
-        return ProviderChain.run(
+        return Latency.time(if (rich) "chat_ai_long" else "chat_ai") {
+        ProviderChain.run(
             rankedProviders(),
             { name ->
                 when (name) {
@@ -2587,26 +2819,35 @@ class NovaService : Service() {
                 }
             },
             { id -> id != "pollinations" || keyless },
-            FallbackContext.systemWith(FallbackContext.systemWith(FreeProviders.systemPrompt(en) + " " + HelpGuide.aiFacts() + " " + SourceMap.aiFacts() + " " + PhoneFacts.aiFacts(this) + (if (withFacts) chainFacts(said, en) else ""), fallbackTaskLine(en)), fallbackCutNote(en)),
+            FallbackContext.systemWith(FallbackContext.systemWith((if (rich) FreeProviders.richSystemPrompt(en) else FreeProviders.systemPrompt(en)) + " " + HelpGuide.aiFacts() + " " + SourceMap.aiFacts() + (if (withFacts) chainFacts(said, en) else "") + (if (rich && web.isNotEmpty()) "\n" + web else ""), fallbackTaskLine(en)), fallbackCutNote(en)),
             said,
             freeCooldowns,
             { System.currentTimeMillis() },
-            turns = fallbackTurns()   // v6.70: a backup AI continues the same conversation, not a lone sentence
+            turns = fallbackTurns(),   // v6.70: a backup AI continues the same conversation, not a lone sentence
+            rich = rich,
+            hedge = !rich   // v7.4: voice answers ask the top 2 providers at once
         ) { p, _, body, key -> rankedCall(p, body, key) }
+        }
     }
 
     /** JSON action pass for Groq/Qwen/GLM/OpenRouter. Validated intents use the same runTool path as Gemini. */
-    private fun runFreePhoneAction(said: String, en: Boolean): PhoneActionRules.Action? {
-        if (!PhoneActionRules.likelyAction(said) || !ExtCfg.freeChain(this)) return null
-        val r = ProviderChain.run(
+    private fun runFreePhoneAction(said: String, en: Boolean): List<PhoneActionRules.Action> {
+        if (!PhoneActionRules.likelyAction(said) || !ExtCfg.freeChain(this)) return emptyList()
+        actionDeadlineMs = System.currentTimeMillis() + UnderstandBudget.TOTAL_MS   // v7.4 5-second rule: hard per-call timeout = what is left of 4.5 s
+        val r = try {
+            Latency.time("action_ai") {
+        ProviderChain.run(
             rankedProviders(),
             { name -> when (name) { "groq" -> SecureStore.getGroq(this); "openrouter" -> SecureStore.getSlot(this, "openrouter"); "zai" -> SecureStore.getSlot(this, "zai"); "zai2" -> SecureStore.getSlot(this, "zai2"); "zai3" -> SecureStore.getSlot(this, "zai3"); else -> "" } },
             { id -> id != "pollinations" || ExtCfg.freeKeyless(this) },
             PhoneActionRules.systemPrompt(en), said, freeCooldowns, { System.currentTimeMillis() }, budgetMs = 9000L, turns = fallbackTurns(),
-            accept = { PhoneActionRules.parse(it) != null }   // v6.90: a provider that answers in prose ("ye kaam nahi kar sakta") is skipped, the next one tries the action
+            accept = { PhoneActionRules.parseAll(it).isNotEmpty() },   // v6.90: a provider that answers in prose ("ye kaam nahi kar sakta") is skipped, the next one tries the action
+            hedge = true   // v7.4: two providers at once
         ) { p, _, body, key -> rankedCall(p, body, key) }
+            }
+        } finally { actionDeadlineMs = 0L }
         if (r.providerId != null) lastFreeProvider = r.providerId else if (r.tried.isNotEmpty()) lastFreeProvider = r.tried.last() + ":" + r.failKind
-        return r.text?.let { PhoneActionRules.parse(it) }
+        return r.text?.let { PhoneActionRules.parseAll(it) } ?: emptyList()
     }
 
     /**
@@ -2657,6 +2898,24 @@ class NovaService : Service() {
                     agentAnsFlag?.set(true)
                     tr("Theek hai", "Okay")
                 }
+                p === songChoicePending -> {   // wip13: spoken pick of one of the songs shown in the popup
+                    val labels = songChoices.map { it.label }
+                    val picked = MusicPlayRules.matchSpoken(text, labels)
+                    when {
+                        picked != null -> {
+                            songChosen(picked)
+                            tr("${labels[picked]} chala raha hoon", "Playing ${labels[picked]}")
+                        }
+                        Logic.parseAnswer(text) == false || Regex("\\b(cancel|rehne do|mat|nahi|band)\\b").containsMatchIn(Logic.norm(text)) -> {
+                            h.post { clearSongChoice() }
+                            tr("Theek hai, gaana chunna cancel kar diya", "Okay, cancelled the song choice")
+                        }
+                        else -> {
+                            pending = p
+                            tr("Number ya gaane ka naam bolo, ya cancel bolo", "Say the number or the song name, or say cancel")
+                        }
+                    }
+                }
                 isContactRetry -> {
                     // A spoken choice may select only one of the real candidates shown in the contact picker.
                     val choices = pendingContactChoices
@@ -2693,7 +2952,10 @@ class NovaService : Service() {
                 else -> when (Logic.parseAnswer(text)) {
                     true -> p.run()
                     false -> { p.onNo?.invoke(); tr("Theek hai, cancel kar diya", "Okay, cancelled") }
-                    null -> tr("Samajh nahi aaya, isliye cancel kar diya", "I did not understand, so I cancelled it")
+                    null -> if (p.reaskOnUnclear) {
+                        pending = p
+                        tr("Gaane ka naam nahi, sirf haan ya na bolo (ya HAAN / NAHI dabao)", "Please say only yes or no (or tap YES / NO)")
+                    } else tr("Samajh nahi aaya, isliye cancel kar diya", "I did not understand, so I cancelled it")
                 }
             }
         } catch (t: Throwable) {
@@ -2778,8 +3040,8 @@ class NovaService : Service() {
 
     private fun runCommand(c: Logic.Cmd): String = when (c.kind) {
         "stop" -> {
-            agentCancel = true
             stopEpoch++
+            agentCancel = true
             connQueue.clear()
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "Owner said stop") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
             agentOutcome = AgentTaskRules.State.CANCELLED
@@ -2812,6 +3074,10 @@ class NovaService : Service() {
         "biz_off" -> bizOff()
         "biz_auto_on" -> bizAuto(true)
         "biz_auto_off" -> bizAuto(false)
+        "smart_on" -> smartReplyVoice(true)
+        "smart_off" -> smartReplyVoice(false)
+        "autoreply_on" -> autoReplyVoice(true)
+        "autoreply_off" -> autoReplyVoice(false)
         "biz_summary" -> WaBiz.summary(cfg.lang != "en")
         "biz_catalogue" -> bizCatalogue(c.arg)
         "message_on" -> messageModeOn()
@@ -2848,6 +3114,14 @@ class NovaService : Service() {
         "wake_snooze" -> wakeSnoozeText()
         "schedule_set" -> scheduleSet(c.arg)
         "schedule_cancel" -> if (ScheduledTaskStore.cancel(this, c.arg)) tr("Schedule hata diya.", "Schedule cancelled.") else tr("Ye schedule ID nahi mila.", "That schedule ID was not found.")
+        "silent_on" -> {
+            cfg.silentMode = true
+            tr("Silent ON: jawab screen aur chat mein dikhega; aam awaaz band. Call/message bhejne se pehle haan/naahi ka confirmation zaroori rahega.", "Silent ON: replies stay on screen and in chat; ordinary speech is off. Call/message actions still require confirmation.")
+        }
+        "silent_off" -> {
+            cfg.silentMode = false
+            tr("Silent OFF: awaaz wapas chalu.", "Silent OFF: spoken replies are back.")
+        }
         "quiet_on" -> {
             cfg.quietReplies = true
             tr("Theek hai, ab jawab chat mein likhunga, bolunga nahi. Alert aur confirmation bol kar bataunga.",
@@ -2858,34 +3132,12 @@ class NovaService : Service() {
             tr("Theek hai, ab jawab bol kar bhi dunga", "Okay, I will speak my replies again")
         }
         "unlock" -> unlockPhone()
-        PhoneVoiceRules.K_SHOT -> {
-            val en = cfg.lang == "en"
-            if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) PhoneActions.failText("no_acc", true, en)
-            else {
-                val sc = NovaAccessibilityService.screenshotToGallery()
-                if (sc.ok) PhoneVoiceRules.doneText(c.kind, c.arg, en)
-                else PhoneActions.failText(if (sc.code == "old_android") "old_android" else "failed_shot", true, en)
-            }
-        }
-        PhoneVoiceRules.K_RINGER -> {
-            val r = PhoneActions.setRinger(this, c.arg)
-            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, true, cfg.lang == "en")
-        }
-        PhoneVoiceRules.K_ROTATION -> {
-            val r = PhoneActions.setRotation(this, c.arg == "on")
-            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, true, cfg.lang == "en")
-        }
-        PhoneVoiceRules.K_ANSWER, PhoneVoiceRules.K_REJECT -> {
-            val ans = c.kind == PhoneVoiceRules.K_ANSWER
-            val r = if (ans) PhoneActions.answerCall(this) else PhoneActions.rejectCall(this)
-            if (r.ok) PhoneVoiceRules.doneText(c.kind, c.arg, cfg.lang == "en") else PhoneActions.failText(r.code, ans, cfg.lang == "en")
-        }
         UnsupportedRules.KIND -> UnsupportedRules.reply(c.arg, cfg.lang == "en")   // v6.74: switch off / restart / factory reset: said clearly, nothing attempted
         PersonalMemory.K_SAVE -> memSave(c.arg)
         PersonalMemory.K_LIST -> memList()
         PersonalMemory.K_FORGET -> memForget(c.arg)
         PersonalMemory.K_FORGET_ALL -> memForgetAll()
-        "analyze" -> analyzeScreen()      // PART 1B
+        "analyze" -> analyzeScreen(c.arg)      // PART 1B (arg = the spoken sentence, used for "ye kaun si movie hai")
         else -> runLocalTool(c)           // PART 1B: torch, volume, brightness, media, global, open_app, settings, camera
     }
 
@@ -3093,7 +3345,12 @@ class NovaService : Service() {
      * v6.78 owner request: open the app, no notification, no "request sent" talk. Tries three ways in a row, silently:
      * the service, the Accessibility service, a PendingIntent. The result is told once, at the end: opened / could not (with the real reason).
      */
-    private fun launch(i: Intent, expectPkg: String?, what: String): R {
+    /** v7.17: true only when the LAST launch() call was blocked by the phone (app never came to the front after 3 ways). */
+    @Volatile private var lastLaunchBlocked = false
+
+    /** resend=false: never fire the same intent again (a real phone CALL must not be dialled twice). */
+    private fun launch(i: Intent, expectPkg: String?, what: String, resend: Boolean = true): R {
+        lastLaunchBlocked = false
         val before = NovaAccessibilityService.foregroundPackage()
         val ok = R(true, tr("$what khul gaya", "$what opened"))
         try {
@@ -3103,13 +3360,14 @@ class NovaService : Service() {
         }
         if (uiVisible) return ok
         if (waitFront(before, expectPkg, 14)) return ok
-        if (NovaAccessibilityService.startFromService(i) && waitFront(before, expectPkg, 14)) return ok
-        if (sendViaPendingIntent(i) && waitFront(before, expectPkg, 14)) return ok
+        if (resend && NovaAccessibilityService.startFromService(i) && waitFront(before, expectPkg, 14)) return ok
+        if (resend && sendViaPendingIntent(i) && waitFront(before, expectPkg, 14)) return ok
         if (NovaAccessibilityService.instance == null) {
             // Without Accessibility nothing can see the screen: the order was given, the result cannot be checked. No claim of success.
             return R(true, tr("$what kholne ka order de diya", "I sent the order to open $what"))
         }
         ErrLog.add("launch", "not in front after 3 ways: " + what)
+        lastLaunchBlocked = true
         return R(false, tr(
             "$what nahi khul paya: phone ne background se app kholne se roka. Ek baar App info > Other permissions me 'Display pop-up windows while running in the background' (ya 'Display over other apps') ON karo.",
             "$what did not open: the phone blocked opening apps from the background. Once, turn ON 'Display pop-up windows while running in the background' (or 'Display over other apps') in App info > Other permissions."
@@ -3162,11 +3420,15 @@ class NovaService : Service() {
             when (c.kind) {
                 "torch_on" -> torch(true)
                 "torch_off" -> torch(false)
+                PhoneVoiceRules.K_ANSWER -> callAction(true)
+                PhoneVoiceRules.K_REJECT -> callAction(false)
                 "volume" -> volume(c.arg, c.num)
                 "brightness_set" -> setBrightness(c.num)
                 "brightness_step" -> stepBrightness(c.num)
                 "media" -> media(c.arg)
                 "global" -> globalAct(c.arg)
+                "ringer" -> ringerTool(c.arg)
+                "rotation" -> rotationTool(c.arg)
                 "settings" -> openSettings(c.arg, c.num == 2)
                 "camera" -> launch(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), null, "Camera")
                 "call" -> callTool(c.arg)
@@ -3225,17 +3487,16 @@ class NovaService : Service() {
             tr("Internet nahi hai; photo queue mein save kar di. Net aane par try hogi; screen-agent tasks auto-repeat nahi honge.", "No internet; image saved to queue and will retry when online. Screen-agent tasks are never replayed.")
         else tr("Queue full ya save error; photo queue nahi hui.", "Queue is full or could not save the image task.")
         imageRunning = true
-        val epoch = stopEpoch
         val subject = req.subject
+        val epoch = stopEpoch
         Thread({
             var spoken = ""
             try {
                 val r = FreeImage.run(this, subject)
                 val img = r.img
                 if (StopRules.wasStopped(epoch, stopEpoch)) {
-                    val why = tr("Roka gaya, photo nahi rakhi", "Stopped, the picture was not kept")
-                    imageListener?.invoke(false, why, "", "")
-                    spoken = why
+                    spoken = tr("Photo rok di, save nahi ki", "Picture cancelled, not saved")
+                    imageListener?.invoke(false, spoken, "", "")
                 } else if (r.ok && img != null) {
                     val saved = ImageGen.saveToGallery(this, img)
                     val thumb = ImageGen.b64(ImageGen.shrink(img, 1024) ?: img)
@@ -3247,7 +3508,9 @@ class NovaService : Service() {
                     imageListener?.invoke(false, why, "", "")
                     spoken = why
                 } else {
-                    val why = tr("Abhi photo nahi ban payi. Thodi der baad dobara bolo", "I could not make the picture right now. Please try again in a little while")
+                    val reason = r.msg.trim()   // v7.17: the provider's own honest reason (quota, key, region...) is shown, not hidden
+                    val why = tr("Abhi photo nahi ban payi. Thodi der baad dobara bolo", "I could not make the picture right now. Please try again in a little while") +
+                        (if (!r.ok && reason.isNotEmpty()) ". $reason" else "")
                     imageListener?.invoke(false, why, "", "")
                     spoken = why
                 }
@@ -3269,6 +3532,8 @@ class NovaService : Service() {
     // The owner presses RAKHO in Settings > KYA SEEKHA before it is ever used in an answer. If the web search fails the free
     // chain writes the note from the model's own knowledge (source "ai"), silently. A note is text only, never an action.
     // Evidence level: written + statically checked. Not compiled here, not phone tested.
+    /** v7.08 PART 5 point 1: counts the spoken "stop"; a picture / website / learn job remembers it at start and drops its result if it moved. */
+    @Volatile private var stopEpoch = 0
     @Volatile private var learnRunning = false
 
     private fun learnBegin(req: LearnRules.Parsed): String {
@@ -3282,8 +3547,8 @@ class NovaService : Service() {
             tr("Internet nahi hai; seekhne ka topic queue mein save hai. Net aane par try hoga.", "No internet; learning topic is queued and will retry when online.")
         else tr("Queue full ya save error; task queue nahi hua.", "Queue is full or the task could not be saved.")
         learnRunning = true
-        val epoch = stopEpoch
         val topic = req.topic
+        val epoch = stopEpoch
         Thread({
             var spoken = ""
             try {
@@ -3296,12 +3561,14 @@ class NovaService : Service() {
                     if (t != null) { note = LearnRules.cleanNote(t); src = "ai" }
                 }
                 if (note != null && StopRules.wasStopped(epoch, stopEpoch)) {
-                    spoken = tr("Roka gaya, kuch yaad nahi rakha", "Stopped, nothing was kept")
+                    spoken = tr("Seekhna rok diya, kuch save nahi kiya", "Learning cancelled, nothing was saved")
                 } else if (note != null) {
                     if (ExtCfg.autoLearn(this)) {   // v6.37: kept at once, no RAKHO needed (text only; HATAO in KYA SEEKHA deletes it)
-                        LearnStore.addKept(this, topic, note, src)
+                        val keptId = LearnStore.addKept(this, topic, note, src)   // v7.17: null = a note for this topic already exists
                         learnListener?.invoke()
-                        spoken = tr("Maine $topic ke baare mein seekha aur yaad rakh liya. Mitana ho to Settings mein KYA SEEKHA me HATAO dabao",
+                        spoken = if (keptId == null) tr("$topic ke baare mein pehle se note hai, dobara save nahi kiya",
+                            "A note about $topic already exists, nothing new was saved")
+                        else tr("Maine $topic ke baare mein seekha aur yaad rakh liya. Mitana ho to Settings mein KYA SEEKHA me HATAO dabao",
                             "I learned about $topic and kept it. To remove it, open Settings, KYA SEEKHA and press HATAO")
                     } else {
                         LearnStore.addPending(this, topic, note, src)
@@ -3342,6 +3609,61 @@ class NovaService : Service() {
             tr("$subject ki website GitHub par sabke liye public karun? Haan ya nahi", "Publish the $subject website publicly on GitHub? Yes or no"),
             true   // publishing is never skipped by "skip confirmation"
         ) { publishRun(subject, html) }
+    }
+
+    /** v7.05 H: Vercel (owner's token, WRITE permission, asks first) or Lovable (no API: clipboard + open + 3 honest manual steps). */
+    private fun publishTargetBegin(t: PublishTarget.Target): String {
+        val subject = lastSiteSubject
+        val html = lastSiteHtml
+        if (html.isEmpty()) return tr("Pehle website banao, phir publish karenge", "Build a website first, then we can publish it")
+        if (t == PublishTarget.Target.LOVABLE) return lovableHandoff(html)
+        if (!ConnectorStore.connected(this, ConnectorCatalog.VERCEL)) return tr("Vercel connect nahi hai. CONNECT tab mein Vercel ka token jodo", "Vercel is not connected. Add your Vercel token in the CONNECT tab")
+        if (!ConnectorCatalog.allows(ConnectorStore.perm(this, ConnectorCatalog.VERCEL), true)) return tr("Vercel par sirf padhne ki ijazat hai. CONNECT tab mein WRITE chalu karo", "Vercel is read-only. Turn on WRITE in the CONNECT tab")
+        if (publishRunning) return tr("Publish ho raha hai, thoda ruko", "Publishing is already running, please wait")
+        return askFirst(
+            tr("$subject ki website Vercel par sabke liye public karun? Haan ya nahi", "Publish the $subject website publicly on Vercel? Yes or no"),
+            true
+        ) { publishVercelRun(subject, html) }
+    }
+
+    private fun publishVercelRun(subject: String, html: String): String {
+        publishRunning = true
+        Thread({
+            var spoken = ""
+            try {
+                val r = VercelPublish.run(this, subject, html)
+                publishListener?.invoke(r.ok, r.msg, r.url)
+                spoken = if (r.ok) tr("Website Vercel par publish ho gayi. Link chat mein hai", "The website is published on Vercel. The link is in the chat") else r.msg
+            } catch (e: Throwable) {
+                spoken = tr("Vercel par publish karte waqt dikkat aayi", "Something went wrong while publishing on Vercel")
+            }
+            publishRunning = false
+            val msg = spoken
+            h.post { say(msg) }
+        }, "nova-publish-vercel").start()
+        return tr("Theek hai, Vercel par publish kar raha hu", "Okay, publishing on Vercel")
+    }
+
+    /** Lovable has no public API, so NOTHING is automated and nothing is typed on the owner's behalf: the page is copied, Lovable opens, the owner pastes. */
+    private fun lovableHandoff(html: String): String {
+        var copied = false
+        try {
+            if (html.length <= 900_000) {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("NOVA website", html))
+                copied = true
+            }
+        } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://lovable.dev")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
+        return if (copied) tr(
+            "Lovable khol raha hu. Website ka code copy ho gaya hai. Teen kaam tum karo: 1. Lovable mein login karo. 2. Naya project chuno aur chat box mein paste karo. 3. Publish dabao. Password ya OTP main kabhi nahi daalta",
+            "Opening Lovable. The website code is copied. Three steps for you: 1. Log in to Lovable. 2. Start a new project and paste into its chat box. 3. Press Publish. I never type passwords or OTPs"
+        ) else tr(
+            "Lovable khol raha hu. Website badi hai isliye copy nahi hui, wo Downloads mein NOVA folder mein save hai. Wahi file Lovable mein upload karo aur Publish dabao. Password ya OTP main kabhi nahi daalta",
+            "Opening Lovable. The website is too big to copy; it is saved in Downloads, NOVA folder. Upload that file in Lovable and press Publish. I never type passwords or OTPs"
+        )
     }
 
     private fun publishRun(subject: String, html: String): String {
@@ -3420,6 +3742,9 @@ class NovaService : Service() {
             "connect" -> {
                 if (on) return tr("${d.name} pehle se connect hai", "${d.name} is already connected")
                 if (ConnectorCatalog.isDynId(d.id)) return tr("Ye connector app mein CONNECT tab se jodte hain (address aur key wahin daalni hoti hai)", "Add this connector in the CONNECT tab (the address and key are typed there)")
+                if (d.kind == "device") {
+                    return gmailRun(GmailRules.Cmd.Connect)
+                }
                 if (d.kind == "link") {
                     val opened = connOpenPage(d.tokenUrl)
                     return tr("${d.name} ka public API nahi hai. Pehle github connect karo, phir wahi repo use hoga" + if (opened) ". Site khol di" else "",
@@ -3779,9 +4104,46 @@ class NovaService : Service() {
 
     /** v6.90: "isko professional banao" right after NOVA built a website = improve THAT website (not a chat answer, not a fake claim). */
     private fun siteFollowUp(text: String): SiteIntent.Parsed? {
-        if (lastSiteHtml.isBlank() || System.currentTimeMillis() - lastSiteAtMs > 30 * 60_000L) return null
-        val f = SiteIntent.parseFollowUp(text) ?: return null
+        // v7.0: after an app restart the last page comes back from disk (6 hours), and edits like "background colour white chahiye" count as website edits.
+        if (lastSiteHtml.isBlank()) {
+            val saved = SiteMedia.loadLast(this, 6 * 3_600_000L)
+            if (saved != null) {
+                lastSiteSubject = saved.first
+                lastSiteTemplate = saved.second
+                lastSiteHtml = SiteMedia.substitute(saved.second, SiteMedia.list(this))
+                lastSiteAtMs = System.currentTimeMillis()
+            }
+        }
+        if (lastSiteHtml.isBlank() || System.currentTimeMillis() - lastSiteAtMs > 6 * 3_600_000L) return null
+        val f = SiteIntent.parseFollowUp(text) ?: SiteIntent.parseEdit(text, SiteMedia.count(this) > 0) ?: return null
         return SiteIntent.Parsed(lastSiteSubject, false, f.raw, true)
+    }
+
+    /** v7.08 PART 5: MediaIntent decides website-with-media vs video request. null = not a media sentence (old routes go on). */
+    private fun mediaRoute(text: String): String? {
+        // v7.12: "ye photo hero mein lagao" after a site was built = put the picked gallery media into the same site
+        try {
+            if ((lastSiteHtml.isBlank() || lastSiteSubject.isBlank()) && MediaPlace.isPlaceCommand(text) && SiteMedia.count(this) > 0 && SiteMedia.placeText(this, text) > 0) {
+                lastTurnLocal = true; lastKind = "site_media_place"
+                return tr("Theek hai, ye photo/video website mein us jagah lagaunga. Ab bolo: website banao ...", "Okay, that media will go to that place. Now say: build a website ...")
+            }
+        } catch (e: Throwable) { }
+        try {
+            if (lastSiteHtml.isNotBlank() && lastSiteSubject.isNotBlank() && MediaPlace.isPlaceCommand(text) && ((SiteMediaStore.items().isNotEmpty() && SiteMediaStore.applyText(text) > 0) || (SiteMedia.count(this) > 0 && SiteMedia.placeText(this, text) > 0))) {
+                lastTurnLocal = false; lastKind = "site"
+                return siteBegin(SiteIntent.Parsed(lastSiteSubject, false, text, true))
+            }
+        } catch (e: Throwable) { }
+        val m = MediaIntent.classify(text) ?: return null
+        return when (m.kind) {
+            MediaIntent.Kind.SITE -> { lastTurnLocal = false; lastKind = "site"; siteBegin(SiteIntent.Parsed(m.subject, m.blocked, m.raw)) }
+            MediaIntent.Kind.VIDEO -> {
+                lastTurnLocal = true; lastKind = "video_gen"
+                tr("AI video nahi banta. Photo AI se bana sakta hu, ya apni gallery se video chuno aur bolo website mein kahan lagana hai. Camera se record karna ho to: nova background me video recording on karo",
+                   "AI video is not available. I can make a picture with AI, or you pick a video from your gallery and tell me where it goes in the website. To record with your camera say: nova start background video recording")
+            }
+            else -> null
+        }
     }
 
     private fun siteBegin(req: SiteIntent.Parsed): String {
@@ -3796,30 +4158,37 @@ class NovaService : Service() {
             tr("Internet nahi hai; website queue mein save hai. Net aane par banegi.", "No internet; website is queued and will be built when online.")
         else tr("Queue full ya save error; website queue nahi hui.", "Queue is full or the website task could not be saved.")
         siteRunning = true
-        val epoch = stopEpoch
         val subject = req.subject
         val rawSaid = req.raw
-        val baseHtml = if (req.followUp) lastSiteHtml else null
+        try { if (!req.followUp) { SiteMediaStore.applyText(rawSaid); if (MediaPlace.isPlaceCommand(rawSaid)) SiteMedia.placeText(this, rawSaid) } } catch (e: Throwable) { }   // v7.12: "pehli photo hero mein" said together with the website request
+        val epoch = stopEpoch
+        val baseHtml = if (req.followUp) lastSiteTemplate.ifBlank { lastSiteHtml } else null
         Thread({
             var spoken = ""
             try {
                 val r = SiteGen.generate(this, subject, rawSaid, baseHtml)
                 if (StopRules.wasStopped(epoch, stopEpoch)) {
-                    val why = tr("Roka gaya, website nahi rakhi", "Stopped, the website was not kept")
-                    siteListener?.invoke(false, why, "", "")
-                    spoken = why
+                    spoken = tr("Website rok di, save nahi ki", "Website cancelled, not saved")
+                    siteListener?.invoke(false, spoken, "", "")
                 } else if (r.ok) {
                     lastSiteSubject = subject
                     lastSiteHtml = r.html
+                    lastSiteTemplate = r.template.ifBlank { r.html }
+                    SiteMedia.saveLast(this, subject, lastSiteTemplate)
                     lastSiteAtMs = System.currentTimeMillis()
                     val saved = SiteGen.save(this, subject, r.html)
+                    val placedNote = SiteGen.userPlaced.let { ids -> if (ids.isEmpty()) "" else tr(" Tumhari gallery ki " + ids.joinToString(", ") + " website mein laga di.", " Your gallery items " + ids.joinToString(", ") + " are in the website.") }
                     siteListener?.invoke(true, subject, r.html, saved ?: "")
                     spoken = when {
                         r.problems.isNotEmpty() -> tr(
                             "Website ki file ban gayi aur save ${if (saved != null) "ho gayi" else "nahi ho payi"}, lekin kuch requirements verify nahi hui: " + r.problems.take(3).joinToString("; "),
                             "A website file was generated${if (saved != null) " and saved" else ", but saving failed"}, but these requirements were not verified: " + r.problems.take(3).joinToString("; ")
                         )
-                        saved != null -> tr("Website ban gayi. Chat mein dekho, aur Downloads mein save ho gayi", "The website is ready. See it in the chat, and it is saved in Downloads")
+                        r.quality.isNotEmpty() -> tr(
+                            "Website ban gayi aur save ${if (saved != null) "ho gayi" else "nahi ho payi"}. Quality check mein ${r.quality.size} baat baaki hai: " + r.quality.first() + ". Bolo 'website ko aur professional banao' to main ek aur baar theek karunga",
+                            "The website is ready${if (saved != null) " and saved" else ", but saving failed"}. The quality check still has ${r.quality.size} open point(s): " + r.quality.first() + ". Say 'make the website more professional' and I will improve it once more"
+                        )
+                        saved != null -> tr("Website ban gayi. Chat mein dekho, aur Downloads mein save ho gayi", "The website is ready. See it in the chat, and it is saved in Downloads") + placedNote
                         else -> tr("Website ban gayi, par file save nahi ho payi. Chat mein dekh sakte ho", "The website is ready, but saving the file failed. You can still see it in the chat")
                     }
                 } else if (!OfflineJobQueue.hasInternet(this) && OfflineJobQueue.enqueueWebsite(this, subject, rawSaid)) {
@@ -3837,7 +4206,8 @@ class NovaService : Service() {
             val msg = spoken
             h.post { say(msg) }
         }, "nova-site").start()
-        return tr(
+        val understood = SiteSummary.samjha(subject, rawSaid, baseHtml != null, cfg.lang == "en")   // v7.3: say first what was understood
+        return understood + " " + tr(
             if (baseHtml != null) "Theek hai, $subject ki website ko sudhar raha hu. Isme ek-do minute lag sakte hain" else "Theek hai, $subject ki website bana raha hu. Isme ek-do minute lag sakte hain",
             if (baseHtml != null) "Okay, improving the $subject website. It can take a minute or two" else "Okay, building a website for $subject. It can take a minute or two"
         )
@@ -4258,7 +4628,7 @@ class NovaService : Service() {
                 continue
             }
             val pkg = snap.first
-            val shielded = pkg.isNotEmpty() && Control.readProtected(pkg, packageName)
+            val shielded = pkg.isNotEmpty() && Control.blocked(pkg, packageName, "tap")
             val nodes: List<AgentRules.Node> = if (shielded) emptyList() else snap.second   // protected screens are never sent to the cloud
             agentMark(AgentTaskRules.State.PLANNING, "Planning step $step")
             val prompt = AgentRules.userPrompt(fullTask, step, pkg, nodes, hist)
@@ -4347,7 +4717,11 @@ class NovaService : Service() {
                 denied++
                 hist.add("step $step: " + agentDescribe(a, node) + " -> REFUSED by safety (" + chk.why + ")")
                 agentNote("step $step: " + a.act + " roka gaya (" + chk.why + ") [" + pkg + "]")   // v6.18d: visible in the chat
-                if (denied >= 3) return agentFinish(AgentTaskRules.State.FAILED, tr(
+                if (chk.why == "not a text box") {   // wip11: tell the model which items ARE text boxes so it can pick one instead of giving up
+                    val boxes = nodes.filter { it.editable }.take(6).joinToString(", ") { "#" + it.i }
+                    hist.add("HINT: item #" + a.index + " is not a text box. " + (if (boxes.isEmpty()) "No text box is on screen: tap the field you want to type into first, then type." else "Text boxes on this screen: $boxes. Use one of these numbers for type."))
+                }
+                if (denied >= (if (chk.why == "not a text box") 5 else 3)) return agentFinish(AgentTaskRules.State.FAILED, tr(
                     "Ye step main nahi kar sakta (" + chk.why + "). Aap khud karo",
                     "I cannot do this step (" + chk.why + "). Please do it yourself"
                 ))
@@ -4405,7 +4779,7 @@ class NovaService : Service() {
 
     /** One separate model call compares the observed final screen against the original contract. */
     private fun agentVerify(task: String, pkg: String, nodes: List<AgentRules.Node>, claimed: String, hist: List<String>): AgentRules.Verification? {
-        if (pkg.isNotEmpty() && Control.readProtected(pkg, packageName)) return null
+        if (pkg.isNotEmpty() && Control.blocked(pkg, packageName, "tap")) return null
         if (nodes.isEmpty()) return null
         val screen = nodes.take(75).joinToString("\n") { AgentRules.nodeLine(it) }.take(5500)
         val shot = try { NovaAccessibilityService.agentScreenshot() } catch (e: Throwable) { null }
@@ -4466,6 +4840,19 @@ class NovaService : Service() {
         val after = NovaAccessibilityService.screenSignature()
         return if (after != before) R(true, tr("Scroll kar diya", "Scrolled $dir"))
         else R(true, tr("Scroll kiya, par screen badli nahi (shayad end aa gaya)", "Scrolled, but nothing changed (maybe the end)"))
+    }
+
+    /** v7.08: answer / reject the ringing call. Honest: ok only when a button was pressed or TelecomManager accepted. */
+    private fun callAction(answer: Boolean): R {
+        val res = if (answer) PhoneActions.answerCall(this) else PhoneActions.rejectCall(this)
+        val kind = if (answer) PhoneVoiceRules.K_ANSWER else PhoneVoiceRules.K_REJECT
+        if (res.ok) return R(true, PhoneVoiceRules.doneText(kind, "", cfg.lang == "en"))
+        return R(false, when (res.code) {
+            "no_permission" -> tr("Call uthane ke liye Phone permission (ANSWER_PHONE_CALLS) chahiye, Settings mein allow karo", "Answering needs the Phone permission (ANSWER_PHONE_CALLS), allow it in Settings")
+            "old_android" -> tr("Is Android par call button nahi dabaya ja sakta", "This Android version cannot press the call button")
+            "no_call" -> tr("Abhi koi call nahi baj rahi", "No call is ringing right now")
+            else -> tr("Call par kaam nahi ho paya", "I could not act on the call")
+        })
     }
 
     private fun torch(on: Boolean): R {
@@ -4594,10 +4981,62 @@ class NovaService : Service() {
                 if (Build.VERSION.SDK_INT < 28) return R(false, tr("Lock ke liye Android 9 ya naya chahiye", "Lock needs Android 9 or newer"))
                 code = AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN; label = "Lock"
             }
+            "screenshot" -> {   // Part 9: Android's own screenshot action (same as the local voice command); the picture goes to the gallery
+                val c = NovaAccessibilityService.screenshotToGallery()
+                return if (c.ok) R(true, tr("Screenshot le liya, gallery mein hai", "Screenshot taken, it is in the gallery"))
+                else if (c.code == "old_android") R(false, tr("Screenshot ke liye Android 9 ya naya chahiye", "Screenshot needs Android 9 or newer"))
+                else R(false, tr("Android ne screenshot action reject kar diya", "Android rejected the screenshot action"))
+            }
             else -> return R(false, tr("Ye action samajh nahi aaya", "I did not understand that action"))
         }
         return if (NovaAccessibilityService.performGlobalAction(code)) R(true, tr("$label ho gaya", "$label done"))
         else R(false, tr("Android ne $label action reject kar diya", "Android rejected the $label action"))
+    }
+
+    /** Part 9: ringer mode. Read back from AudioManager. Silent needs Do Not Disturb access; without it NOVA says so and changes nothing. NOT TESTED on a real phone. */
+    private fun ringerTool(mode: String): R {
+        val am = getSystemService(AudioManager::class.java) ?: return R(false, tr("Audio service nahi mili", "The audio service is not available"))
+        val want = when (mode) {
+            "normal" -> AudioManager.RINGER_MODE_NORMAL
+            "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
+            "silent" -> AudioManager.RINGER_MODE_SILENT
+            else -> return R(false, tr("Ringer ka ye mode samajh nahi aaya", "I did not understand that ringer mode"))
+        }
+        if (want == AudioManager.RINGER_MODE_SILENT && Build.VERSION.SDK_INT >= 23) {
+            val nm = getSystemService(NotificationManager::class.java)
+            if (nm == null || !nm.isNotificationPolicyAccessGranted) return R(false, tr(
+                "Poori silent ke liye Do Not Disturb access chahiye. Android Settings mein NOVA ke liye Do Not Disturb access on karo, ya vibrate bolo",
+                "Full silent needs Do Not Disturb access. Turn it on for NOVA in Android Settings, or ask for vibrate"))
+        }
+        try { am.ringerMode = want } catch (e: SecurityException) {
+            return R(false, tr("Android ne ringer badalne nahi diya (Do Not Disturb access chahiye ho sakta hai)", "Android did not allow the ringer change (Do Not Disturb access may be needed)"))
+        }
+        try { Thread.sleep(150) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) }
+        val label = when (want) { AudioManager.RINGER_MODE_NORMAL -> tr("normal", "normal"); AudioManager.RINGER_MODE_VIBRATE -> tr("vibrate", "vibrate"); else -> tr("silent", "silent") }
+        return if (am.ringerMode == want) R(true, tr("Ringer $label hai", "Ringer is $label"))
+        else R(false, tr("Ringer badla nahi", "The ringer did not change"))
+    }
+
+    /** Part 9: auto-rotate on/off or lock the screen to portrait / landscape. Needs the same WRITE_SETTINGS permission as brightness. Read back. NOT TESTED on a real phone. */
+    private fun rotationTool(mode: String): R {
+        if (mode !in setOf("auto_on", "auto_off", "portrait", "landscape")) return R(false, tr("Rotation ka ye mode samajh nahi aaya", "I did not understand that rotation mode"))
+        if (!Settings.System.canWrite(this)) return R(false, tr(
+            "Rotation badalne ke liye permission chahiye. NOVA app mein ALLOW BRIGHTNESS dabao, wahi permission yahan bhi chalti hai",
+            "Rotation needs a permission. Tap ALLOW BRIGHTNESS in the NOVA app; the same permission covers this"))
+        val auto = if (mode == "auto_on") 1 else 0
+        var ok = Settings.System.putInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, auto)
+        if (mode == "portrait") ok = ok && Settings.System.putInt(contentResolver, Settings.System.USER_ROTATION, 0)
+        if (mode == "landscape") ok = ok && Settings.System.putInt(contentResolver, Settings.System.USER_ROTATION, 1)
+        val backAuto = Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, -1)
+        val backRot = Settings.System.getInt(contentResolver, Settings.System.USER_ROTATION, -1)
+        val good = ok && backAuto == auto && (mode != "portrait" || backRot == 0) && (mode != "landscape" || backRot == 1)
+        if (!good) return R(false, tr("Rotation badli nahi", "The rotation did not change"))
+        return R(true, when (mode) {
+            "auto_on" -> tr("Auto rotate on hai", "Auto rotate is on")
+            "auto_off" -> tr("Auto rotate band hai", "Auto rotate is off")
+            "portrait" -> tr("Screen portrait mein lock hai", "Screen is locked to portrait")
+            else -> tr("Screen landscape mein lock hai", "Screen is locked to landscape")
+        })
     }
 
     private fun openSettings(page: String, toggleAsked: Boolean): R {
@@ -4622,31 +5061,179 @@ class NovaService : Service() {
         ) + r.msg)
     }
 
-    private fun musicPlay(req: MusicPlayRules.Request): R {
-        val pm = packageManager
-        val pkg = req.packages.firstOrNull { try { pm.getPackageInfo(it, 0); true } catch (e: Exception) { false } }
-            ?: return R(false, tr("${req.appLabel} phone mein install nahi mila", "${req.appLabel} is not installed on this phone"))
+    // ------------------------------------------------------------------ wip13: music commands (real playback check, honest answers, no silent app switch)
+
+    @Volatile private var songChoicePending: Pending? = null
+    @Volatile private var songChoices: List<MusicCatalog.Track> = emptyList()
+    @Volatile private var songChoiceReq: MusicPlayRules.Request? = null
+
+    private fun isInstalled(pkg: String): Boolean = try { packageManager.getPackageInfo(pkg, 0); true } catch (e: Exception) { false }
+
+    private fun clearSongChoice() {
+        songChoices = emptyList()
+        songChoiceReq = null
+        val p = songChoicePending
+        songChoicePending = null
+        if (p != null && pending === p) pending = null
+    }
+
+    /** Entry for "<music app> par <song> play karo". Similar songs -> popup / spoken choice. Otherwise straight to [musicPlay]. Worker thread. */
+    private fun musicBegin(req: MusicPlayRules.Request): String {
+        if (req.packages.none { isInstalled(it) }) return musicPlay(req).msg
+        val tracks = try { MusicCatalog.lookup(req.query) } catch (e: Exception) { null }
+        if (tracks != null) {
+            val many = MusicPlayRules.choices(req.query, tracks)
+            if (many.size >= 2) return songAsk(req, many)
+            val one = MusicPlayRules.bestSingle(req.query, tracks)
+            if (one != null) return musicPlay(req.copy(query = MusicPlayRules.searchQuery(one)), verifyText = one.title).msg
+        }
+        return musicPlay(req).msg
+    }
+
+    private fun songAsk(req: MusicPlayRules.Request, tracks: List<MusicCatalog.Track>): String {
+        songChoices = tracks
+        songChoiceReq = req
+        val lines = tracks.mapIndexed { i, t -> "${i + 1}. ${t.label}" }.joinToString("\n")
+        val prompt = tr(
+            "'${req.query}' ke kai gaane mile:\n$lines\nNumber ya naam bolo, ya cancel bolo.",
+            "Found several songs for '${req.query}':\n$lines\nSay the number or the name, or say cancel."
+        )
+        val p = Pending(prompt, System.currentTimeMillis(), onNo = { clearSongChoice() }, run = { "" })
+        songChoicePending = p
+        pending = p
+        if (uiVisible) {
+            songChoiceListener?.invoke(tracks.map { it.label }) { idx ->
+                if (idx != null) songChosen(idx) else h.post { clearSongChoice() }
+            }
+        }
+        return prompt
+    }
+
+    /** One real choice (popup tap or spoken). The claim stops a tap + a spoken answer from starting the song twice. */
+    private fun songChosen(idx: Int) {
+        val req = songChoiceReq
+        val track = songChoices.getOrNull(idx)
+        if (req == null || track == null) return
+        if (!claimAction("song|" + req.appKey + "|" + track.label)) return
+        h.post { clearSongChoice() }
+        Thread {
+            val r = try { musicPlay(req.copy(query = MusicPlayRules.searchQuery(track)), verifyText = track.title) }
+                catch (e: Exception) { R(false, tr("Gaana chalane me dikkat aayi", "Could not start the song")) }
+            announce(r.msg)
+        }.start()
+    }
+
+    /** Asks (always, even if the other confirmations are switched off) before trying a DIFFERENT app. Nothing is sent anywhere else without a yes. */
+    private fun musicAltOffer(req: MusicPlayRules.Request, why: String, tried: Set<String>): String {
+        val seen = tried + req.appKey
+        val alt = MusicPlayRules.others(req.appKey, seen).firstOrNull { a -> a.packages.any { isInstalled(it) } }
+            ?: return why + tr(" Koi doosra music app installed nahi mila. Maine ise kisi aur app par nahi bheja.", " No other music app is installed. I did not send it to any other app.")
+        val prompt = why + tr(" ${alt.label} par '${req.query}' try karun? Haan ya na bolo.", " Try '${req.query}' on ${alt.label}? Say yes or no.")
+        pending = Pending(prompt, System.currentTimeMillis(), onNo = null, run = {
+            musicPlay(MusicPlayRules.Request(alt.key, alt.label, alt.packages, req.query), seen).msg
+        })
+        pending?.reaskOnUnclear = true
+        return prompt
+    }
+
+    /** Samples the music app's own media session (needs Notification access ON) and AudioManager for up to ~8 s. Blocks the worker thread. */
+    private fun verifyPlayback(pkg: String, wasActive: Boolean, q: String): Triple<MusicPlayRules.Outcome, String, String> {
+        val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        try { Thread.sleep(1500) } catch (e: InterruptedException) { return Triple(MusicPlayRules.Outcome.CANNOT_TELL, "", "") }
+        val end = System.currentTimeMillis() + 6500
+        var last = MusicPlayRules.Outcome.NOT_PLAYING
+        var title = ""
+        var artist = ""
+        while (true) {
+            var sp: Boolean? = null
+            title = ""
+            artist = ""
+            try {
+                val msm = getSystemService(MEDIA_SESSION_SERVICE) as android.media.session.MediaSessionManager
+                val list = msm.getActiveSessions(android.content.ComponentName(this, NovaNotificationService::class.java))
+                sp = false
+                for (c in list) {
+                    if (c.packageName != pkg) continue
+                    val st = c.playbackState?.state
+                    if (st == android.media.session.PlaybackState.STATE_PLAYING || st == android.media.session.PlaybackState.STATE_BUFFERING) {
+                        sp = true
+                        title = c.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: ""
+                        artist = c.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+                    }
+                }
+            } catch (e: Exception) {
+                sp = null   // no Notification access (SecurityException) or no media service: only AudioManager is left
+            }
+            val active = try { am.isMusicActive } catch (e: Exception) { false }
+            last = MusicPlayRules.judge(wasActive, active, sp, title, artist, q)
+            if (last == MusicPlayRules.Outcome.VERIFIED_MATCH) break
+            if (sp == null && (last == MusicPlayRules.Outcome.PLAYING_UNCONFIRMED || last == MusicPlayRules.Outcome.CANNOT_TELL)) break
+            if (System.currentTimeMillis() >= end) break
+            try { Thread.sleep(600) } catch (e: InterruptedException) { break }
+        }
+        return Triple(last, title, artist)
+    }
+
+    /**
+     * Asks ONE music app (the one the owner named) to search and play, then CHECKS what really happened.
+     * Never opens or searches another app by itself: a different app is only offered as a question ([musicAltOffer]).
+     */
+    private fun musicPlay(req: MusicPlayRules.Request, tried: Set<String> = emptySet(), verifyText: String = req.query): R {
+        val pkg = req.packages.firstOrNull { isInstalled(it) }
+            ?: return R(false, musicAltOffer(req, tr("${req.appLabel} phone mein install nahi mila.", "${req.appLabel} is not installed on this phone."), tried))
         val q = req.query
+        val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        val wasActive = try { am.isMusicActive } catch (e: Exception) { false }
         val search = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
             .setPackage(pkg)
             .putExtra(android.app.SearchManager.QUERY, q)
             .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            startActivity(search)
-            return R(true, tr("${req.appLabel} mein $q chala diya", "Playing $q on ${req.appLabel}"))
-        } catch (e: Exception) {
-            ErrLog.add("music-play", "play-from-search failed " + e.javaClass.simpleName)
-        }
-        if (req.appKey == "spotify") {
+        var sent = false
+        val lr = launch(search, pkg, req.appLabel)   // v7.17: verified start. A phone-blocked background start stops here, no other app is tried
+        if (lr.ok) sent = true
+        else if (lastLaunchBlocked) return R(false, lr.msg)
+        else ErrLog.add("music-play", "play-from-search could not start")
+        if (!sent && req.appKey == "spotify") {
             try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:" + enc(q))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                return R(true, tr("Spotify mein $q search khol diya. Gaane par ek tap karo", "Opened $q in Spotify search. Tap the song"))
+                val lr2 = launch(Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:" + enc(q))).setPackage(pkg), pkg, "Spotify")
+                if (!lr2.ok && lastLaunchBlocked) return R(false, lr2.msg)
+                if (lr2.ok) return R(false, tr(
+                    "Spotify ne seedha play karne ki request nahi li, isliye maine sirf '$q' ka search khola hai. Gaana khud nahi baja, aap result par tap karo. Maine kisi aur app par nahi bheja.",
+                    "Spotify did not accept a direct play request, so I only opened the search for '$q'. Nothing is playing yet, tap a result. I did not send it to any other app."
+                ))
             } catch (e: Exception) {
                 ErrLog.add("music-play", "spotify search link failed " + e.javaClass.simpleName)
             }
         }
-        return openApp(req.appLabel)
+        if (!sent) {
+            val o = openApp(req.appLabel)
+            return R(false, if (o.ok) tr(
+                "${req.appLabel} khol diya, par '$q' khud chalane ka tareeka ${req.appLabel} ne nahi diya. Aap app me search kar lo. Maine kisi aur app par nahi bheja.",
+                "I opened ${req.appLabel}, but it gives no way to play '$q' from here. Please search inside the app. I did not send it to any other app."
+            ) else o.msg)
+        }
+        val (outcome, title, artist) = verifyPlayback(pkg, wasActive, verifyText)
+        val shown = if (artist.isBlank()) title else "$title — $artist"
+        return when (outcome) {
+            MusicPlayRules.Outcome.VERIFIED_MATCH -> R(true, tr("${req.appLabel} par chal raha hai: $shown", "Playing on ${req.appLabel}: $shown"))
+            MusicPlayRules.Outcome.PLAYING_OTHER -> R(false, musicAltOffer(req, tr(
+                "${req.appLabel} par '$shown' chal raha hai, jo '$q' se match nahi karta. Ho sakta hai wo gaana nahi mila ya account me allowed nahi hai.",
+                "${req.appLabel} is playing '$shown', which does not match '$q'. The song may not be found or not allowed on this account."
+            ), tried))
+            MusicPlayRules.Outcome.PLAYING_UNCONFIRMED -> R(true, tr(
+                "${req.appLabel} me music chalu ho gaya, par kaun sa gaana hai ye main confirm nahi kar sakta. Confirm karne ke liye Notification access ON karo.",
+                "Music started in ${req.appLabel}, but I cannot confirm which song it is. Turn on Notification access so I can confirm."
+            ))
+            MusicPlayRules.Outcome.CANNOT_TELL -> R(true, tr(
+                "${req.appLabel} ko '$q' chalane ki request bheji, par pehle se kuch baj raha tha isliye confirm nahi kar sakta. Confirm karne ke liye Notification access ON karo.",
+                "I asked ${req.appLabel} to play '$q', but something was already playing so I cannot confirm. Turn on Notification access so I can confirm."
+            ))
+            MusicPlayRules.Outcome.NOT_PLAYING -> R(false, musicAltOffer(req, tr(
+                "${req.appLabel} khula par '$q' play nahi hua." + if (req.appKey == "spotify") " Spotify free account, login ya app ki restriction ki wajah se gaana seedha nahi chalne deta ho sakta hai." else "",
+                "${req.appLabel} opened but '$q' did not start playing." + if (req.appKey == "spotify") " Spotify free accounts, login or app restrictions can block direct playback." else ""
+            ), tried))
+        }
     }
 
     /** v6.92: works with ANY installed app. SEARCH: standard play-from-search, then the app's own search intent, then the screen
@@ -4663,7 +5250,7 @@ class NovaService : Service() {
         val label = labels[idx]
         val q = req.query
         if (Control.blocked(pkg, packageName, "type")) {
-            return R(false, tr("$label me main search nahi karunga: ye Settings, installer ya Play Store jaisa system app hai", "I will not search inside $label: it is a system app (Settings, installer, Play Store)"))
+            return R(false, tr("$label me main search nahi karunga: ye paise ya security wala app hai", "I will not search inside $label: it is a payment or security app"))
         }
         if (req.play) {
             val play = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
@@ -4953,7 +5540,7 @@ class NovaService : Service() {
     }
 
     // ---------------------------------------------------------------- contacts, call, sms, WhatsApp
-    private val NUMBER_RE =Regex("^[+0-9 \\-]{5,}$")
+    private val NUMBER_RE = Regex("^[+0-9 \\-]{5,}$")
 
     /** What happens when the owner picks one of the displayed candidates (popup tap or spoken name). Set per command: call / SMS / WhatsApp. */
     @Volatile private var contactChoiceAction: ((ContactCandidate) -> Unit)? = null
@@ -5078,9 +5665,10 @@ class NovaService : Service() {
             var placed = false
             if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                 try {
-                    startActivity(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", num, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    placed = true
-                    msg = tr("$name ko call ki request bheji", "Call request sent for $name")
+                    // v7.17: through launch() so a phone-blocked background start is not reported as a placed call
+                    val cr = launch(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", num, null)), null, tr("Call", "Call"), false)
+                    placed = cr.ok
+                    if (placed) msg = tr("$name ko call ki request bheji", "Call request sent for $name")
                 } catch (e: SecurityException) {
                     placed = false
                 } catch (e: Exception) {
@@ -5129,8 +5717,8 @@ class NovaService : Service() {
                 if (!claimAction("call|" + Logic.waNumber(number))) return@askFirst tr("Ye call abhi request ho chuki hai, dobara nahi lagayi", "That call was just requested, not placing it twice")
                 if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                     try {
-                        startActivity(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        tr("${name} ko call request bhej di", "Call request sent for ${name}")
+                        val cr = launch(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)), null, tr("Call", "Call"), false)   // v7.17: verified start
+                        if (cr.ok) tr("${name} ko call request bhej di", "Call request sent for ${name}") else cr.msg
                     } catch (e: SecurityException) {
                         tr("Android ne call ki permission deny ki: ${e.message ?: "SecurityException"}", "Android denied the call permission: ${e.message ?: "SecurityException"}")
                     } catch (e: Exception) {
@@ -5183,7 +5771,11 @@ class NovaService : Service() {
         val appLabel = (requestedApp ?: WhatsAppTarget.App.MESSENGER).label
         val prompt = tr("$name ko $appLabel par bheju: ${Logic.shorten(message)}?", "Send $name on $appLabel: ${Logic.shorten(message)}?")
         // Preserve the existing confirmation and send flow while retaining an explicitly requested app identity.
-        val reply = askFirst(prompt, must = true) { sendWhatsApp(num, message, requestedApp) }
+        val reply = askFirst(prompt, must = true) {
+            val sentMsg = sendWhatsApp(num, message, requestedApp)
+            SmartReplyRules.convo.addFact(name, message)   // Part 10: what the owner tells this person becomes a fact the AI may use when it chats with them
+            sentMsg
+        }
         return R(pending != null && reply == prompt, reply)
     }
 
@@ -5217,15 +5809,89 @@ class NovaService : Service() {
     }
 
     // ---------------------------------------------------------------- alarm / timer / calendar / urls
-    private fun alarmTool(hour: Int, minute: Int, label: String): R {
+    private val SONG_MARK = setOf("song", "songs", "gana", "gaana", "gaane", "tune", "ringtone")
+    private val SONG_FILL = setOf("laga", "lagao", "do", "de", "dena", "ke", "ka", "ki", "sath", "saath", "with", "bajao", "baja", "baje", "wala", "wali",
+        "pe", "par", "on", "use", "karo", "kar", "set", "rakho", "rakh", "aur", "or", "the", "a", "mera", "meri", "mere", "alarm", "alarms", "in", "sab", "sabhi")
+
+    /** "kesariya song laga do" -> ("", "kesariya"). No song word -> (label, ""). Pure text, never throws. */
+    private fun extractSong(label: String): Pair<String, String> {
+        val w = label.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val k = w.indexOfFirst { it.lowercase() in SONG_MARK }
+        if (k < 0) return Pair(label, "")
+        val after = w.drop(k + 1).takeWhile { it.lowercase() !in SONG_FILL }
+        val before = w.take(k).reversed().takeWhile { it.lowercase() !in SONG_FILL }.reversed()
+        val from: Int
+        val to: Int
+        val songWords: List<String>
+        if (after.isNotEmpty()) { from = k; to = k + after.size; songWords = after } else { from = k - before.size; to = k; songWords = before }
+        val rest = w.filterIndexed { idx, _ -> idx < from || idx > to }.filter { it.lowercase() !in SONG_FILL }
+        return Pair(rest.joinToString(" "), songWords.joinToString(" "))
+    }
+
+    private fun audioPermGranted(): Boolean {
+        val p = if (Build.VERSION.SDK_INT >= 33) "android.permission.READ_MEDIA_AUDIO" else Manifest.permission.READ_EXTERNAL_STORAGE
+        return checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** First song on the phone whose title or file name contains every word of [query]; newest first. */
+    private fun findSongUri(query: String): android.net.Uri? {
+        val words = query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 2 }.take(6)
+        if (words.isEmpty()) return null
+        val sel = words.joinToString(" AND ") { "(LOWER(" + MediaStore.Audio.Media.TITLE + ") LIKE ? OR LOWER(" + MediaStore.Audio.Media.DISPLAY_NAME + ") LIKE ?)" }
+        val args = words.flatMap { listOf("%$it%", "%$it%") }.toTypedArray()
+        return try {
+            contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media._ID), sel, args, MediaStore.Audio.Media.DATE_ADDED + " DESC")?.use { c ->
+                if (c.moveToFirst()) android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, c.getLong(0)) else null
+            }
+        } catch (e: Exception) { null }
+    }
+
+    /** Asks the system for its next alarm for up to 2.5 s (only on a background thread). True only when it is this alarm. */
+    private fun alarmArmed(hour: Int, minute: Int): Boolean {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return false
+        val am = getSystemService(android.app.AlarmManager::class.java) ?: return false
+        val now = java.util.Calendar.getInstance()
+        val want = java.util.Calendar.getInstance()
+        want.set(java.util.Calendar.HOUR_OF_DAY, hour)
+        want.set(java.util.Calendar.MINUTE, minute)
+        want.set(java.util.Calendar.SECOND, 0)
+        want.set(java.util.Calendar.MILLISECOND, 0)
+        if (want.timeInMillis <= now.timeInMillis) want.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        for (n in 1..5) {
+            try { Thread.sleep(500) } catch (e: InterruptedException) { return false }
+            val nx = try { am.nextAlarmClock } catch (e: Exception) { null }
+            if (nx != null && Math.abs(nx.triggerTime - want.timeInMillis) < 60_000L) return true
+        }
+        return false
+    }
+
+    private fun alarmTool(hour: Int, minute: Int, label: String, songArg: String = ""): R {
         if (hour !in 0..23 || minute !in 0..59) return R(false, tr("Alarm ka time galat hai", "That alarm time is not valid"))
+        val ex = extractSong(label)
+        val song = if (songArg.isNotBlank()) songArg.trim() else ex.second
         val i = Intent(AlarmClock.ACTION_SET_ALARM)
             .putExtra(AlarmClock.EXTRA_HOUR, hour).putExtra(AlarmClock.EXTRA_MINUTES, minute)
-            .putExtra(AlarmClock.EXTRA_MESSAGE, label).putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            .putExtra(AlarmClock.EXTRA_MESSAGE, ex.first).putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+        var songNote = ""
+        if (song.isNotBlank()) {
+            if (!audioPermGranted()) {
+                songNote = tr(". Song nahi laga: NOVA ko Settings, Apps, NOVA, Permissions mein Music and audio ki permission do, phir dobara bolo",
+                    ". The song was not set: allow NOVA the Music and audio permission in Settings, Apps, NOVA, Permissions, then ask again")
+            } else {
+                val uri = findSongUri(song)
+                if (uri == null) songNote = tr(". '$song' naam ka gaana phone mein nahi mila, normal awaaz rakhi", ". I could not find a song called '$song' on the phone, so the normal sound stays")
+                else {
+                    i.putExtra(AlarmClock.EXTRA_RINGTONE, uri.toString())
+                    songNote = tr(". Song '$song' ki request bheji, alarm baje tab ek baar suna kar check kar lena", ". Requested the song '$song', please check that it plays when the alarm rings")
+                }
+            }
+        }
         val t = Timers.clock(hour * 60 + minute)
-        return if (fire(i)) R(true, tr("$t ke alarm ki request bheji. Android confirm nahi karta, clock app mein dekh lo",
-            "Requested an alarm for $t. Android gives no confirmation, please check the clock app"))
-        else R(false, tr("Alarm set karne wala app nahi mila", "No app could set the alarm"))
+        if (!fire(i)) return R(false, tr("Alarm set karne wala app nahi mila", "No app could set the alarm"))
+        return if (alarmArmed(hour, minute)) R(true, tr("$t ka alarm verify ho gaya, system ki alarm list mein dikh raha hai$songNote",
+            "The $t alarm is confirmed in the system alarm list$songNote"))
+        else R(true, tr("$t ka alarm clock app ko bhej diya. Android khud batata nahi, ek baar clock app mein check kar lena$songNote",
+            "Requested an alarm for $t. Android gives no confirmation, please check the clock app$songNote"))
     }
 
     private fun timerTool(seconds: Int, label: String): R {
@@ -5234,7 +5900,7 @@ class NovaService : Service() {
             .putExtra(AlarmClock.EXTRA_LENGTH, seconds).putExtra(AlarmClock.EXTRA_MESSAGE, label)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
         val d = Timers.human(seconds, cfg.lang == "en")
-        return if (fire(i)) R(true, tr("$d ke timer ki request bheji. Android confirm nahi karta, clock app mein dekh lo",
+        return if (fire(i)) R(true, tr("$d ka timer clock app ko bhej diya. Android khud batata nahi, ek baar clock app mein check kar lena",
             "Requested a $d timer. Android gives no confirmation, please check the clock app"))
         else R(false, tr("Timer set karne wala app nahi mila", "No app could set the timer"))
     }
@@ -5268,12 +5934,12 @@ class NovaService : Service() {
     private fun runTool(name: String, a: JSONObject): String {
         val r: R = try {
             when (name) {
-                "open_app" -> openAppOrSite(a.optString("name"))
+                "open_app" -> openApp(a.optString("name"))
                 "open_url" -> openUrl(a.optString("url"))
                 "call" -> callTool(a.optString("who"))
                 "sms" -> smsTool(a.optString("to"), a.optString("message"))
                 "whatsapp" -> whatsappTool(a.optString("to"), a.optString("message"))
-                "alarm" -> alarmTool(a.optInt("hour", -1), a.optInt("minute", -1), a.optString("label"))
+                "alarm" -> alarmTool(a.optInt("hour", -1), a.optInt("minute", -1), a.optString("label"), a.optString("song"))
                 "timer" -> timerTool(a.optInt("seconds", -1), a.optString("label"))
                 "torch" -> torch(a.optBoolean("on", false))
                 "volume" -> volume(a.optString("action"), a.optInt("percent", -1))
@@ -5285,7 +5951,11 @@ class NovaService : Service() {
                 "play_music" -> {
                     val q = a.optString("query").trim()
                     if (q.isEmpty()) R(false, "no song given")
-                    else launch(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + enc(q))), null, "YouTube")
+                    else {
+                        // v7.17: this only opens a SEARCH page; it must never be reported as "playing"
+                        val yr = launch(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + enc(q))), null, "YouTube")
+                        if (yr.ok) R(true, tr("YouTube par '$q' ki search khol di, gaana abhi nahi baja. Aap result par tap karo", "Opened a YouTube search for '$q'; nothing is playing yet, tap a result")) else yr
+                    }
                 }
                 "camera" -> cameraTool(a.optString("mode", "photo"), a.optString("facing", "back"))
                 "settings" -> openSettings(a.optString("page", "main"), false)
@@ -5293,6 +5963,8 @@ class NovaService : Service() {
                 "brightness_step" -> stepBrightness(a.optInt("delta", 0))
                 "media" -> media(a.optString("action"))
                 "global_action" -> globalAct(a.optString("action"))
+                "ringer" -> ringerTool(a.optString("mode"))
+                "rotation" -> rotationTool(a.optString("mode"))
                 "calendar_event" -> calendarTool(a.optString("title"), a.optString("start"))
                 "search_web" -> R(true, searchWeb(a.optString("query")))
                 else -> R(false, "unknown tool")
@@ -5307,6 +5979,15 @@ class NovaService : Service() {
 
     // ---------------------------------------------------------------- cloud (only with a user supplied key)
     private fun postOnce(model: String, key: String, json: String, readMs: Int): Pair<Int, String> {
+        val fast = GeminiSpeed.withFastThinking(model, json)   // v7.3: 2.5 Flash answers without the hidden thinking pass
+        if (fast != json) {
+            val r = postOnceRaw(model, key, fast, readMs)
+            if (r.first != 400) return r
+        }
+        return postOnceRaw(model, key, json, readMs)   // other models, or a 400 on the new field: the old request exactly as before
+    }
+
+    private fun postOnceRaw(model: String, key: String, json: String, readMs: Int): Pair<Int, String> {
         var conn: HttpURLConnection? = null
         try {
             val c = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
@@ -5436,7 +6117,7 @@ class NovaService : Service() {
     private fun systemPrompt(): String {
         val now = SimpleDateFormat("EEEE, d MMMM yyyy, hh:mm a", Locale.ENGLISH).format(Date())
         val bat = getSystemService(BatteryManager::class.java).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        return """You are NOVA, a voice assistant on the user's Android phone. The user's message is a spoken command in Hindi, Hinglish or English: the audio plus a transcript that may have small mistakes (if they differ, trust the audio). People speak naturally: long, casual, with filler and polite words, a different word order, or several things in one sentence, for example 'mere mobile ko turant lock kar do', 'yaar thodi awaaz kam kar de aur torch jala de', 'mujhe subah saat baje uthana hai alarm laga dena'. Work out the INTENT of the whole sentence and act with the tools; when the user asks for several things, call several tools in the same turn. Never say you did not understand just because the phrasing is unusual or long: choose the most likely action. Ask ONE short question only when two very different actions are equally likely, and ask the user to repeat only when the audio is really empty. Your replies are read aloud, so: no markdown, no lists, no emojis, no URLs, short natural sentences. Reply in the language the user spoke: Hindi in Devanagari script for Hindi or Hinglish, English for English. For the camera tool pass mode video when the user says video or record, and facing front when the user says front, selfie or aage wala camera. Use the provided tools for phone actions and never claim an action was done unless the tool result says so; if a tool result says requested or not confirmed, say exactly that. The call and whatsapp tools ask the user for a spoken confirmation by themselves, so call them directly without asking first. For call, sms and whatsapp pass the contact name in Latin letters as it is usually saved, for example Rahul. For whatsapp pass only the final message text. You cannot see the phone screen. For analysis or explanations give a clear answer: conclusion first, then two to four reasons, then key risks. Use search_web for anything current such as news, prices or scores. Keep answers under about 8 sentences unless asked for detail. Never say you are building, adding, changing or creating a website, app, file or design unless a tool result says it was done: if you cannot do it, say so plainly in one sentence and offer text steps instead. Never call or message anyone the user did not ask for. Never repeat, redo or continue an earlier command unless the user clearly asks for it again in this new message. If the audio is silent or only background noise, call no tool, change nothing, and only ask the user to repeat. ${HelpGuide.aiFacts()} ${SourceMap.aiFacts()} Current time: $now. Phone battery: $bat percent."""
+        return """You are NOVA, a voice assistant on the user's Android phone. The user's message is a spoken command in Hindi, Hinglish or English: the audio plus a transcript that may have small mistakes (if they differ, trust the audio). People speak naturally: long, casual, with filler and polite words, a different word order, or several things in one sentence, for example 'mere mobile ko turant lock kar do', 'yaar thodi awaaz kam kar de aur torch jala de', 'mujhe subah saat baje uthana hai alarm laga dena'. Work out the INTENT of the whole sentence, even when the user only hints instead of commanding (for example 'andhera hai' means torch on, 'bahut shor hai' means volume down, 'kal subah jaldi uthna hai' means set an alarm) and act with the tools; when the user asks for several things, call several tools in the same turn. Never say you did not understand just because the phrasing is unusual or long: choose the most likely action. Ask ONE short question only when two very different actions are equally likely, and ask the user to repeat only when the audio is really empty. Your replies are read aloud, so: no markdown, no lists, no emojis, no URLs, short natural sentences. Reply in the language the user spoke: Hindi in Devanagari script for Hindi or Hinglish, English for English. For the camera tool pass mode video when the user says video or record, and facing front when the user says front, selfie or aage wala camera. Use the provided tools for phone actions and never claim an action was done unless the tool result says so; if a tool result says requested or not confirmed, say exactly that. The call and whatsapp tools ask the user for a spoken confirmation by themselves, so call them directly without asking first. For call, sms and whatsapp pass the contact name in Latin letters as it is usually saved, for example Rahul. For whatsapp pass only the final message text. You cannot see the phone screen. For analysis or explanations give a clear answer: conclusion first, then two to four reasons, then key risks. Use search_web for anything current such as news, prices or scores. Keep answers under about 8 sentences unless asked for detail. Never say you are building, adding, changing or creating a website, app, file or design unless a tool result says it was done: if you cannot do it, say so plainly in one sentence and offer text steps instead. Never call or message anyone the user did not ask for. Never repeat, redo or continue an earlier command unless the user clearly asks for it again in this new message. If the audio is silent or only background noise, call no tool, change nothing, and only ask the user to repeat. ${HelpGuide.aiFacts()} ${SourceMap.aiFacts()} ${PhoneFacts.aiFacts(this)} Current time: $now. Phone battery: $bat percent.${if (richTurn) " " + FreeProviders.GEMINI_RICH_NOTE else ""}"""
     }
 
     private fun declarations(): JSONArray {
@@ -5446,7 +6127,7 @@ class NovaService : Service() {
         t.put(tool("call", "Phone call a saved contact name or number. The user is asked to confirm by voice first; only the dialer opens", "who" to "string"))
         t.put(tool("sms", "Open the SMS app with a prefilled message to a contact name or number", "to" to "string", "message" to "string"))
         t.put(tool("whatsapp", "Send a WhatsApp message to a contact name or number. The user is asked to confirm by voice first", "to" to "string", "message" to "string"))
-        t.put(tool("alarm", "Set an alarm (24-hour clock)", "hour" to "integer", "minute" to "integer", "label" to "string"))
+        t.put(tool("alarm", "Set an alarm (24-hour clock). Optional song: a song title saved on the phone to ring instead of the normal sound", "hour" to "integer", "minute" to "integer", "label" to "string", "song" to "string"))
         t.put(tool("timer", "Start a countdown timer", "seconds" to "integer", "label" to "string"))
         t.put(tool("torch", "Turn the flashlight on or off", "on" to "boolean"))
         t.put(tool("volume", "Change media volume: action is one of up, down, mute, max", "action" to "string"))
@@ -5461,7 +6142,9 @@ class NovaService : Service() {
         t.put(tool("brightness", "Set screen brightness 0-100. May need a special permission", "percent" to "integer"))
         t.put(tool("brightness_step", "Increase or decrease brightness by a percentage delta", "delta" to "integer"))
         t.put(tool("media", "Control media playback: play, pause, next, previous", "action" to "string"))
-        t.put(tool("global_action", "Phone navigation: home, back, recents, notifications, quick_settings, lock", "action" to "string"))
+        t.put(tool("global_action", "Phone navigation: home, back, recents, notifications, quick_settings, lock, screenshot", "action" to "string"))
+        t.put(tool("ringer", "Set the ringer mode: normal, vibrate or silent (silent needs Do Not Disturb access)", "mode" to "string"))
+        t.put(tool("rotation", "Screen rotation: auto_on, auto_off, portrait or landscape (needs the brightness permission)", "mode" to "string"))
         t.put(tool("calendar_event", "Create a calendar event. start is local time like 2026-10-09T18:00", "title" to "string", "start" to "string"))
         t.put(tool("search_web", "Search the internet for current information and get a text summary", "query" to "string"))
         return t
@@ -5624,10 +6307,10 @@ class NovaService : Service() {
         if (verifyShot == null) return Pair(false, if (en)
             "The screenshot was blocked or its security could not be verified. I will not send this screen to AI."
             else "Screenshot block hua ya screen ki security verify nahi hui. Main is screen ko AI ko nahi bhejunga.")
-        if (intent == ScreenSession.Intent.PICTURE || thin) {
+        if (intent == ScreenSession.Intent.PICTURE || intent == ScreenSession.Intent.IDENTIFY || thin) {
             val now = NovaAccessibilityService.readScreen(false)
             if (now == null || ScreenSession.isProtected(now.pkg, packageName)) {
-                return Pair(false, if (intent == ScreenSession.Intent.PICTURE) ScreenSession.noPicture(en) else ScreenSession.noText(en))
+                return Pair(false, if (intent == ScreenSession.Intent.PICTURE || intent == ScreenSession.Intent.IDENTIFY) ScreenSession.noPicture(en) else ScreenSession.noText(en))
             }
             shot = verifyShot
         }
@@ -5641,8 +6324,14 @@ class NovaService : Service() {
         val contents = JSONArray()
         synchronized(scrHist) { scrHist.forEach { contents.put(it) } }
         contents.put(JSONObject().put("role", "user").put("parts", parts))
-        val sys = ScreenSession.systemPrompt(cfg.lang, scrLabel, scrPkg, scrText)
-        val (code, resp) = postFallback(cloudBody(contents, false, sys))
+        var sys = ScreenSession.systemPrompt(cfg.lang, scrLabel, scrPkg, scrText)
+        var body = cloudBody(contents, false, sys)
+        if (intent == ScreenSession.Intent.IDENTIFY) {
+            // Only this one question may use Google Search; only the spoken question + screenshot go out, same protected-screen gate as above.
+            sys += "\nFor this one question you MAY use Google Search to identify what is visible (title, name, song, person). Say if you are not sure."
+            body = JSONObject(cloudBody(contents, false, sys)).put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject()))).toString()
+        }
+        val (code, resp) = postFallback(body)
         if (code !in 200..299) return Pair(false, cloudFailure(code))
         val out = candidateText(resp).trim()
         if (out.isEmpty()) return Pair(false, tr("Jawab nahi mila", "No answer received"))
@@ -5655,7 +6344,7 @@ class NovaService : Service() {
     }
 
     /** First reading ("nova screen dekho"). */
-    private fun analyzeScreen(): String {
+    private fun analyzeScreen(spoken: String = ""): String {
         // Below Android 11 there is no Accessibility screenshot API to verify FLAG_SECURE; refuse rather than risk exposing text.
         if (Build.VERSION.SDK_INT < 30) return tr(
             "Is Android version par secure-screen check verify nahi kar sakta, isliye screen reading/AI analysis band rakha hai.",
@@ -5681,18 +6370,21 @@ class NovaService : Service() {
             "Mujhe koi dusra app nahi dikha. NOVA se bahar jaakar dobara bolo: screen dekho",
             "I did not see another app. Leave NOVA and say it again: analyze screen"
         )
-        return screenStartFrom(sn)
+        return screenStartFrom(sn, spoken)
     }
 
     /** Opens the session on an already read screen. Used by "screen dekho" and by a spoken yes to a screen alert. Worker thread. */
-    private fun screenStartFrom(sn: NovaAccessibilityService.Snap): String {
+    private fun screenStartFrom(sn: NovaAccessibilityService.Snap, spoken: String = ""): String {
         lastTurnLocal = false
         lastKind = "screen"
         scrAdopt(sn)
         scrState = ScreenSession.start(sn.pkg, System.currentTimeMillis())
-        val gate = screenGate(ScreenSession.Intent.REFRESH)
+        val ident = ScreenSession.wantsIdentify(spoken)
+        val firstIntent = if (ident) ScreenSession.Intent.IDENTIFY else ScreenSession.Intent.REFRESH
+        val gate = screenGate(firstIntent)
         if (gate != null) return gate
-        val (ok, out) = screenTalk(ScreenSession.firstAsk(), "(screen dekho)", ScreenSession.Intent.REFRESH)
+        val (ok, out) = if (ident) screenTalk(ScreenSession.askFor(firstIntent, spoken), "(identify) " + spoken.take(120), firstIntent)
+            else screenTalk(ScreenSession.firstAsk(), "(screen dekho)", ScreenSession.Intent.REFRESH)
         if (!ok) {
             val local = screenLocalRead(scrLines, 8)
             endScreenSession()
@@ -5736,7 +6428,7 @@ class NovaService : Service() {
             lastKind = "screen_end"
             return ScreenSession.ended(en)
         }
-        if (cmd?.kind == "analyze") intent = ScreenSession.Intent.REFRESH
+        if (cmd?.kind == "analyze" && intent != ScreenSession.Intent.IDENTIFY) intent = ScreenSession.Intent.REFRESH
         else if (ScreenSession.isOtherFeature(said)) { endScreenSession(); return null }
         if (intent == ScreenSession.Intent.OTHER && !turnIsFollow) { endScreenSession(); return null }   // a new wake-word sentence is not a screen question
         lastKind = "screen"
@@ -5758,7 +6450,7 @@ class NovaService : Service() {
         val en = cfg.lang == "en"
         val snap = NovaAccessibilityService.readScreen(false)
         val other = snap != null && snap.pkg.isNotEmpty() && snap.pkg != packageName
-        if (other && snap != null && (intent == ScreenSession.Intent.REFRESH || snap.pkg != scrPkg)) scrAdopt(snap)   // "ab ye dekho" or another app is in front now
+        if (other && snap != null && (intent == ScreenSession.Intent.REFRESH || intent == ScreenSession.Intent.IDENTIFY || snap.pkg != scrPkg)) scrAdopt(snap)   // "ab ye dekho" or another app is in front now
         else if (!other && intent == ScreenSession.Intent.REFRESH) return tr(
             "Mujhe naya screen nahi dikha. Jo screen dekhni hai wo kholo, phir bolo: ab ye dekho",
             "I do not see a new screen. Open the one you want, then say: look at this now"

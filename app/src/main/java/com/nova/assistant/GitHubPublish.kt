@@ -57,7 +57,7 @@ object GitHubPublish {
     fun run(ctx: Context, subject: String, html: String): Out {
         val token = SecureStore.getSlot(ctx, SLOT)
         if (token.isEmpty()) return Out(false, "", "GitHub token nahi mila. Settings mein daalo")
-        if (html.length < 200 || html.length > SiteGen.MAX_HTML) return Out(false, "", "Website file theek nahi hai")
+        if (html.length < 200 || html.length > SiteGen.MAX_FINAL) return Out(false, "", "Website file theek nahi hai")
         val who = call(token, "GET", "/user", null)
         if (who.first !in 200..299) return Out(false, "", failFor(who.first))
         val login = try { JSONObject(who.second).optString("login") } catch (e: Exception) { "" }

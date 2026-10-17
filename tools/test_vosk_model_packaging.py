@@ -7,7 +7,7 @@ class VoskModelPackagingTest(unittest.TestCase):
     def test_ci_prepares_model_before_gradle_build(self):
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
         prepare = workflow.find("Prepare and validate offline Vosk model")
-        build = workflow.find("Assemble debug APK")
+        build = workflow.find("Run unit tests and assemble debug")
         self.assertGreaterEqual(prepare, 0)
         self.assertGreater(build, prepare)
         self.assertIn("./tools/prepare_vosk_model.sh", workflow)

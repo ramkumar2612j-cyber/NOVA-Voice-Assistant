@@ -136,7 +136,36 @@ object OpenWebRules {
         "claude" to Pair("Claude", "com.anthropic.claude"),
         "primevideo" to Pair("Prime Video", "com.amazon.avod.thirdpartyclient"),
         "microsoftteams" to Pair("Microsoft Teams", "com.microsoft.teams"),
-        "teams" to Pair("Microsoft Teams", "com.microsoft.teams")
+        "teams" to Pair("Microsoft Teams", "com.microsoft.teams"),
+        // v7.06: more known apps (exact Play title = label, so the page check still refuses lookalikes). A wrong package can only fail safe.
+        "googlephotos" to Pair("Google Photos", "com.google.android.apps.photos"),
+        "photos" to Pair("Google Photos", "com.google.android.apps.photos"),
+        "googletranslate" to Pair("Google Translate", "com.google.android.apps.translate"),
+        "translate" to Pair("Google Translate", "com.google.android.apps.translate"),
+        "googledocs" to Pair("Google Docs", "com.google.android.apps.docs.editors.docs"),
+        "googlesheets" to Pair("Google Sheets", "com.google.android.apps.docs.editors.sheets"),
+        "googleslides" to Pair("Google Slides", "com.google.android.apps.docs.editors.slides"),
+        "googlecalendar" to Pair("Google Calendar", "com.google.android.calendar"),
+        "calendar" to Pair("Google Calendar", "com.google.android.calendar"),
+        "googlelens" to Pair("Google Lens", "com.google.ar.lens"),
+        "lens" to Pair("Google Lens", "com.google.ar.lens"),
+        "filesbygoogle" to Pair("Files by Google", "com.google.android.apps.nbu.files"),
+        "youtubemusic" to Pair("YouTube Music", "com.google.android.apps.youtube.music"),
+        "snapseed" to Pair("Snapseed", "com.niksoftware.snapseed"),
+        "capcut" to Pair("CapCut", "com.lemon.lvoverseas"),
+        "vlc" to Pair("VLC for Android", "org.videolan.vlc"),
+        "onedrive" to Pair("Microsoft OneDrive", "com.microsoft.skydrive"),
+        "candycrush" to Pair("Candy Crush Saga", "com.king.candycrushsaga"),
+        "candycrushsaga" to Pair("Candy Crush Saga", "com.king.candycrushsaga"),
+        "subwaysurfers" to Pair("Subway Surfers", "com.kiloo.subwaysurf"),
+        "templerun2" to Pair("Temple Run 2", "com.imangi.templerun2"),
+        "clashofclans" to Pair("Clash of Clans", "com.supercell.clashofclans"),
+        "clashroyale" to Pair("Clash Royale", "com.supercell.clashroyale"),
+        "brawlstars" to Pair("Brawl Stars", "com.supercell.brawlstars"),
+        "roblox" to Pair("Roblox", "com.roblox.client"),
+        "amongus" to Pair("Among Us", "com.innersloth.spacemafia"),
+        "hillclimbracing" to Pair("Hill Climb Racing", "com.fingersoft.hillclimb"),
+        "hillclimbracing2" to Pair("Hill Climb Racing 2", "com.fingersoft.hcr2")
     )
 
     /** v6.99 Part 3: every spelling speech-to-text gives for download / install (Roman + what HindiRoman makes of the Devanagari words: daunlod, instol). */

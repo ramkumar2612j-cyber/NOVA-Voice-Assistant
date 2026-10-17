@@ -1,0 +1,250 @@
+PART 1 REPORT - repo wip13 vs my zip
+only in repo: 60
+only in mine: 94
+differs: 86
+
+== ONLY IN REPO (keep all) ==
+./.github/workflows/build.yml
+./AUTOPSY_PART1.md
+./NEXT_ACCOUNT_PROMPT_3.md
+./NEXT_ACCOUNT_PROMPT_PART10.md
+./NEXT_ACCOUNT_PROMPT_PART2.md
+./NEXT_ACCOUNT_PROMPT_PART4.md
+./NEXT_ACCOUNT_PROMPT_PART5.md
+./NEXT_ACCOUNT_PROMPT_PART5B.md
+./NEXT_ACCOUNT_PROMPT_PART5C.md
+./NEXT_ACCOUNT_PROMPT_PART6.md
+./NEXT_ACCOUNT_PROMPT_PART7.md
+./NEXT_ACCOUNT_PROMPT_PART8.md
+./NEXT_ACCOUNT_PROMPT_PART9.md
+./NEXT_ACCOUNT_PROMPT_merge_stage.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip9.md
+./NEXT_ACCOUNT_PROMPT_wip12.md
+./NEXT_ACCOUNT_PROMPT_wip13.md
+./PART2_STATUS.md
+./PART3_STATUS.md
+./PART4_STATUS.md
+./PART5_STATUS.md
+./PART5_STATUS_HINDI.md
+./PART6_STATUS.md
+./PART7_STATUS.md
+./PART7_STATUS_HINDI.md
+./PART8_STATUS.md
+./PART8_STATUS_HINDI.md
+./PART9D_STATUS.md
+./PART9_STATUS.md
+./PART9_STATUS_HINDI.md
+./app/src/main/java/com/nova/assistant/FeatureVoice.kt
+./app/src/main/java/com/nova/assistant/GeminiSpeed.kt
+./app/src/main/java/com/nova/assistant/MusicCatalog.kt
+./app/src/main/java/com/nova/assistant/SiteDesign.kt
+./app/src/main/java/com/nova/assistant/SiteQuality.kt
+./app/src/main/java/com/nova/assistant/SiteSummary.kt
+./app/src/main/java/com/nova/assistant/UnderstandBudget.kt
+./app/src/main/java/com/nova/assistant/WebContext.kt
+./app/src/test/java/com/nova/assistant/FeatureVoiceTest.kt
+./app/src/test/java/com/nova/assistant/MusicCatalogTest.kt
+./app/src/test/java/com/nova/assistant/NovaV73Test.kt
+./app/src/test/java/com/nova/assistant/PhoneActionUnderstandTest.kt
+./app/src/test/java/com/nova/assistant/RichChatTest.kt
+./app/src/test/java/com/nova/assistant/SiteLuxuryTest.kt
+./app/src/test/java/com/nova/assistant/SiteQualityTest.kt
+./app/src/test/java/com/nova/assistant/SiteV7Test.kt
+./app/src/test/java/com/nova/assistant/UnderstandBudgetTest.kt
+./app/src/test/java/com/nova/assistant/WebContextTest.kt
+./tools/test_music_play_contract.py
+./tools/test_part10_autotest_5s_contract.py
+./tools/test_part10_chat_autostart_contract.py
+./tools/test_part3_stop_silent_contract.py
+./tools/test_part4_ui_contract.py
+./tools/test_part5_feature_voice_contract.py
+./tools/test_part5_ui_screens.py
+./tools/test_part9_phone_tools_contract.py
+./tools/test_part9d_dnd_wiring_contract.py
+./tools/test_rich_chat_contract.py
+./tools/test_site_quality_contract.py
+./tools/ui_screens.py
+
+== ONLY IN MINE (add) ==
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART2.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART3.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART4.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART5.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART6.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART7.md
+./NEXT_ACCOUNT_PROMPT_AUTOPSY_PART8.md
+./NEXT_ACCOUNT_PROMPT_AUTO_MEDIA.md
+./NEXT_ACCOUNT_PROMPT_BUILD_AND_PHONE.md
+./NEXT_ACCOUNT_PROMPT_UI_RESTORE.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14_FINAL.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14_part2.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14_part3.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14_part4.md
+./NEXT_ACCOUNT_PROMPT_v6.97_wip14_part5.md
+./NEXT_ACCOUNT_PROMPT_v6.99_FINAL.md
+./NEXT_ACCOUNT_PROMPT_v6_99_FINAL_ALL.md
+./NEXT_ACCOUNT_PROMPT_v6_99_PART1.md
+./NEXT_ACCOUNT_PROMPT_v6_99_PART2.md
+./NEXT_ACCOUNT_PROMPT_v6_99_PART3_FINAL.md
+./NEXT_ACCOUNT_PROMPT_v7_01_HUB3D.md
+./NEXT_ACCOUNT_PROMPT_v7_03_FUTURE_HUD.md
+./NEXT_ACCOUNT_PROMPT_v7_04_G_GALLERY.md
+./NEXT_ACCOUNT_PROMPT_v7_05_H_I_NOCOVER.md
+./NEXT_ACCOUNT_PROMPT_v7_06_NOCOVER_FIX.md
+./app/src/main/java/com/nova/assistant/MediaIntent.kt
+./app/src/main/java/com/nova/assistant/MediaPlace.kt
+./app/src/main/java/com/nova/assistant/OpenWebRules.kt
+./app/src/main/java/com/nova/assistant/PaymentReplyRules.kt
+./app/src/main/java/com/nova/assistant/PhoneActions.kt
+./app/src/main/java/com/nova/assistant/PhoneFacts.kt
+./app/src/main/java/com/nova/assistant/PhoneVoiceRules.kt
+./app/src/main/java/com/nova/assistant/PhotoEditIntent.kt
+./app/src/main/java/com/nova/assistant/PhotoPro.kt
+./app/src/main/java/com/nova/assistant/PlayInstallRules.kt
+./app/src/main/java/com/nova/assistant/PublishTarget.kt
+./app/src/main/java/com/nova/assistant/SiteMediaStore.kt
+./app/src/main/java/com/nova/assistant/SocialReplyRules.kt
+./app/src/main/java/com/nova/assistant/StopRules.kt
+./app/src/main/java/com/nova/assistant/VercelPublish.kt
+./app/src/test/java/com/nova/assistant/MediaIntentTest.kt
+./app/src/test/java/com/nova/assistant/MediaPlaceTest.kt
+./app/src/test/java/com/nova/assistant/MoreAppsTest.kt
+./app/src/test/java/com/nova/assistant/OpenWebRoutingTest.kt
+./app/src/test/java/com/nova/assistant/OpenWebRulesTest.kt
+./app/src/test/java/com/nova/assistant/PaymentReplyRulesTest.kt
+./app/src/test/java/com/nova/assistant/PhoneFactsTest.kt
+./app/src/test/java/com/nova/assistant/PhoneVoiceRulesTest.kt
+./app/src/test/java/com/nova/assistant/PhotoEditIntentTest.kt
+./app/src/test/java/com/nova/assistant/PhotoProTest.kt
+./app/src/test/java/com/nova/assistant/PlayInstallRulesTest.kt
+./app/src/test/java/com/nova/assistant/PublishTargetTest.kt
+./app/src/test/java/com/nova/assistant/SiteMediaApplyTest.kt
+./app/src/test/java/com/nova/assistant/SocialReplyRulesTest.kt
+./app/src/test/java/com/nova/assistant/StopRulesTest.kt
+./app/src/test/java/com/nova/assistant/VercelPublishTest.kt
+./docs/AUTOPSY_FINAL_REPORT.md
+./docs/AUTOPSY_PART2.md
+./docs/AUTOPSY_PART3.md
+./docs/AUTOPSY_PART4.md
+./docs/AUTOPSY_PART5.md
+./docs/AUTOPSY_PART6.md
+./docs/AUTOPSY_PART7.md
+./docs/FEATURE_INVENTORY.md
+./docs/NEXT_ACCOUNT_PROMPT_v6.97_wip14.md
+./docs/TEST_REPORT_WIP14.md
+./docs/pending_G/MediaPlace.kt.txt
+./docs/pending_G/SiteMediaStore.kt.txt
+./tools/build_ui_preview.py
+./tools/test_auto_media_contract.py
+./tools/test_autopsy_part2_contract.py
+./tools/test_autopsy_part3_contract.py
+./tools/test_autopsy_part4_contract.py
+./tools/test_autopsy_part5_contract.py
+./tools/test_autopsy_part6_contract.py
+./tools/test_autopsy_part7_contract.py
+./tools/test_autopsy_part8_contract.py
+./tools/test_autopsy_part9_contract.py
+./tools/test_download_spellings_contract.py
+./tools/test_future_hud_contract.py
+./tools/test_no_feature_loss_contract.py
+./tools/test_open_web_download_contract.py
+./tools/test_part4_part5_contract.py
+./tools/test_payment_reply_contract.py
+./tools/test_phonefacts_contract.py
+./tools/test_photo_publish_contract.py
+./tools/test_site_media_contract.py
+./tools/test_social_reply_contract.py
+./tools/test_stop_contract.py
+./tools/test_wiring_audit_contract.py
+./tools/ui_ids_baseline.txt
+./tools/ui_owner_check.py
+./tools/ui_scroll_audit.py
+
+== DIFFERS (file repo_only_lines mine_only_lines) ==
+./app/src/main/assets/ui.html repo_only_lines=926 mine_only_lines=1190
+./app/src/main/java/com/nova/assistant/NovaService.kt repo_only_lines=674 mine_only_lines=439
+./app/src/main/java/com/nova/assistant/NovaHud.kt repo_only_lines=329 mine_only_lines=83
+./app/src/main/java/com/nova/assistant/SmartReplyRules.kt repo_only_lines=175 mine_only_lines=64
+./app/src/main/java/com/nova/assistant/MainActivity.kt repo_only_lines=147 mine_only_lines=258
+./app/src/main/java/com/nova/assistant/SiteGen.kt repo_only_lines=136 mine_only_lines=55
+./app/src/main/java/com/nova/assistant/FreeProviders.kt repo_only_lines=109 mine_only_lines=6
+./app/src/main/java/com/nova/assistant/MusicPlayRules.kt repo_only_lines=105 mine_only_lines=0
+./app/src/test/java/com/nova/assistant/SmartReplyRulesTest.kt repo_only_lines=94 mine_only_lines=82
+./app/src/main/java/com/nova/assistant/SiteMedia.kt repo_only_lines=89 mine_only_lines=162
+./app/src/main/java/com/nova/assistant/PhoneActionRules.kt repo_only_lines=65 mine_only_lines=12
+./app/src/main/java/com/nova/assistant/NovaNotificationService.kt repo_only_lines=65 mine_only_lines=41
+./app/src/main/java/com/nova/assistant/SiteIntent.kt repo_only_lines=61 mine_only_lines=7
+./docs/AUTOPSY_PART1.md repo_only_lines=53 mine_only_lines=13
+./app/src/test/java/com/nova/assistant/MusicPlayRulesTest.kt repo_only_lines=47 mine_only_lines=0
+./skillpacks/starter.json repo_only_lines=44 mine_only_lines=4
+./app/src/main/java/com/nova/assistant/FeatureStatus.kt repo_only_lines=43 mine_only_lines=0
+./CHANGELOG.md repo_only_lines=39 mine_only_lines=168
+./app/src/main/java/com/nova/assistant/ConnectorApi.kt repo_only_lines=38 mine_only_lines=7
+./tools/test_smart_reply_contract.py repo_only_lines=35 mine_only_lines=32
+./app/src/test/java/com/nova/assistant/PhoneActionRulesTest.kt repo_only_lines=26 mine_only_lines=0
+./app/src/main/java/com/nova/assistant/HelpGuide.kt repo_only_lines=26 mine_only_lines=21
+./NEXT_ACCOUNT_PROMPT_v6.97.md repo_only_lines=22 mine_only_lines=0
+./app/src/main/java/com/nova/assistant/Logic.kt repo_only_lines=21 mine_only_lines=4
+./app/src/main/java/com/nova/assistant/ScreenSession.kt repo_only_lines=19 mine_only_lines=3
+./app/src/main/java/com/nova/assistant/SelfTest.kt repo_only_lines=18 mine_only_lines=2
+./app/src/main/java/com/nova/assistant/ConnectorCatalog.kt repo_only_lines=18 mine_only_lines=1
+./app/src/test/java/com/nova/assistant/HelpGuideTest.kt repo_only_lines=16 mine_only_lines=34
+./app/src/main/java/com/nova/assistant/AutoTest.kt repo_only_lines=14 mine_only_lines=4
+./app/src/main/java/com/nova/assistant/ActionLog.kt repo_only_lines=14 mine_only_lines=3
+./app/src/main/java/com/nova/assistant/SpecContract.kt repo_only_lines=12 mine_only_lines=3
+./app/src/test/java/com/nova/assistant/ScreenSessionTest.kt repo_only_lines=11 mine_only_lines=0
+./app/src/test/java/com/nova/assistant/LogicTest.kt repo_only_lines=11 mine_only_lines=0
+./app/src/main/java/com/nova/assistant/ScheduledTaskStore.kt repo_only_lines=11 mine_only_lines=32
+./app/src/main/java/com/nova/assistant/Control.kt repo_only_lines=10 mine_only_lines=23
+./NEXT_ACCOUNT_PROMPT_PART3.md repo_only_lines=10 mine_only_lines=32
+./.gitignore repo_only_lines=10 mine_only_lines=10
+./tools/classify_mirror.py repo_only_lines=9 mine_only_lines=0
+./app/src/test/java/com/nova/assistant/AgentRulesPart6Test.kt repo_only_lines=9 mine_only_lines=10
+./app/src/test/java/com/nova/assistant/SilentRulesTest.kt repo_only_lines=8 mine_only_lines=0
+./app/src/test/java/com/nova/assistant/SafetyInvariantsTest.kt repo_only_lines=8 mine_only_lines=11
+./app/src/test/java/com/nova/assistant/AgentRulesTest.kt repo_only_lines=7 mine_only_lines=7
+./app/src/main/java/com/nova/assistant/AgentRules.kt repo_only_lines=7 mine_only_lines=2
+./app/src/main/java/com/nova/assistant/VideoRecordService.kt repo_only_lines=6 mine_only_lines=31
+./app/src/main/java/com/nova/assistant/NovaAccessibilityService.kt repo_only_lines=6 mine_only_lines=137
+./app/src/main/java/com/nova/assistant/ExtCfg.kt repo_only_lines=6 mine_only_lines=27
+./app/src/main/java/com/nova/assistant/Cfg.kt repo_only_lines=6 mine_only_lines=1
+./app/src/test/java/com/nova/assistant/ControlTest.kt repo_only_lines=5 mine_only_lines=13
+./app/src/main/java/com/nova/assistant/AiChoice.kt repo_only_lines=5 mine_only_lines=2
+./tools/test_hud_controls.py repo_only_lines=4 mine_only_lines=3
+./tools/test_help_contract.py repo_only_lines=4 mine_only_lines=0
+./app/src/main/java/com/nova/assistant/ScheduledTaskReceiver.kt repo_only_lines=4 mine_only_lines=11
+./app/src/main/java/com/nova/assistant/LocalBrains.kt repo_only_lines=4 mine_only_lines=1
+./tools/test_autoreply_contract.py repo_only_lines=3 mine_only_lines=3
+./app/src/test/java/com/nova/assistant/AutoReplyRulesTest.kt repo_only_lines=3 mine_only_lines=3
+./app/src/main/java/com/nova/assistant/RecordSession.kt repo_only_lines=3 mine_only_lines=4
+./app/src/main/java/com/nova/assistant/FreeHttp.kt repo_only_lines=3 mine_only_lines=3
+./app/src/main/java/com/nova/assistant/AutoReplyRules.kt repo_only_lines=3 mine_only_lines=3
+./app/src/main/AndroidManifest.xml repo_only_lines=3 mine_only_lines=5
+./tools/test_tool_verify_contract.py repo_only_lines=2 mine_only_lines=1
+./tools/test_lock_guard_contract.py repo_only_lines=2 mine_only_lines=2
+./tools/test_feature_status_contract.py repo_only_lines=2 mine_only_lines=2
+./tools/test_android_runtime_contract.py repo_only_lines=2 mine_only_lines=2
+./tools/test_ai_rank_autolearn_contract.py repo_only_lines=2 mine_only_lines=2
+./app/src/main/java/com/nova/assistant/ToolVerify.kt repo_only_lines=2 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/ImageGen.kt repo_only_lines=2 mine_only_lines=7
+./app/src/main/java/com/nova/assistant/ConnectorStore.kt repo_only_lines=2 mine_only_lines=1
+./README.md repo_only_lines=2 mine_only_lines=2
+./tools/test_vosk_model_packaging.py repo_only_lines=1 mine_only_lines=1
+./tools/test_screen_session_contract.py repo_only_lines=1 mine_only_lines=1
+./tools/test_screen_alert_contract.py repo_only_lines=1 mine_only_lines=2
+./tools/test_connectors_contract.py repo_only_lines=1 mine_only_lines=1
+./app/src/test/java/com/nova/assistant/LockGuardTest.kt repo_only_lines=1 mine_only_lines=1
+./app/src/test/java/com/nova/assistant/ConnectorRulesTest.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/WatchMic.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/WatchCommandActivity.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/VoiceFlowRules.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/OfflineJobQueue.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/LockGuard.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/LockAlert.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/GitHubPublish.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/ContactRequestParser.kt repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/Brain.kt repo_only_lines=1 mine_only_lines=1
+./app/build.gradle.kts repo_only_lines=1 mine_only_lines=1
+./app/src/main/java/com/nova/assistant/FeatureCheck.kt repo_only_lines=0 mine_only_lines=21
+./app/src/main/java/com/nova/assistant/BootReceiver.kt repo_only_lines=0 mine_only_lines=6

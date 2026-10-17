@@ -4,7 +4,7 @@ NOVA is an Android voice assistant (Kotlin, package `com.nova.assistant`) that t
 
 | | |
 |---|---|
-| Version | 6.99 |
+| Version | 6.88 |
 | Min / target SDK | 26 / 34 |
 | Language / build | Kotlin 1.9.24, AGP 8.5.2, Gradle 8.7, JDK 17 |
 | Status | Sandbox: main compiles with real kotlinc (0 errors), Part 4 (v6.73): 571/571 JUnit PASS. Parts 5-6 (v6.75-6.76): 45/45 Python contract scripts PASS, new Kotlin/JUnit NOT RUN. **Gradle/AGP/GitHub-Actions build: NOT RUN. Real phone: NOT TESTED.** |

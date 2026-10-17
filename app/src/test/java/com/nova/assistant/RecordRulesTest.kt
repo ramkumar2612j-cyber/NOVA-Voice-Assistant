@@ -103,3 +103,15 @@ class RecordRulesTest {
         assertFalse(SilentRules.present(false, false, listOf("rec"), "Recording shuru", "done").speak)
     }
 }
+
+class RecordWriterWarnTest {
+    @org.junit.Test fun writerWarningTextExistsInBothLanguages() {
+        org.junit.Assert.assertTrue(RecordRules.text("writer_err", true, "").contains("part-way"))
+        org.junit.Assert.assertTrue(RecordRules.text("writer_err", false, "").contains("beech mein"))
+    }
+    @org.junit.Test fun savedKeepsOldConstructorAndDefaultsToNoError() {
+        val s = RecordSession.Saved(1, 1, "/x", 1000L, 0)
+        org.junit.Assert.assertEquals("", s.writerError)
+        org.junit.Assert.assertEquals("boom", RecordSession.Saved(1, 0, "/x", 1000L, 0, "boom").writerError)
+    }
+}

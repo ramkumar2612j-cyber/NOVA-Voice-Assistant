@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v6.98 lock guard wiring contract (static): every piece must be connected, no manual test buttons."""
+"""v6.97-wip9 lock guard wiring contract (static): every piece must be connected, no manual test buttons."""
 import re, sys, pathlib
 R = pathlib.Path(__file__).resolve().parent.parent / "app/src/main"
 J = R / "java/com/nova/assistant"
@@ -22,7 +22,7 @@ check("key filter flags in accessibility xml", "flagRequestFilterKeyEvents" in x
 check("alert uses ALARM stream", la.count("STREAM_ALARM") >= 3)
 check("switch exists (default ON)", "fun lockGuard" in cfg and 'getBoolean(LOCK_GUARD, true)' in cfg)
 check("bridge + UI switch", "fun getLockGuard" in ma and "fun setLockGuard" in ma and 'id="wb_lg"' in ui and "Android.setLockGuard" in ui)
-check("auto test section present", "6f. v6.98 LOCK GUARD" in st)
+check("auto test section present", "6f. v6.97-wip9 LOCK GUARD" in st)
 check("no manual lock test button", 'id="lg_test"' not in ui)
 check("alert never reads message text", "ex.getCharSequence(Notification.EXTRA_TEXT)" in ns and "LockGuard.text(a, silent, en)" in ns)
 man = (R / "AndroidManifest.xml").read_text(encoding="utf-8")

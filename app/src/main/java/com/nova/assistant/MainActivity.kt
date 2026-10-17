@@ -33,6 +33,7 @@ class MainActivity : Activity() {
         super.onCreate(b)
         cfg = Cfg(this)
         ApiUsage.init(this)
+        Thread { try { ScheduledTaskReceiver().notifyMissed(applicationContext, ScheduledTaskStore.rescheduleAll(applicationContext)) } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()) } }.start()   // v7.12: alarms re-armed at every open
         LocalBrains.installEngine(this)
         web = WebView(this)
         hardenWebView(web)
@@ -62,6 +63,7 @@ class MainActivity : Activity() {
         NovaService.publishListener = { ok, msg, url ->
             runJs("onPublish(" + ok + "," + JSONObject.quote(msg) + "," + JSONObject.quote(url) + ")")
         }
+        NovaService.askListener = { q -> runJs("onAsk(" + JSONObject.quote(q) + ")") }
         NovaService.siteListener = { ok, msg, html, saved ->
             runJs("onSite(" + ok + "," + JSONObject.quote(msg) + "," + JSONObject.quote(html) + "," + JSONObject.quote(saved) + ")")
         }
@@ -89,6 +91,29 @@ class MainActivity : Activity() {
                         .create()
                     dialog.setOnCancelListener { if (!answered) { answered = true; complete(null) } }
                     dialog.setOnDismissListener { if (!answered) { answered = true; complete(null) } }
+                    dialog.show()
+                    dialog.window?.setLayout(
+                        (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+            }
+        }
+        NovaService.songChoiceListener = { labels, complete ->
+            runOnUiThread {
+                if (isDestroyed || isFinishing) { complete(null) }
+                else {
+                    var answered = false
+                    val dialog = AlertDialog.Builder(this)
+                        .setTitle("NOVA — Kaun sa gaana?")
+                        .setItems(labels.toTypedArray()) { _, which ->
+                            if (!answered) { answered = true; complete(which) }
+                        }
+                        .setNegativeButton("Cancel") { _, _ ->
+                            if (!answered) { answered = true; complete(null) }
+                        }
+                        .create()
+                    dialog.setOnCancelListener { if (!answered) { answered = true; complete(null) } }
                     dialog.show()
                     dialog.window?.setLayout(
                         (resources.displayMetrics.widthPixels * 0.92f).toInt(),
@@ -204,6 +229,8 @@ class MainActivity : Activity() {
         // v6.21: health dialogs are never shown automatically on resume. The automatic AutoTest report is in Settings > TEST REPORT.
         // v6.33: quiet automatic self test (no popup/sound/torch/screen jump) once keys + mic permission exist, and again when they change.
         AutoTest.kick(this) { sum, rep -> runJs("onAutoTest(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
+        // v7.35 AUTO VERIFY: 12 s after the app opens NOVA checks by itself that every feature is understood and wired (read-only, once per 10 min).
+        FeatureVerify.start(this, 12_000L, { runJs("window.p6Verify&&p6Verify()") }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
     }
 
     @Volatile private var lastAutoActivateAt = 0L
@@ -255,6 +282,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         NovaService.uiVisible = false
+        AutoTest.stop()   // Part 10: the 5-second feature watcher sleeps while the screen is closed
         super.onPause()
     }
 
@@ -287,9 +315,11 @@ class MainActivity : Activity() {
             NovaService.learnListener = null
             NovaService.publishListener = null
             NovaService.siteListener = null
+            NovaService.askListener = null
             NovaService.imageListener = null
             NovaService.permRequest = null
             NovaService.contactChoiceListener = null
+            NovaService.songChoiceListener = null
         }
         testTts?.shutdown()
         testTts = null
@@ -304,6 +334,12 @@ class MainActivity : Activity() {
 
     private fun isDefaultAssistant(): Boolean = try {
         (Settings.Secure.getString(contentResolver, "assistant") ?: "").startsWith("$packageName/")
+    } catch (e: Exception) { false }
+
+    /** Part 9D: Do Not Disturb access (needed only for "ringer silent"). Below Android 6 there is no such gate, so it counts as granted. */
+    private fun dndGranted(): Boolean = try {
+        if (Build.VERSION.SDK_INT < 23) true
+        else getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
     } catch (e: Exception) { false }
 
     private fun granted(p: String) =
@@ -387,11 +423,11 @@ class MainActivity : Activity() {
             e.apply()
         }
         val ask = ArrayList<String>()
-        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.CALL_PHONE, Manifest.permission.ANSWER_PHONE_CALLS)) {
+        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.CALL_PHONE)) {
             if (!granted(p)) ask.add(p)
         }
         if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS)) ask.add(Manifest.permission.POST_NOTIFICATIONS)
-        if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.98: watch mic over Bluetooth
+        if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.97-wip9: watch mic over Bluetooth
         val runs = prefs.getInt("setup_runs", 0)
         val opens = specialOpenCounts(prefs)
         val specialMissing = missingSpecial().keys.filter { (opens[it] ?: 0) < SetupChainRules.maxOpens(it) }
@@ -505,6 +541,7 @@ class MainActivity : Activity() {
             return
         }
         if (resultCode != RESULT_OK) return
+        if (requestCode == REQ_SITE_MEDIA) { handleSiteMedia(data); return }
         val uri = data?.data ?: return
         if (requestCode == REQ_PPN) {
             Thread {
@@ -591,9 +628,46 @@ class MainActivity : Activity() {
                 val small = ImageGen.shrink(raw, 1280)
                 if (small == null) { runJs("onPhotoErr('Ye photo format nahi padh paya')"); return@Thread }
                 pickedPhoto = small
+                editedPhoto = null; synchronized(editHistory) { editHistory.clear() }   // v7.12: a new picked photo starts a fresh edit session
                 val thumb = ImageGen.shrink(small, 160) ?: small
                 runJs("onPhoto(" + JSONObject.quote(ImageGen.b64(thumb)) + ")")
             } catch (e: Throwable) { runJs("onPhotoErr('Photo padhne mein dikkat')") }
+        }.start()
+    }
+
+    // v7.0 website media: photos and short videos for the next website / website edit (kept in the app folder, embedded after the page is written)
+    private fun handleSiteMedia(data: Intent?) {
+        val uris = ArrayList<Uri>()
+        data?.data?.let { uris.add(it) }
+        val cd = data?.clipData
+        if (cd != null) for (i in 0 until cd.itemCount) cd.getItemAt(i).uri?.let { uris.add(it) }
+        if (uris.isEmpty()) return
+        Thread {
+            var added = 0
+            var err = ""
+            for (u in uris.distinct().take(SiteMedia.MAX_ITEMS)) {
+                try {
+                    val mime = contentResolver.getType(u).orEmpty()
+                    val raw = contentResolver.openInputStream(u)?.use { it.readBytes() }
+                    if (raw == null || raw.isEmpty()) { err = "Ek file padh nahi paya"; continue }
+                    if (mime.startsWith("video/")) {
+                        val r = SiteMedia.add(this, "vid", if (mime.contains("webm")) "webm" else "mp4", raw, 0, 0)
+                        if (r == null) added++ else err = r
+                    } else {
+                        if (raw.size > 30_000_000) { err = "Photo bahut badi hai"; continue }
+                        var side = 1600
+                        var jpg = ImageGen.shrink(raw, side)
+                        while (jpg != null && jpg.size > SiteMedia.MAX_IMG_BYTES && side > 640) { side -= 320; jpg = ImageGen.shrink(raw, side) }
+                        if (jpg == null) { err = "Ek photo ka format nahi padh paya"; continue }
+                        val o = android.graphics.BitmapFactory.Options()
+                        o.inJustDecodeBounds = true
+                        android.graphics.BitmapFactory.decodeByteArray(jpg, 0, jpg.size, o)
+                        val r = SiteMedia.add(this, "img", "jpg", jpg, o.outWidth, o.outHeight)
+                        if (r == null) added++ else err = r
+                    }
+                } catch (e: Throwable) { err = "Media padhne mein dikkat" }
+            }
+            runJs("onSiteMedia(" + SiteMedia.count(this) + "," + added + "," + JSONObject.quote(err) + ")")
         }.start()
     }
 
@@ -637,6 +711,57 @@ class MainActivity : Activity() {
             }
             imgBusy = false
             runJs(js)
+        }.start()
+    }
+
+    // ===== v7.12 PHOTO EDITOR (add-only). Level 1 = on the phone (PhotoPro, no internet). Level 2 = Gemini, only after a native HAAN tap.
+    // Level 3 = honest text when AI did not work (the phone result is still given). The ORIGINAL (pickedPhoto) is never overwritten:
+    // the edited copy is editedPhoto, older edits are kept in editHistory (max 5).
+    @Volatile private var editedPhoto: ByteArray? = null
+    private val editHistory = ArrayList<ByteArray>()
+    @Volatile private var lastEditReport = "Abhi koi edit nahi hua"
+
+    private fun editFinish(ok: Boolean, msg: String, bytes: ByteArray?, level: Int) {
+        var thumb = ""
+        var saved = ""
+        if (ok && bytes != null) {
+            synchronized(editHistory) {
+                editedPhoto?.let { editHistory.add(it); while (editHistory.size > 5) editHistory.removeAt(0) }
+            }
+            editedPhoto = bytes
+            saved = try { ImageGen.saveToGallery(this, bytes) ?: "" } catch (e: Throwable) { "" }
+            thumb = ImageGen.b64(ImageGen.shrink(bytes, 1024) ?: bytes)
+        }
+        lastEditReport = "Level " + level + ": " + msg + (if (saved.isNotEmpty()) " | Gallery: " + saved else "")
+        imgBusy = false
+        runJs("onPhotoEdited(" + (ok && thumb.isNotEmpty()) + "," + JSONObject.quote(msg) + "," + JSONObject.quote(thumb) + "," + JSONObject.quote(saved) + "," + level + ")")
+    }
+
+    /** Level 1: preset / crop on the phone. [note] is put in front of the honest result text. */
+    private fun editPhone(pe: PhotoEditIntent.Parsed, src: ByteArray, note: String) {
+        imgBusy = true
+        Thread {
+            try {
+                val preset = try { if (pe.preset.isEmpty()) null else PhotoPro.Preset.valueOf(pe.preset) } catch (e: Exception) { null }
+                val ratio = if (pe.kind == PhotoEditIntent.Kind.CROP) pe.ratio.split(":").mapNotNull { it.toIntOrNull() }.toIntArray().takeIf { it.size == 2 } else null
+                val out = PhotoPro.run(src, preset, ratio)
+                if (out == null) editFinish(false, note + "Phone par edit nahi ho paya (photo bahut badi ya format ki dikkat)", null, 1)
+                else editFinish(true, note + "Ho gaya, phone par (internet nahi gaya)", out, 1)
+            } catch (e: Throwable) { editFinish(false, note + "Edit beech mein ruk gaya", null, 1) }
+        }.start()
+    }
+
+    /** Level 2: Gemini photo edit. Only called after the HAAN tap. When it fails, Level 3 = honest text + the phone result. */
+    private fun editAi(pe: PhotoEditIntent.Parsed, said: String, src: ByteArray) {
+        imgBusy = true
+        Thread {
+            try {
+                val prompt = "Edit the attached photo exactly as requested and keep everything else, especially faces and identity, unchanged. Request: " + said.take(300)
+                val r = ImageGen.generate(this, prompt, src)
+                val img = r.img
+                if (r.ok && img != null) editFinish(true, "AI se ho gaya", img, 2)
+                else editPhone(pe, src, "AI ne nahi kiya (" + r.msg.take(120) + "). Phone se jitna ho sakta tha kiya. ")
+            } catch (e: Throwable) { editPhone(pe, src, "AI ne nahi kiya (dikkat aayi). Phone se jitna ho sakta tha kiya. ") }
         }.start()
     }
 
@@ -815,7 +940,41 @@ class MainActivity : Activity() {
         fun stopSpeak() { NovaService.instance?.stopSpeaking() }
 
         @JavascriptInterface
-        fun sendText(t: String): String = NovaService.instance?.typed(t.take(500)) ?: "off"
+        fun setSilentMode(on: Boolean): String {
+            cfg.silentMode = on
+            return if (on) "on" else "off"
+        }
+
+        @JavascriptInterface
+        fun getSilentMode(): Boolean = cfg.silentMode
+
+        @JavascriptInterface
+        fun sendText(t: String): String {
+            // v7.0: a long website brief is kept whole (was cut at 500); every other typed sentence keeps the old 500 limit.
+            val limit = if (t.length > 500 && SiteIntent.parse(t.take(SiteIntent.MAX_RAW)) != null) SiteIntent.MAX_RAW else 500
+            return NovaService.instance?.typed(t.take(limit)) ?: "off"
+        }
+
+        /** v7.30 PART 1: what NOVA thinks the typed sentence is. {"kind":"SITE|IMAGE|PHOTO_EDIT|NONE","subject":..,"blocked":..,"why":..}. Read-only, nothing is started. */
+        @JavascriptInterface
+        fun detectIntent(text: String, hasPhoto: Boolean): String = try {
+            val r = AutoIntent.detect(text.take(1500), hasPhoto)
+            JSONObject().put("kind", r.kind.name).put("subject", r.subject).put("blocked", r.blocked).put("why", r.why).toString()
+        } catch (e: Exception) { JSONObject().put("kind", "NONE").toString() }
+
+        /** v7.34 PART 5: a short line from the page (p3 card shown / p4 core running / lowfx / js error). Stored masked in AutoTrace, max 1 per tag per 10 s. Returns ok / rate / skip. */
+        @JavascriptInterface
+        fun uiLog(tag: String, msg: String): String = try { AutoTrace.addUi(tag.take(20), msg.take(120)) } catch (e: Throwable) { "skip" }
+
+        /** v7.35 AUTO VERIFY: the page answers the Kotlin wiring check (which bridge / callback / element is missing). */
+        @JavascriptInterface
+        fun verifyPage(json: String): String { FeatureVerify.setPage(json.take(8000)); return "ok" }
+
+        /** v7.35 AUTO VERIFY: long-press on the AUTO VERIFY box = check again now. Returns started / busy. */
+        @JavascriptInterface
+        fun verifyNow(): String = try {
+            FeatureVerify.start(this@MainActivity, 0L, { runJs("window.p6Verify&&p6Verify()") }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
+        } catch (e: Throwable) { "busy" }
 
         // ---- v6.69 chat sessions (New Chat, history list, resume). The page shows the result; nothing here speaks or acts on the phone.
         @JavascriptInterface
@@ -1017,7 +1176,37 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun clearPhoto() { pickedPhoto = null }
+        fun clearPhoto() { pickedPhoto = null; editedPhoto = null; synchronized(editHistory) { editHistory.clear() } }
+
+        /** v7.1: yes/no question NOVA is waiting for ("" = none) and the HAAN / NAHI tap. */
+        @JavascriptInterface
+        fun pendingAsk(): String = NovaService.instance?.pendingPromptNow() ?: ""
+
+        @JavascriptInterface
+        fun answerAsk(yes: Boolean): String = NovaService.instance?.answerPending(yes) ?: "off"
+
+        @JavascriptInterface
+        fun pickSiteMedia(): String {
+            runOnUiThread {
+                try {
+                    val i = Intent(Intent.ACTION_GET_CONTENT)
+                    i.type = "*/*"
+                    i.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/mp4", "video/webm"))
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    i.addCategory(Intent.CATEGORY_OPENABLE)
+                    startActivityForResult(Intent.createChooser(i, "Website ke liye photo/video chuno"), REQ_SITE_MEDIA)
+                } catch (e: Exception) {
+                    runJs("onSiteMedia(" + SiteMedia.count(this@MainActivity) + ",0,'Gallery nahi khuli')")
+                }
+            }
+            return "ok"
+        }
+
+        @JavascriptInterface
+        fun clearSiteMedia(): String { SiteMedia.clear(this@MainActivity); return "ok" }
+
+        @JavascriptInterface
+        fun siteMediaCount(): Int = SiteMedia.count(this@MainActivity)
 
         /** started / asking (waits for the HAAN tap) / busy / nokey / empty. A photo is only uploaded after that tap. */
         @JavascriptInterface
@@ -1043,6 +1232,61 @@ class MainActivity : Activity() {
             }
             return "asking"
         }
+
+        /** v7.12 photo editor: nophoto / notedit / blocked / busy / started / asking. The AI part is only sent after the native HAAN, BHEJO tap. */
+        @JavascriptInterface
+        fun editPhoto(text: String): String {
+            val t = text.trim().take(300)
+            val base = pickedPhoto ?: return "nophoto"
+            val pe = PhotoEditIntent.parse(t) ?: return "notedit"
+            if (pe.blocked) return "blocked"
+            if (imgBusy) return "busy"
+            val cur = editedPhoto ?: base
+            if (pe.kind == PhotoEditIntent.Kind.ORIGINAL) {
+                editedPhoto = null
+                synchronized(editHistory) { editHistory.clear() }
+                lastEditReport = "Level 1: original photo wapas"
+                val th = ImageGen.b64(ImageGen.shrink(base, 1024) ?: base)
+                runJs("onPhotoEdited(true," + JSONObject.quote("Original photo wapas") + "," + JSONObject.quote(th) + ",\"\",1)")
+                return "started"
+            }
+            if (pe.needsAi) {
+                if (!SecureStore.hasKeys(this@MainActivity)) { editPhone(pe, cur, "AI ne nahi kiya (Gemini key nahi hai). Phone se jitna ho sakta tha kiya. "); return "started" }
+                runOnUiThread {
+                    try {
+                        android.app.AlertDialog.Builder(this@MainActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                            .setTitle("Photo Google ko bhejein?")
+                            .setMessage("Ye edit AI se karne ke liye photo internet par Google Gemini ko bheji jayegi. NAHI dabaoge to sirf phone par jitna ho sakta hai utna hoga.")
+                            .setPositiveButton("HAAN, BHEJO") { _, _ -> editAi(pe, t, cur) }
+                            .setNegativeButton("NAHI") { _, _ -> editPhone(pe, cur, "AI ke bina: ") }
+                            .setOnCancelListener { runJs("onImgCancel()") }
+                            .show()
+                    } catch (e: Exception) { runJs("onImgCancel()") }
+                }
+                return "asking"
+            }
+            editPhone(pe, cur, "")
+            return "started"
+        }
+
+        /** v7.12: puts the edited photo into the website media (same list the gallery picker fills). ok or a short reason. */
+        @JavascriptInterface
+        fun editedToSite(): String {
+            val b = editedPhoto ?: return "Pehle photo edit karo"
+            var side = 1600
+            var jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya"
+            while (jpg.size > SiteMedia.MAX_IMG_BYTES && side > 640) { side -= 320; jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya" }
+            val o = android.graphics.BitmapFactory.Options()
+            o.inJustDecodeBounds = true
+            android.graphics.BitmapFactory.decodeByteArray(jpg, 0, jpg.size, o)
+            val err = SiteMedia.add(this@MainActivity, "img", "jpg", jpg, o.outWidth, o.outHeight)
+            runJs("onSiteMedia(" + SiteMedia.count(this@MainActivity) + "," + (if (err == null) 1 else 0) + "," + JSONObject.quote(err ?: "") + ")")
+            return err ?: "ok"
+        }
+
+        /** v7.12: one honest line about the last edit (which level did it, where it was saved). */
+        @JavascriptInterface
+        fun editReport(): String = lastEditReport
 
         /** The optional Groq key is only ever written here, never sent back to the page. ok / invalid / fail. */
         @JavascriptInterface
@@ -1316,6 +1560,18 @@ class MainActivity : Activity() {
         fun getAutoReply(): String = JSONObject().put("on", ActionLog.autoReplyOn(this@MainActivity)).put("text", ActionLog.autoReplyText(this@MainActivity)).toString()
 
         @JavascriptInterface
+        fun getSmartReply(): Boolean = ActionLog.smartReplyOn(this@MainActivity)
+
+        @JavascriptInterface
+        fun setSmartReply(on: Boolean): String { ActionLog.setSmartReply(this@MainActivity, on); return "ok" }
+
+        @JavascriptInterface
+        fun getOwnerName(): String = ActionLog.ownerName(this@MainActivity)
+
+        @JavascriptInterface
+        fun setOwnerName(name: String): String { ActionLog.setOwnerName(this@MainActivity, name.take(60)); return ActionLog.ownerName(this@MainActivity) }
+
+        @JavascriptInterface
         fun setAutoReply(on: Boolean, text0: String): String { val text = text0.take(500); ActionLog.setAutoReply(this@MainActivity, on, text); return "ok" }
 
         @JavascriptInterface
@@ -1533,50 +1789,7 @@ class MainActivity : Activity() {
             return if (BrainStore.get(this@MainActivity).removeSkill(name)) "ok" else "not_found"
         }
 
-        // ---- v6.99 Part 1 + 2: call answer permission, Do Not Disturb access (silent ringer), write-settings state ----
-        @JavascriptInterface
-        fun hasAnswerCalls(): Boolean = Build.VERSION.SDK_INT < 28 || granted(Manifest.permission.ANSWER_PHONE_CALLS)
-
-        @JavascriptInterface
-        fun requestAnswerCalls(): String {
-            if (hasAnswerCalls()) return "granted"
-            runOnUiThread { requestPermissions(arrayOf(Manifest.permission.ANSWER_PHONE_CALLS), REQ_CALL) }
-            return "asked"
-        }
-
-        @JavascriptInterface
-        fun hasPolicyAccess(): Boolean = PhoneActions.policyAccess(this@MainActivity)
-
-        @JavascriptInterface
-        fun openPolicyAccess() {
-            runOnUiThread {
-                try { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) } catch (e: Exception) { ErrLog.add("MainActivity", e.toString()) }
-            }
-        }
-
-        @JavascriptInterface
-        fun canWriteSettings(): Boolean = Settings.System.canWrite(this@MainActivity)
-
-        // ---- v6.99 Part 3: AI SMART REPLY ----
-        @JavascriptInterface
-        fun getSmartReply(): Boolean = ExtCfg.smartReply(this@MainActivity)
-
-        @JavascriptInterface
-        fun setSmartReply(on: Boolean): String { ExtCfg.setSmartReply(this@MainActivity, on); return "ok" }
-
-        /** One line: what smart reply needs and whether it has it. Never prints a key. */
-        @JavascriptInterface
-        fun smartReplyStatus(): String = try {
-            val ctx = this@MainActivity
-            val n = DrivingBridge.listenerEnabled(ctx)
-            val k = ExtCfg.freeChain(ctx) && (SecureStore.hasGroq(ctx) || SecureStore.hasSlot(ctx, "openrouter") || SecureStore.hasSlot(ctx, "zai") || SecureStore.hasSlot(ctx, "zai2") || SecureStore.hasSlot(ctx, "zai3"))
-            val r = ActionLog.autoReplyOn(ctx)
-            (if (n) "Notification access ON" else "Notification access OFF") + " | " +
-                (if (r) "Auto jawab ON" else "Auto jawab OFF") + " | " +
-                (if (k) "AI key ON" else "AI key nahi (fixed jawab hi jayega)")
-        } catch (e: Throwable) { "?" }
-
-        // ---- v6.98 LOCK GUARD ----
+        // ---- v6.97-wip9 LOCK GUARD ----
         @JavascriptInterface
         fun getLockGuard(): Boolean = ExtCfg.lockGuard(this@MainActivity)
 
@@ -1651,7 +1864,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun speakMsg(t0: String): String {
             val t = t0.take(4000)
-            val text = ChatText.clean(t).take(1500)
+            val text = FreeProviders.speakable(ChatText.clean(t), 1500)
             if (text.isBlank()) return "empty"
             val svc = NovaService.instance
             if (svc != null) { svc.speakClick(text); return "ok" }
@@ -1709,9 +1922,6 @@ class MainActivity : Activity() {
             return "asked"
         }
 
-        @JavascriptInterface
-        fun hasCalendarRead(): Boolean = CalendarRead.permitted(this@MainActivity)
-
         /** Calendar permission is requested only from this explicit in-app button tap, never from voice. */
         @JavascriptInterface
         fun requestCalendarRead(): String {
@@ -1730,6 +1940,19 @@ class MainActivity : Activity() {
                     )
                 } catch (e: Exception) {
                     pushFlow("write_settings_failed")
+                }
+            }
+        }
+
+        /** Part 9D: Do Not Disturb access page for NOVA. Needed only for "ringer silent". Android lists NOVA there because the manifest declares ACCESS_NOTIFICATION_POLICY. */
+        @JavascriptInterface
+        fun openDndAccess() {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e: Exception) {
+                    ErrLog.add("MainActivity", "openDndAccess " + e.toString())
+                    try { startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e2: Exception) { pushFlow("dnd_settings_failed") }
                 }
             }
         }
@@ -1767,6 +1990,7 @@ class MainActivity : Activity() {
                 .put("contacts", granted(Manifest.permission.READ_CONTACTS))
                 .put("calendar", granted(Manifest.permission.READ_CALENDAR))
                 .put("writeSettings", Settings.System.canWrite(this@MainActivity))
+                .put("dnd", dndGranted())
                 .put("battery", (getSystemService(POWER_SERVICE) as? android.os.PowerManager)?.isIgnoringBatteryOptimizations(packageName) == true)
                 .put("feedUrl", cfg.feedUrl)
                 .put("running", NovaService.running)
@@ -1985,6 +2209,7 @@ class MainActivity : Activity() {
                 .put("contacts", granted(Manifest.permission.READ_CONTACTS))
                 .put("calendar", granted(Manifest.permission.READ_CALENDAR))
                 .put("writeSettings", Settings.System.canWrite(this@MainActivity))
+                .put("dnd", dndGranted())
                 .put("overlay", Settings.canDrawOverlays(this@MainActivity))
                 .put("feedUrl", cfg.feedUrl)
                 .put("running", NovaService.running)
@@ -2053,6 +2278,12 @@ class MainActivity : Activity() {
         fun connectorBegin(id: String): String {
             if (id.length > 40) return "bad"
             val d = ConnectorCatalog.byId(id) ?: return "bad"
+            if (id == ConnectorCatalog.GMAIL) {
+                if (!GmailStore.gmailInstalled(this@MainActivity)) return "nogmail"
+                if (DrivingBridge.listenerEnabled(this@MainActivity)) return "connected"
+                runOnUiThread { DrivingBridge.openListenerSettings(this@MainActivity) }
+                return "opened"
+            }
             val url = if (id == ConnectorCatalog.LOVABLE) "https://lovable.dev" else d.tokenUrl
             runOnUiThread { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) { ErrLog.add("Connector", "open page failed") } }
             return "opened"
@@ -2060,11 +2291,11 @@ class MainActivity : Activity() {
 
         /** After the owner comes back from the provider page: is a token for this connector on the clipboard? Never returns the token. */
         @JavascriptInterface
-        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) "none" else if (clipToken(id) != null) "found" else "none"
+        fun connectorClip(id: String): String = if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) "none" else if (clipToken(id) != null) "found" else "none"
 
         @JavascriptInterface
         fun connectorUseClip(id: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
             val t = clipToken(id) ?: return "none"
             connectorVerifyAsync(id, t, true)
             return "checking"
@@ -2073,7 +2304,7 @@ class MainActivity : Activity() {
         /** Manual fallback: the owner pastes the token into the box. */
         @JavascriptInterface
         fun connectorPaste(id: String, raw0: String): String {
-            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE) return "bad"
+            if (id.length > 40 || ConnectorCatalog.byId(id) == null || id == ConnectorCatalog.LOVABLE || id == ConnectorCatalog.GMAIL) return "bad"
             val t = (if (raw0.length > 400) "" else raw0).trim()
             if (t.length < 20 || t.length > 255 || t.any { it.isWhitespace() }) return "invalid"
             connectorVerifyAsync(id, t, false)
@@ -2094,6 +2325,11 @@ class MainActivity : Activity() {
         /** TEST button: asks the provider again who the token belongs to. */
         @JavascriptInterface
         fun connectorTest(id: String): String {
+            if (id == ConnectorCatalog.GMAIL) {
+                val ok = ConnectorStore.connected(this@MainActivity, id)
+                pushConn(id, if (ok) "ok" else "fail", if (ok) "Gmail app + notification access theek hai" else "Notification access ON karo aur Gmail app rakho")
+                return "checking"
+            }
             if (id.length > 40 || !ConnectorStore.connected(this@MainActivity, id) || id == ConnectorCatalog.LOVABLE) return "none"
             pushConn(id, "checking", "")
             Thread({
@@ -2274,6 +2510,7 @@ class MainActivity : Activity() {
         const val REQ_CALENDAR = 8
         const val REQ_BASIC = 3
         const val REQ_PICK = 4
+        const val REQ_SITE_MEDIA = 47
         const val REQ_VIDEO = 5
         const val REQ_ALL = 9
         const val REQ_EXPORT_TEACH = 6

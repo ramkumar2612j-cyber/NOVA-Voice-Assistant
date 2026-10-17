@@ -32,6 +32,10 @@ object AutoTest {
     @Volatile private var lastSig = ""
     @Volatile private var lastAt = 0L
     @Volatile private var kicking = false
+    @Volatile private var active = false   // Part 10: the 5-second watcher only runs while the NOVA screen is open
+
+    /** Called from onPause: the watcher stops (no background polling). */
+    fun stop() { active = false }
 
     private fun granted(a: Activity, p: String) = a.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
 
@@ -42,19 +46,25 @@ object AutoTest {
         sb.append(SecureStore.getKeys(a).size).append('|').append(SecureStore.hasGroq(a)).append(SecureStore.hasSlot(a, "openrouter")).append(SecureStore.hasSlot(a, "zai")).append('|')
         for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.POST_NOTIFICATIONS)) sb.append(if (granted(a, p)) '1' else '0')
         sb.append('|').append(NovaService.running).append(NovaAccessibilityService.instance != null).append(DrivingBridge.listenerEnabled(a)).append(a.packageManager.canRequestPackageInstalls())
+        sb.append('|').append(try { android.provider.Settings.System.canWrite(a) } catch (e: Exception) { false }).append(try { android.provider.Settings.canDrawOverlays(a) } catch (e: Exception) { false })
+        sb.append(try { android.os.Build.VERSION.SDK_INT >= 23 && a.getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true } catch (e: Exception) { false }).append(try { ActionLog.smartReplyOn(a) } catch (e: Exception) { false })
         sb.append('|').append(UpdateManager.appVersion(a))
         return sb.toString()
     }
 
     /** Called from onResume. Waits for the page and service to settle, then tests at +5 s and again at +25 s (second run only if state changed). */
     fun kick(act: Activity, show: (String, String) -> Unit) {
-        if (kicking) return
+        if (kicking) { active = true; return }
         kicking = true
+        active = true
         Thread {
             try {
-                for (wait in longArrayOf(5_000L, 20_000L)) {
-                    Thread.sleep(wait)
-                    if (act.isDestroyed || act.isFinishing) return@Thread
+                var round = 0
+                while (true) {
+                    // first test at +5 s, second at +20 s, then the watcher looks every 5 s and re-tests only when a permission, key or switch changed
+                    Thread.sleep(if (round == 1) 20_000L else 5_000L)
+                    round++
+                    if (act.isDestroyed || act.isFinishing || !active) return@Thread
                     val ok = ready(act)
                     val sig = signature(act)
                     val now = System.currentTimeMillis()

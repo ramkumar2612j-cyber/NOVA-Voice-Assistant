@@ -159,6 +159,7 @@ class NovaAccessibilityService : AccessibilityService() {
             val root = s.rootInActiveWindow ?: return Ctl(false, "no_window")
             if (Control.blocked(root.packageName?.toString(), s.packageName, "type")) return Ctl(false, "blocked")
             val node = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return Ctl(false, "no_focus")
+            if (node.isPassword) return Ctl(false, "password")
             if (!node.isEditable) return Ctl(false, "no_focus")
             val old = node.text?.toString() ?: ""
             val hint = node.hintText?.toString()
@@ -168,8 +169,8 @@ class NovaAccessibilityService : AccessibilityService() {
 
         /**
          * v6.92: inside the app that is now in front: find (or open) its search box, type [query], press search,
-         * and when [tapResult] is true tap the first result that mentions the query. Password fields are typed into only when
-         * the owner orders it (v6.98); never works in settings / installer / Play Store screens (Control.blocked).
+         * and when [tapResult] is true tap the first result that mentions the query. Never types into password
+         * fields and never works in banking / settings / installer screens (Control.blocked).
          */
         fun searchInApp(query: String, tapResult: Boolean): Ctl {
             val s = instance ?: return Ctl(false, "no_acc")
@@ -331,6 +332,7 @@ class NovaAccessibilityService : AccessibilityService() {
         fun agentTap(index: Int, long: Boolean): Ctl {
             val s = instance ?: return Ctl(false, "no_acc")
             val n = agentNode(index) ?: return Ctl(false, "not_found")
+            if (n.isPassword) return Ctl(false, "password")
             if (!long && s.clickNode(n)) return Ctl(true, "ok")
             val r = Rect()
             n.getBoundsInScreen(r)
@@ -342,6 +344,7 @@ class NovaAccessibilityService : AccessibilityService() {
         fun agentType(index: Int, text: String): Ctl {
             if (index < 0) return typeText(text)
             val n = agentNode(index) ?: return Ctl(false, "not_found")
+            if (n.isPassword) return Ctl(false, "password")
             if (!n.isEditable) return Ctl(false, "no_focus")
             return setTextChecked(n, text)
         }
@@ -677,7 +680,7 @@ class NovaAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * v6.98 LOCK GUARD: while a lock alert plays, ONE press of a volume key stops it (and is consumed, so the volume does not change).
+     * v6.97-wip9 LOCK GUARD: while a lock alert plays, ONE press of a volume key stops it (and is consumed, so the volume does not change).
      * Without an active alert the key is passed on untouched. Needs flagRequestFilterKeyEvents (accessibility_config.xml).
      */
     override fun onKeyEvent(event: android.view.KeyEvent?): Boolean {

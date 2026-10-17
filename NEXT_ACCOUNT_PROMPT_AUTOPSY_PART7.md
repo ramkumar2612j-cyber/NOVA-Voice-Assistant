@@ -1,0 +1,4 @@
+# NOVA AUTOPSY - remaining R4 + R5 of 5. Paste first + attach NOVA-Voice-Assistant.zip
+Owner: not a programmer, Android phone only. Hinglish, SHORT, ONE step at a time. PASS / FAIL / NOT TESTED. NEVER remove a feature. Zip name exactly NOVA-Voice-Assistant.zip. After EVERY part give the zip (compulsory).
+Plan: R1 connectors/web/learning DONE (docs/AUTOPSY_PART4.md); R2 open web/download/teach/photo DONE (docs/AUTOPSY_PART5.md); R3 video + recordings DONE (docs/AUTOPSY_PART6.md); R4 routines / scheduled tasks / settings; R5 self test + final report + final zip.
+Job R4: trace routines, scheduled tasks (ScheduledDays etc.) and Settings bridge. Find silent stops (permission, early return, swallowed exception, false success). Fix only proven bugs, one test per fix in tools/test_autopsy_part7_contract.py.

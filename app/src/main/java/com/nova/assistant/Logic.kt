@@ -350,8 +350,9 @@ object Logic {
     fun classify(text: String): Cmd? {
         // Contact grammar runs on the original transcript so Devanagari and phonetic variants
         // survive the general ASCII command normalizer. It only classifies; it never looks up or calls.
-        // v6.99 Part 1: "call uthao / call kaato" must win over "call <name>"
-        PhoneVoiceRules.parse(stripWake(norm(text)))?.takeIf { it.kind in PhoneVoiceRules.ACTIVE }?.let { return it }
+        // v7.08 PART 5: "call uthao / call kaato" (answer / reject the ringing call). Only these two kinds are taken from PhoneVoiceRules;
+        // ringer / rotation / screenshot stay with the repo's own rules below.
+        PhoneVoiceRules.parse(stripWake(norm(text)))?.let { if (it.kind == PhoneVoiceRules.K_ANSWER || it.kind == PhoneVoiceRules.K_REJECT) return it }
         ContactRequestParser.parseCommand(text)?.let { return Cmd("call", it.requestedName) }
         val n = stripWake(norm(text))   // a custom wake word at the start is never part of the command
         if (n.isEmpty() || n.length > 120) return null
@@ -365,7 +366,7 @@ object Logic {
         // v6.75: used ONLY by the torch / volume / brightness / media / global-nav blocks below (NOT by "do not disturb", which has its own rule)
         val negated = t.any { it in NEGATION }
 
-        if (core in setOf("stop", "cancel", "chup", "quiet", "ruko", "be quiet", "shut up") || StopRules.isStop(core)) return Cmd("stop")   // v6.99 Part 2: ruk jao / roko / bas karo ...
+        if (core in setOf("stop", "cancel", "chup", "quiet", "ruko", "be quiet", "shut up") || StopRules.isStop(core)) return Cmd("stop")
 
         // ---- "unlock" is only a stub that says unlocking was removed (voice / pattern / face unlock no longer exist)
         if (core in setOf("unlock", "unlock phone", "phone unlock", "unlock karo", "phone unlock karo", "unlock the phone", "unlock screen")) return Cmd("unlock")
@@ -379,6 +380,10 @@ object Logic {
         if (core in setOf("aaj ka schedule", "aaj ki meetings", "today schedule", "my calendar today", "meri meetings", "upcoming meetings", "aaj ke events")) {
             return Cmd("calendar_today")
         }
+
+        // ---- Part 3: persistent SILENT switch, kept separate from legacy quiet replies.
+        if (core in setOf("silent on", "silent mode on", "silent karo", "awaaz band mode on")) return Cmd("silent_on")
+        if (core in setOf("silent off", "silent mode off", "silent hatao", "awaaz band mode off")) return Cmd("silent_off")
 
         // ---- quiet replies on / off (default on: replies are shown in the chat, not spoken)
         if (core in setOf("quiet mode on", "silent replies on", "voice replies off")) return Cmd("quiet_on")
@@ -410,6 +415,7 @@ object Logic {
 
         // ---- Message Mode has its own saved switch/inbox; Driving remains independent.
         WaBiz.command(n)?.let { return it }
+        SmartReplyRules.command(n)?.let { return it }   // Part 8: AI SMART / Auto-reply on or off by voice (confirmation in NovaService)
         MessageMode.command(n, core)?.let { return it }
 
         // ---- driving mode (read messages aloud, fixed quick replies). Checked before the free-text "type" rule.
@@ -439,6 +445,7 @@ object Logic {
             return null
         }
 
+        if (ScreenSession.wantsIdentify(text)) return Cmd("analyze", text)   // v6.97-wip9: "ye kaun si movie hai" = screenshot + web search
         if (has("screen") && !has("brightness", "brightnes", "timeout", "lock", "rotate", "rotation", "record", "recording", "shot", "off", "band") && // FIXSCREEN2
             (has("analyze", "analyse", "analysis", "dekho", "check", "read", "summarize", "summary",
                 "dekh", "dekhna", "dikh", "dikha", "dikhao", "dikhta", "padh", "padho", "padhna", "batao", "bata", "kya", "likha",
@@ -463,13 +470,26 @@ object Logic {
 
         if (has("volume", "awaaz", "awaz")) {
             if (negated) return null
-            if (has("mute", "silent", "band", "bandh", "off")) return Cmd("volume", "mute")
+            if (has("mute", "silent")) return Cmd("volume", "mute")
             if (has("max", "maximum", "full")) return Cmd("volume", "max")
             if (has("down", "lower", "decrease", "kam", "reduce", "low")) return Cmd("volume", "down")
             if (has("up", "raise", "increase", "badha", "badhao", "higher", "high")) return Cmd("volume", "up")
             val num = parseNumber(t)
             if (num != null) return Cmd("volume", "set", num.coerceIn(0, 100))
             return null
+        }
+
+        // Part 9B: ringer + screen rotation by voice, also without AI. The bare word "silent" is NOT used here (it belongs to NOVA's Silent mode and volume mute).
+        if (!negated && size <= 6) {
+            if (has("vibrate", "vibration") && !has("off", "band", "bandh", "stop", "disable", "camera", "alarm")) return Cmd("ringer", "vibrate")
+            if (has("ringer") && has("silent")) return Cmd("ringer", "silent")
+            if (has("ringer") && has("normal", "on", "chalu")) return Cmd("ringer", "normal")
+            if (has("portrait", "landscape") && has("screen", "rotate", "rotation", "lock", "orientation") && !has("camera", "photo", "selfie", "image"))
+                return Cmd("rotation", if (has("portrait")) "portrait" else "landscape")
+            if (has("rotate", "rotation", "autorotate")) {
+                if (has("off", "band", "bandh", "lock", "stop", "disable")) return Cmd("rotation", "auto_off")
+                if (has("on", "chalu", "chalao", "start", "enable")) return Cmd("rotation", "auto_on")
+            }
         }
 
         if (has("brightness", "brightnes")) {
@@ -495,6 +515,13 @@ object Logic {
             if (has("resume", "continue") || (has("play") && has("music", "media", "song", "playback"))) {
                 return Cmd("media", "play")
             }
+        }
+
+        // v7.22 PART 8 (add-only): "screenshot lo / take screenshot" -> Android's own screenshot action (globalAct already handles "screenshot").
+        // Short phrases only; anything about sending / deleting / reading / analysing a screenshot is NOT a take-screenshot command.
+        if (!negated && size <= 4 && (has("screenshot", "screenshots") || (has("screen") && has("shot"))) &&
+            !has("delete", "hatao", "bhejo", "send", "share", "analyze", "analyse", "dekho", "padho", "read", "kya", "kaun", "search", "gallery", "last", "pichla")) {
+            return Cmd("global", "screenshot")
         }
 
         if (!negated) {

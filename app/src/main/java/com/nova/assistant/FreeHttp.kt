@@ -17,7 +17,7 @@ object FreeHttp {
     private const val CONNECT_MS = 6000
     private const val READ_MS = 10000
 
-    fun post(p: FreeProvider, jsonBody: String, key: String): NetAnswer {
+    fun post(p: FreeProvider, jsonBody: String, key: String, connectMs: Int = CONNECT_MS, readMs: Int = READ_MS): NetAnswer {
         var conn: HttpURLConnection? = null
         try {
             val u = URL(p.url)
@@ -25,8 +25,8 @@ object FreeHttp {
             val c = u.openConnection() as HttpURLConnection
             conn = c
             c.requestMethod = "POST"
-            c.connectTimeout = CONNECT_MS
-            c.readTimeout = READ_MS
+            c.connectTimeout = connectMs
+            c.readTimeout = readMs
             c.instanceFollowRedirects = false
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")

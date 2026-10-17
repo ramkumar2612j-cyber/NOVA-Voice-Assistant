@@ -263,6 +263,46 @@ object FreeProviders {
 
     const val MAX_USER_CHARS = 1000
     const val MAX_REPLY_CHARS = 700
+    const val MAX_USER_CHARS_RICH = 6000   // v7.1: typed chat turn (ChatGPT/Claude style) may carry a long question
+    const val MAX_REPLY_CHARS_RICH = 8000
+    const val RICH_MAX_TOKENS = 2000
+
+    /** v7.1 typed chat turn: full, structured answer (steps, lists, code blocks), owner's language, one "Samjha:" line first for complex asks. */
+    fun richSystemPrompt(en: Boolean): String =
+        if (en) {
+            "You are NOVA, a capable assistant on the user's phone, answering in a chat window like ChatGPT or Claude. Give a complete, " +
+                "well-organised answer: short paragraphs, numbered steps or - bullets where they help, code in fenced blocks. Write, explain, " +
+                "translate, plan, analyse, teach and debug as needed, in the language the user used (Hindi, Hinglish or English). " +
+                "For a complex request start with one line 'Samjha: ...' saying what you understood. " +
+                "If WEB RESULTS are given, use them and end with a 'Sources:' line. Without them you have no live data (weather, prices, scores, news): say so instead of guessing. " +
+                "You cannot press buttons or change phone settings in this answer, so never say you did. Never say you are building or changing an app, website or file: you only answer in text here. If you are not sure, say so."
+        } else {
+            "Tum NOVA ho, user ke phone par ek kaabil assistant, chat window mein ChatGPT ya Claude ki tarah jawab dete ho. Poora aur saaf jawab do: " +
+                "chhote paragraph, jahan kaam aaye wahan numbered steps ya - bullets, code fenced block mein. Likhna, samjhana, translate, plan, " +
+                "analysis, padhai aur debug jo bhi maange, usi bhasha mein jisme user ne poocha (Hindi, Hinglish ya English). " +
+                "Mushkil request par pehli line 'Samjha: ...' likho ki tumne kya samjha. " +
+                "Agar WEB RESULTS diye hain to unhe use karo aur aakhir mein 'Sources:' line do. Bina unke live data (mausam, bhaav, score, khabar) tumhare paas nahi: andaza mat lagao, saaf bolo. " +
+                "Is jawab mein tum phone par button nahi dabaa sakte ya setting nahi badal sakte, isliye kabhi mat kehna ki kar diya. Kabhi mat kehna ki tum app, website ya file bana rahe ho: yahan sirf text mein jawab dete ho. Pakka na ho to bolo."
+        }
+
+    /** v7.3: appended to Gemini's system prompt on a typed chat turn; it overrides the read-aloud / no-markdown / 8-sentence rules for real questions only. */
+    const val GEMINI_RICH_NOTE = "TYPED CHAT: this message was typed in the chat window, not spoken. For phone actions keep the reply to one short sentence. " +
+        "For questions, writing, code, analysis, translation, planning or study give a complete ChatGPT-style answer: markdown is allowed (short headings, - lists, numbered steps, fenced code blocks) and any length that is needed, " +
+        "so ignore the rules about being read aloud, no markdown, no lists and under 8 sentences. For a complex request start with one line 'Samjha: ...' saying what you understood. " +
+        "Use search_web for anything current and end with a 'Sources:' line when you used it."
+
+    /** Chat-only text: strip markdown marks and cap, so the TTS reads a clean short version when "chat speak" is ON. */
+    fun speakable(text: String, maxChars: Int = 800): String {
+        var t = text.replace(Regex("(?s)```.*?```"), " ")
+        t = t.replace(Regex("[*#`_>]+"), "").replace(Regex("(?m)^\\s*[-\u2022]\\s+"), "")
+        t = t.replace(Regex("\\s+"), " ").trim()
+        if (t.length > maxChars) {
+            val cut = t.substring(0, maxChars)
+            val p = maxOf(maxOf(cut.lastIndexOf('.'), cut.lastIndexOf('?')), maxOf(cut.lastIndexOf('!'), cut.lastIndexOf('\u0964')))
+            t = if (p > 200) cut.substring(0, p + 1) else cut.trimEnd()
+        }
+        return t
+    }
 
     fun systemPrompt(en: Boolean): String =
         if (en) {
@@ -279,8 +319,8 @@ object FreeProviders {
         }
 
     /** turns = (role, text) pairs of the running conversation (roles "user" / "assistant"), put between the system text and the new question. Empty = the old single-question body. */
-    fun buildBody(model: String, system: String, user: String, maxTokens: Int = 350, extra: String = "", turns: List<Pair<String, String>> = emptyList()): String {
-        val u = if (user.length > MAX_USER_CHARS) user.substring(0, MAX_USER_CHARS) else user
+    fun buildBody(model: String, system: String, user: String, maxTokens: Int = 350, extra: String = "", turns: List<Pair<String, String>> = emptyList(), userCap: Int = MAX_USER_CHARS): String {
+        val u = if (user.length > userCap) user.substring(0, userCap) else user
         val sb = StringBuilder()
         for ((r, t) in turns) {
             if (r != "user" && r != "assistant") continue
@@ -293,12 +333,20 @@ object FreeProviders {
     }
 
     /** choices[0].message.content as clean spoken text, or null (also for 200-answers that carry an "error" object). */
-    fun parseReply(body: String): String? {
+    fun parseReply(body: String, rich: Boolean = false): String? {
         val root = MiniJson.parse(body) ?: return null
         val msg = MiniJson.field(MiniJson.at(MiniJson.field(root, "choices"), 0), "message")
         val content = MiniJson.field(msg, "content") as? String ?: return null
-        val t = clean(content)
+        val t = if (rich) cleanRich(content) else clean(content)
         return if (t.isBlank()) null else t
+    }
+
+    /** v7.1 chat text: only the reasoning block is removed; newlines, lists, code and markdown stay (the chat window renders them). */
+    fun cleanRich(text: String): String {
+        var t = text.replace(Regex("(?s)<think>.*?</think>"), "").replace("\r\n", "\n").trim()
+        t = t.replace(Regex("\\n{3,}"), "\n\n")
+        if (t.length > MAX_REPLY_CHARS_RICH) t = t.substring(0, MAX_REPLY_CHARS_RICH).trimEnd()
+        return t
     }
 
     /** Spoken-text cleanup: no reasoning blocks, no markdown marks, one line, capped on a sentence end. */
@@ -422,9 +470,12 @@ object ProviderChain {
         now: () -> Long,
         budgetMs: Long = 14_000L,
         turns: List<Pair<String, String>> = emptyList(),
+        rich: Boolean = false,   // v7.1: typed chat turn -> long answer (2000 tokens, 6000 char question, newlines kept)
         accept: ((String) -> Boolean)? = null,   // v6.90: a text that fails this check counts as "no answer from this provider" (no cooldown), the next provider tries
+        hedge: Boolean = false,   // v7.4 5-second rule: ask the top two providers at the same time (first valid answer wins)
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
+        if (hedge && !rich) return runHedged(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, call)
         val start = now()
         val tried = ArrayList<String>()
         var worst = "nokey"
@@ -449,9 +500,9 @@ object ProviderChain {
                     cool = false
                     break
                 }
-                val r = call(p, m, FreeProviders.buildBody(m, system, user, extra = p.extra, turns = turns), key)
+                val r = call(p, m, FreeProviders.buildBody(m, system, user, maxTokens = if (rich) FreeProviders.RICH_MAX_TOKENS else 350, extra = p.extra, turns = turns, userCap = if (rich) FreeProviders.MAX_USER_CHARS_RICH else FreeProviders.MAX_USER_CHARS), key)
                 if (r.code in 200..299) {
-                    val t = FreeProviders.parseReply(r.body)
+                    val t = FreeProviders.parseReply(r.body, rich)
                     if (t != null && (accept == null || accept(t))) return ChainResult(t, p.id, m, "", tried)
                     kind = FreeProviders.worse(kind, "other")
                     if (t != null) { cool = false; break }   // answered, but not in the required shape: try the next provider, do not penalise this one
@@ -466,5 +517,57 @@ object ProviderChain {
             worst = FreeProviders.worse(worst, kind)
         }
         return ChainResult(null, null, null, worst, tried)
+    }
+
+    /**
+     * v7.4 5-second rule: the first [width] usable providers are asked AT THE SAME TIME and the first VALID answer wins.
+     * Each worker is the normal [run] for one provider (same models, cooldowns, accept check), so nothing about the fallback is removed.
+     * If nobody answered in time the remaining providers are tried one after the other with whatever time is left.
+     */
+    fun runHedged(
+        providers: List<FreeProvider>,
+        keyOf: (String) -> String,
+        enabled: (String) -> Boolean,
+        system: String,
+        user: String,
+        cd: Cooldowns,
+        now: () -> Long,
+        budgetMs: Long,
+        turns: List<Pair<String, String>> = emptyList(),
+        width: Int = UnderstandBudget.HEDGE_WIDTH,
+        accept: ((String) -> Boolean)? = null,
+        call: (FreeProvider, String, String, String) -> NetAnswer
+    ): ChainResult {
+        val start = now()
+        val usable = providers.filter { p -> enabled(p.id) && !cd.cooling(p.id, now()) && (p.keyName == null || keyOf(p.keyName).trim().isNotEmpty()) }
+        if (usable.size < 2 || width < 2) return run(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = false, accept = accept, hedge = false, call = call)
+        val first = usable.take(width)
+        val rest = providers.filter { it !in first }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(first.size)
+        val ecs = java.util.concurrent.ExecutorCompletionService<ChainResult>(pool)
+        try {
+            for (p in first) ecs.submit(java.util.concurrent.Callable<ChainResult> { run(listOf(p), keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = false, accept = accept, hedge = false, call = call) })
+            var worst = "nokey"
+            val tried = ArrayList<String>()
+            var network = false
+            repeat(first.size) {
+                val left = budgetMs - (now() - start)
+                val f = ecs.poll(maxOf(200L, left), java.util.concurrent.TimeUnit.MILLISECONDS) ?: return@repeat
+                val r = try { f.get() } catch (e: Exception) { null } ?: return@repeat
+                if (r.text != null) { pool.shutdownNow(); return r }
+                tried.addAll(r.tried)
+                if (r.failKind == "network") network = true
+                worst = FreeProviders.worse(worst, r.failKind)
+            }
+            if (network) return ChainResult(null, null, null, "network", tried)
+            val left = budgetMs - (now() - start)
+            if (rest.isNotEmpty() && left > UnderstandBudget.MIN_CALL_MS) {
+                val r = run(rest, keyOf, enabled, system, user, cd, now, left, turns, rich = false, accept = accept, hedge = false, call = call)
+                return ChainResult(r.text, r.providerId, r.model, r.failKind, tried + r.tried)
+            }
+            return ChainResult(null, null, null, worst, tried)
+        } finally {
+            pool.shutdown()
+        }
     }
 }

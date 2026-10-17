@@ -1,7 +1,7 @@
 package com.nova.assistant
 
 /**
- * v6.98 LOCK GUARD (owner request 15 Oct 2026). Pure Kotlin (no Android classes), unit tested.
+ * v6.97-wip9 LOCK GUARD (owner request 15 Oct 2026). Pure Kotlin (no Android classes), unit tested.
  *
  * While the phone is LOCKED NOVA is quiet:
  *  - it takes NO voice commands (the service gate uses [quietNow]);

@@ -16,11 +16,10 @@ import android.os.Build
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        val a = i.action
-        if (a != Intent.ACTION_BOOT_COMPLETED && a != "android.intent.action.QUICKBOOT_POWERON") return
-        try { Cfg(c).active = false } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
-        try { ScheduledTaskStore.rescheduleAll(c) } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
-        try { askToStart(c) } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
+        val plan = ScheduleRestoreRules.bootPlan(i.action) ?: return   // v7.12: boot + app update + clock / zone change + exact-alarm permission change
+        if (plan.resetActive) try { Cfg(c).active = false } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
+        if (plan.rearm) try { ScheduledTaskReceiver().notifyMissed(c, ScheduledTaskStore.rescheduleAll(c)) } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
+        if (plan.askToStart) try { askToStart(c) } catch (ignored: Exception) { ErrLog.add("BootReceiver", ignored.toString()) }
     }
 
     private fun askToStart(c: Context) {

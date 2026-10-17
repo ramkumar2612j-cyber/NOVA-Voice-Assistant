@@ -22,6 +22,7 @@ object ConnectorStore {
     /** Lovable has no token: it counts as "connected" once GitHub is connected. */
     fun connected(ctx: Context, id: String): Boolean =
         if (id == ConnectorCatalog.LOVABLE) SecureStore.hasSlot(ctx, slot(ConnectorCatalog.GITHUB))
+        else if (id == ConnectorCatalog.GMAIL) GmailStore.gmailInstalled(ctx) && DrivingBridge.listenerEnabled(ctx)
         else SecureStore.hasSlot(ctx, slot(id))
 
     fun account(ctx: Context, id: String): String = p(ctx).getString("acc_$id", "") ?: ""
@@ -166,7 +167,7 @@ object ConnectorStore {
                 JSONObject().put("id", d.id).put("name", d.name).put("short", d.short).put("kind", d.kind)
                     .put("connected", connected(ctx, d.id)).put("account", account(ctx, d.id)).put("perm", perm(ctx, d.id))
                     .put("help", d.tokenHelp).put("readCan", JSONArray(d.readCan)).put("writeCan", JSONArray(d.writeCan)).put("actions", acts)
-                    .put("needsGithub", d.id == ConnectorCatalog.LOVABLE)
+                    .put("needsGithub", d.id == ConnectorCatalog.LOVABLE).put("gmailInstalled", d.id == ConnectorCatalog.GMAIL && GmailStore.gmailInstalled(ctx))
             )
         }
         for (m in mcpList(ctx)) {

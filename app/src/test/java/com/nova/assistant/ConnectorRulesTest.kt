@@ -131,7 +131,7 @@ class ConnectorRulesTest {
         val ids = ConnectorCatalog.ALL.map { it.id }
         for (want in listOf("github", "vercel", "lovable", "netlify", "cloudflare", "supabase", "notion")) assertTrue(want, want in ids)
         // every real provider opens an https token page; Lovable is honest that it has no API
-        for (d in ConnectorCatalog.ALL) assertTrue(d.tokenUrl.startsWith("https://"))
+        for (d in ConnectorCatalog.ALL) if (d.kind != "device") assertTrue(d.id, d.tokenUrl.startsWith("https://"))
         assertEquals("link", ConnectorCatalog.byId("lovable")!!.kind)
     }
 

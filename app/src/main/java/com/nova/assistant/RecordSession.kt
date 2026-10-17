@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
  * Nothing here ever uploads audio. The foreground notification (with STOP) is shown by NovaService, never hidden.
  */
 object RecordSession {
-    class Saved(val files: Int, val inMedia: Int, val path: String, val ms: Long, val dropped: Int)
+    class Saved(val files: Int, val inMedia: Int, val path: String, val ms: Long, val dropped: Int, val writerError: String = "")
 
     private const val RATE = RecordRules.RATE
     private const val QUEUE_CHUNKS = 1200   // 120 s of audio buffered if the encoder is slow; beyond that chunks are counted as dropped
@@ -121,6 +121,7 @@ object RecordSession {
         if (!wasActive) return null
         val wr = w ?: return null
         val ms = System.currentTimeMillis() - startedAt
+        val diedEarly = !wr.isAlive
         wr.stopFlag = true
         try { wr.join(15000) } catch (e: InterruptedException) { ErrLog.add("RecordSession", e.toString()) }
         writer = null
@@ -129,7 +130,8 @@ object RecordSession {
         val files = ArrayList<File>(wr.finished)
         val drop = dropped
         val path = dir(ctx).absolutePath
-        if (files.isEmpty()) return Saved(0, 0, path, ms, drop)
+        val wErr = wr.err ?: if (diedEarly) "writer stopped early" else ""
+        if (files.isEmpty()) return Saved(0, 0, path, ms, drop, wErr)
         var inMedia = 0
         val app = ctx.applicationContext
         if (Build.VERSION.SDK_INT >= 29) {
@@ -140,7 +142,7 @@ object RecordSession {
                 }
             }
         }
-        return Saved(files.size, inMedia, path, ms, drop)
+        return Saved(files.size, inMedia, path, ms, drop, wErr)
     }
 
     /** Android 10+: copy the finished file into Music/NOVA so the owner finds it in any Files / Music app. */

@@ -47,22 +47,14 @@ class ControlTest {
     }
 
     @Test fun blockedPlaces() {
-        // v6.98 owner decision: only Settings, installer, permission screens and the Play Store refuse tap / type
+        assertTrue(Control.blocked(null, own, "tap"))
+        assertTrue(Control.blocked("", own, "scroll"))
         assertTrue(Control.blocked("com.android.settings", own, "tap"))
         assertTrue(Control.blocked("com.google.android.packageinstaller", own, "tap"))
         assertTrue(Control.blocked("com.google.android.permissioncontroller", own, "type"))
-        assertTrue(Control.blocked("com.android.vending", own, "tap"))
-        assertFalse(Control.blocked(null, own, "tap"))
-        assertFalse(Control.blocked("", own, "type"))
-        assertFalse(Control.blocked("com.phonepe.app", own, "tap"))
-        assertFalse(Control.blocked("com.sbi.mybank", own, "type"))
-        assertFalse(Control.blocked(own, own, "tap"))
-        // READING stays shielded
-        assertTrue(Control.readProtected(null, own))
-        assertTrue(Control.readProtected("com.phonepe.app", own))
-        assertTrue(Control.readProtected("com.sbi.mybank", own))
-        assertTrue(Control.readProtected(own, own))
-        assertFalse(Control.readProtected("com.whatsapp", own))
+        assertTrue(Control.blocked("com.phonepe.app", own, "tap"))
+        assertTrue(Control.blocked("com.sbi.mybank", own, "tap"))
+        assertTrue(Control.blocked(own, own, "tap"))
         assertFalse(Control.blocked("com.android.settings", own, "scroll"))
         assertFalse(Control.blocked("com.whatsapp", own, "tap"))
     }

@@ -186,6 +186,7 @@ object ConnectorApi {
         if (isHook) return hookRun(ctx, id, name, arg)
         if (isN8n) return n8nRun(ctx, id, name, action, arg)
         if (id == ConnectorCatalog.LOVABLE) return if (action == "open") Out(true, listOf("https://lovable.dev")) else Out(false, err = "Lovable mein ye kaam nahi hai")
+        if (id == ConnectorCatalog.GMAIL) return gmailRun(ctx, action, arg)
         val t = ConnectorStore.token(ctx, id)
         return try {
             when (id) {
@@ -199,6 +200,42 @@ object ConnectorApi {
             }
         } catch (e: Exception) {
             Out(false, err = "$name ka kaam poora nahi ho paya")
+        }
+    }
+
+    // ------------------------------------------------------------------ Gmail (device connector: Gmail app notifications, no login, no token)
+    private fun gmailRun(ctx: Context, action: String, arg: String): Out {
+        if (!GmailStore.gmailInstalled(ctx)) return Out(false, err = "Gmail app phone mein nahi mila")
+        return when (action) {
+            "recent", "important" -> {
+                val all = GmailStore.recent(ctx)
+                val list = (if (action == "important") all.filter { it.important } else all).takeLast(8).reversed()
+                if (list.isEmpty()) Out(true, listOf(if (action == "important") "Abhi koi zaroori mail nahi dikhi" else "Abhi koi naya mail nahi dikha. Naya mail aate hi yahan dikhega"))
+                else Out(true, list.map { (if (it.important) "[ZAROORI] " else "") + it.sender + ": " + it.subject })
+            }
+            "watches" -> {
+                val w = GmailStore.watches(ctx)
+                if (w.isEmpty()) Out(true, listOf("Watch list khali hai. Bolo: nova Amazon ka mail dekhte rehna"))
+                else Out(true, w.map { it.name + " (" + it.period + ")" })
+            }
+            "compose" -> {
+                val parts = arg.split("|").map { it.trim() }
+                val to = parts.getOrElse(0) { "" }
+                val to2 = if (GmailRules.EMAIL_RE.matches(to)) to.lowercase() else GmailStore.aliasOf(ctx, to)
+                if (to2.isEmpty() || !GmailRules.EMAIL_RE.matches(to2)) return Out(false, err = "Sahi email address chahiye (abc@gmail.com)")
+                val subject = parts.getOrElse(1) { "" }.take(200)
+                val body = parts.drop(2).joinToString(" | ").take(2000)
+                try {
+                    val i = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:" + android.net.Uri.encode(to2)))
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
+                        .putExtra(android.content.Intent.EXTRA_TEXT, body)
+                        .setPackage(GmailStore.GMAIL_PKG)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ctx.startActivity(i)
+                    Out(true, listOf("Gmail mein mail ka draft khol diya. Bhejne ke liye Gmail mein SEND aap dabao"))
+                } catch (e: Exception) { Out(false, err = "Gmail khul nahi paya") }
+            }
+            else -> Out(false, err = "Gmail mein ye kaam nahi hai")
         }
     }
 
@@ -259,8 +296,13 @@ object ConnectorApi {
             "workflows" -> list(http("GET", "$base/api/v1/workflows?limit=12", h, null), name, ConnectorParse::n8nWorkflows, "Koi workflow nahi mila")
             "executions" -> {
                 val wf = arg.trim()
-                val q = if (wf.isNotEmpty() && ConnectorRules.nameOk(wf)) "&workflowId=" + enc(wf) else ""
-                list(http("GET", "$base/api/v1/executions?limit=8$q", h, null), name, ConnectorParse::n8nExecutions, "Koi run nahi mila")
+                // v7.17: n8n filters by workflow ID, so a spoken NAME is resolved first; an unknown name is an honest error, never "all runs".
+                val wid = if (wf.isEmpty()) "" else n8nWorkflowId(base, h, wf)
+                if (wf.isNotEmpty() && (wid.isEmpty() || !ConnectorRules.nameOk(wid))) Out(false, err = "n8n par '$wf' workflow nahi mila")
+                else {
+                    val q = if (wid.isNotEmpty()) "&workflowId=" + enc(wid) else ""
+                    list(http("GET", "$base/api/v1/executions?limit=8$q", h, null), name, ConnectorParse::n8nExecutions, "Koi run nahi mila")
+                }
             }
             "activate", "deactivate" -> {
                 val key = arg.trim()

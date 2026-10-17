@@ -57,7 +57,7 @@ object OfflineJobQueue {
     }
 
     @Synchronized fun enqueueWebsite(ctx: Context, subject: String, raw: String): Boolean {
-        val payload = JSONObject().put("subject", OfflineQueueRules.cleanPayload(subject).take(120)).put("raw", OfflineQueueRules.cleanPayload(raw).take(350)).toString()
+        val payload = JSONObject().put("subject", OfflineQueueRules.cleanPayload(subject).take(120)).put("raw", OfflineQueueRules.cleanPayload(raw).take(1000)).toString()
         return enqueue(ctx, OfflineQueueRules.Kind.WEBSITE, payload)
     }
     @Synchronized fun enqueueLearn(ctx: Context, topic: String): Boolean = enqueue(ctx, OfflineQueueRules.Kind.LEARN,

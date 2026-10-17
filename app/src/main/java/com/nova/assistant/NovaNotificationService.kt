@@ -24,14 +24,24 @@ class NovaNotificationService : NotificationListenerService() {
         MessageMode.load(this)
     }
 
+    /** v7.17: if Android drops the listener, ask it to bind again so auto-reply / alerts do not silently stop. */
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        try {
+            requestRebind(android.content.ComponentName(this, NovaNotificationService::class.java))
+        } catch (e: Throwable) {
+            ErrLog.add("Listener", "rebind failed: " + e)
+        }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return
             MessageMode.load(this)
-            CallHub.onPosted(sbn)
-            handleLock(sbn)
-            if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn)
-            if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn)
+            // v7.17: each helper is isolated, so one failing helper can no longer stop message reading / driving mode below
+            try { handleLock(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "lock: $e") }
+            try { if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "biz: $e") }
+            try { if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "gmail: $e") }
             if (!Driving.enabled && !MessageMode.enabled) return
             val pkg = sbn.packageName ?: return
             if (pkg == packageName || pkg !in Driving.APPS || (MessageMode.enabled && !MessageMode.isSelected(this, pkg) && !Driving.enabled)) return
@@ -53,12 +63,13 @@ class NovaNotificationService : NotificationListenerService() {
                 if (Driving.inbox.offer(m)) NovaService.instance?.onDrivingMessage(m)
             }
         } catch (e: Exception) {
-            // never crash the listener because of one odd notification
+            // never crash the listener because of one odd notification (v7.17: but write it down)
+            ErrLog.add("NotifListener", "posted: $e")
         }
     }
 
     /**
-     * v6.98 LOCK GUARD: phone locked + (any call while the phone is silent | call or message from Papa / Mummy) = loud beep + one spoken line.
+     * v6.97-wip9 LOCK GUARD: phone locked + (any call while the phone is silent | call or message from Papa / Mummy) = loud beep + one spoken line.
      * Never reads message text. Normal messages are ignored here (and held back by NovaService while locked). Rules: LockGuard.
      */
     private fun handleLock(sbn: StatusBarNotification) {
@@ -100,36 +111,62 @@ class NovaNotificationService : NotificationListenerService() {
             if (!ActionLog.autoReplyOn(ctx)) return
             val now = System.currentTimeMillis()
             if (WaBiz.active(now) && (m.pkg == "com.whatsapp" || m.pkg == "com.whatsapp.w4b")) return   // business watch has its own rules
-            // v6.98: Instagram / WhatsApp insult = no reply, owner told; wish or nice comment = fixed thank-you (rules: SocialReplyRules)
-            val soc = if (!isGroup && !m.hidden) SocialReplyRules.decide(m.pkg, m.text) else null
-            if (soc != null && soc.kind == SocialReplyRules.Kind.INSULT) {
-                ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", SocialReplyRules.insultNote(soc.report, true))
-                NovaService.instance?.onSocialInsult(m.sender, m.app, soc.report)
-                return
-            }
-            // v6.99 Part 5: money talk is read, not asked about. Code / OTP = no reply + history note; other money talk = a safe fixed line (PaymentReplyRules).
-            val pay = if (!isGroup && !m.hidden) PaymentReplyRules.decide(m.text) else null
-            if (pay != null && pay.kind == PaymentReplyRules.Kind.SECRET) {
-                ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", PaymentReplyRules.secretNote())
-                return
-            }
-            val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: AutoReplyRules.gate.allow(m.sender, now)
+            val smart = ActionLog.smartReplyOn(ctx)
+            val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: (if (smart) SmartReplyRules.gate.allow(m.sender, now) else AutoReplyRules.gate.allow(m.sender, now))
             if (reason != null) {
                 if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true))
                 return
             }
-            // v6.99 Part 3: fixed thank-you (social) and the owner's fixed text stay the fallback; the AI is asked only when
-            // smart reply is ON and the message is safe for a cloud AI. The AI answer is cleaned; unusable / late = fixed text.
-            val fixed = pay?.reply ?: soc?.reply ?: ActionLog.autoReplyText(ctx)
-            val askAi = pay == null && SmartReplyRules.useAi(ExtCfg.smartReply(ctx), soc?.reply, m.text)
-            val picked = SmartReplyRules.pick(if (askAi) NovaService.instance?.smartReply(m.sender, m.text) else null, fixed)
-            val text = picked.text
+            if (smart) { smartAutoReply(ctx, m); return }
+            val text = ActionLog.autoReplyText(ctx)
             val ok = DrivingBridge.sendReply(ctx, m.key, text)
-            ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg, if (pay != null) PaymentReplyRules.note(pay.kind) else SmartReplyRules.note(picked.ai))
+            ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
             NovaService.instance?.onAutoReplied(m.sender, m.app, text, ok)
         } catch (e: Exception) {
             // one odd notification must never crash the listener
         }
+    }
+
+    /**
+     * Part 7 AI SMART REPLY: the AI answers in its own words (own thread: the AI call must never run on the main thread), then the owner is told
+     * (history + phone notification + voice when idle). If no AI is available the owner's fixed text is sent instead. Rules: SmartReplyRules.
+     */
+    private fun smartAutoReply(ctx: Context, m: Driving.Msg, business: Boolean = false) {
+        Thread {
+            try {
+                if (SmartReplyRules.convo.lastAssistant(m.sender) == m.text) return@Thread   // our own reply showing up again
+                if (!SmartReplyRules.seen.fresh(m.sender, m.text, System.currentTimeMillis())) return@Thread   // the same notification posted twice
+                val svc = NovaService.instance
+                // v7.15 Part 2 SAFETY: money talk never reaches the AI. Codes / OTP / passwords get no reply; other money talk gets ONE safe fixed line.
+                val pay = PaymentReplyRules.decide(m.text)
+                if (pay != null) {
+                    if (pay.kind == PaymentReplyRules.Kind.SECRET) {
+                        ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", PaymentReplyRules.secretNote(), m.pkg)
+                        return@Thread
+                    }
+                    val fixed = pay.reply ?: return@Thread
+                    val sentFixed = DrivingBridge.sendReply(ctx, m.key, fixed)
+                    ActionLog.add(ctx, m.app, m.sender, m.text, if (sentFixed) "sent" else "failed", fixed, m.pkg)
+                    GmailStore.notifyPhone(ctx, "NOVA: paise ki baat", PaymentReplyRules.note(pay.kind))
+                    svc?.onSmartReplied(PaymentReplyRules.note(pay.kind))
+                    return@Thread
+                }
+                val res = try { svc?.smartDraft(m.sender, m.text, business) } catch (e: Throwable) { null }
+                if (res != null && res.skip) {
+                    ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", "Jawab ki zaroorat nahi thi", m.pkg)
+                    return@Thread
+                }
+                val text = res?.text ?: ActionLog.autoReplyText(ctx)
+                val needOwner = res?.needOwner ?: false
+                val ok = DrivingBridge.sendReply(ctx, m.key, text)
+                ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
+                val line = SmartReplyRules.inform(m.sender, m.app, m.text, text, needOwner, ok, true)
+                GmailStore.notifyPhone(ctx, if (needOwner) "NOVA: zaruri message" else "NOVA ne baat ki", line)
+                svc?.onSmartReplied(line)
+            } catch (e: Throwable) {
+                ErrLog.add("SmartReply", e.toString())   // one failed chat must never crash the listener
+            }
+        }.start()
     }
 
     /** v6.93: a new Gmail notification = a new mail. Only sender + subject are used (numbers masked); nothing is uploaded. */
@@ -164,6 +201,30 @@ class NovaNotificationService : NotificationListenerService() {
         }
     }
 
+    /**
+     * Part 8: AI SMART REPLY inside the Business Watch window. Runs only when ALL of these are ON: Auto-reply, AI SMART, and Business watch "auto on"
+     * (the owner allowed replies in this window). The owner's catalogue answers still go first and are never replaced; WaBiz URGENT messages still
+     * tell the owner. The business prompt forbids stock / size / rate / delivery claims, so the AI only greets and says the owner will confirm.
+     */
+    private fun bizSmart(pkg: String, key: String, title: String, body: String, canReply: Boolean, d: WaBiz.Decision?) {
+        try {
+            val ctx = applicationContext
+            if (!ActionLog.autoReplyOn(ctx) || !ActionLog.smartReplyOn(ctx) || !WaBiz.autoReply) return
+            if (d != null && (d.sendNow || d.item.draft.isNotBlank())) return   // the owner's own catalogue answer wins
+            if (WaBiz.looksSensitive(body)) return
+            val now = System.currentTimeMillis()
+            val m = Driving.makeMsg(key, pkg, title, body, now, canReply) ?: return
+            val reason = AutoReplyRules.skipReason(false, m.canReply, m.hidden, m.text) ?: SmartReplyRules.gate.allow(m.sender, now)
+            if (reason != null) {
+                if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true), m.pkg)
+                return
+            }
+            smartAutoReply(ctx, m, true)
+        } catch (e: Throwable) {
+            ErrLog.add("BizSmart", e.toString())   // one odd notification must never crash the listener
+        }
+    }
+
     /** WhatsApp / WhatsApp Business only. Decision rules are in WaBiz; this only reads and sends via the notification's own reply button. */
     private fun handleBiz(sbn: StatusBarNotification) {
         val pkg = sbn.packageName ?: return
@@ -178,7 +239,9 @@ class NovaNotificationService : NotificationListenerService() {
         val key = sbn.key ?: "$pkg:${sbn.id}"
         val action = DrivingBridge.replyAction(n)
         if (action != null) DrivingBridge.remember(key, action)
-        val d = WaBiz.onMessage(title, body, System.currentTimeMillis(), action != null, key.hashCode()) ?: return
+        val dec = WaBiz.onMessage(title, body, System.currentTimeMillis(), action != null, key.hashCode())
+        bizSmart(pkg, key, title, body, action != null, dec)   // Part 8: AI smart reply inside the Business Watch window
+        val d = dec ?: return
         if (d.tellOwner) NovaService.instance?.onBizUrgent(d.item.sender, d.item.text)
         if (d.sendNow && d.item.draft.isNotBlank()) {
             val ctx = applicationContext
@@ -193,7 +256,6 @@ class NovaNotificationService : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         val k = sbn?.key ?: return
-        CallHub.onRemoved(k)
         DrivingBridge.forget(k)
     }
 }

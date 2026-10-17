@@ -50,7 +50,11 @@ object ScheduledTaskStore {
         if (old.size >= MAX_ITEMS) return "limit"
         val entry = Entry(UUID.randomUUID().toString(), spec, ScheduledTaskRules.nextAtMillis(spec))
         if (!write(ctx, old + entry)) return "storage_failed"
-        return if (scheduleAlarm(ctx, entry)) "exact" else "inexact"
+        return when (scheduleAlarmState(ctx, entry)) {
+            "exact" -> "exact"
+            "inexact" -> "inexact"
+            else -> "alarm_failed"   // v7.08: the entry is saved (rescheduleAll retries it) but Android refused every alarm: never say "saved on time"
+        }
     }
 
     /** v6.40: change only how important a job is (prio 0..2, or -1 = keep) and/or its own-words note (null = keep). Alarms are not touched. */
@@ -89,7 +93,8 @@ object ScheduledTaskStore {
         val found = old.firstOrNull { it.id == id } ?: return null
         return if (found.spec.repeatDaily) {
             val next = found.copy(nextAtMs = if (found.spec.days != 0) ScheduledTaskRules.nextAtMillis(found.spec) else maxOf(found.nextAtMs + 86_400_000L, ScheduledTaskRules.nextAtMillis(found.spec)))
-            if (write(ctx, old.map { if (it.id == id) next else it })) scheduleAlarm(ctx, next)
+            if (!write(ctx, old.map { if (it.id == id) next else it })) ErrLog.add("ScheduledTaskStore", "consume: storage write failed, alarm re-armed anyway")   // v7.12: never let a failed write kill a repeating job
+            scheduleAlarm(ctx, next)
             found
         } else {
             cancelAlarm(ctx, id)
@@ -98,12 +103,29 @@ object ScheduledTaskStore {
         }
     }
 
-    @Synchronized fun rescheduleAll(ctx: Context) {
+    /**
+     * v7.12: a past-due ONE-SHOT job is no longer moved to tomorrow (a stale reminder a day late): it is dropped and its label is returned
+     * (the caller says so once). Repeating jobs move to the next real time and are saved. Returns the labels of the missed jobs.
+     */
+    @Synchronized fun rescheduleAll(ctx: Context): List<String> {
         val all = read(ctx)
+        val now = System.currentTimeMillis()
+        val keep = ArrayList<Entry>()
+        val missed = ArrayList<String>()
+        var changed = false
         all.forEach { e ->
-            val corrected = if (e.nextAtMs > System.currentTimeMillis()) e else e.copy(nextAtMs = ScheduledTaskRules.nextAtMillis(e.spec))
-            scheduleAlarm(ctx, corrected)
+            when (ScheduleRestoreRules.planFor(e.nextAtMs, e.spec.repeatDaily, now)) {
+                ScheduleRestoreRules.Plan.KEEP, ScheduleRestoreRules.Plan.FIRE_NOW -> { keep.add(e); scheduleAlarm(ctx, e) }
+                ScheduleRestoreRules.Plan.MOVE_NEXT -> {
+                    val moved = e.copy(nextAtMs = ScheduledTaskRules.nextAtMillis(e.spec))
+                    keep.add(moved); changed = true
+                    scheduleAlarm(ctx, moved)
+                }
+                ScheduleRestoreRules.Plan.DROP_MISSED -> { missed.add(e.spec.label.ifBlank { e.spec.kind.name }); changed = true; cancelAlarm(ctx, e.id) }
+            }
         }
+        if (changed && !write(ctx, keep)) ErrLog.add("ScheduledTaskStore", "rescheduleAll: storage write failed")
+        return missed
     }
 
     fun listText(ctx: Context): String {
@@ -138,22 +160,25 @@ object ScheduledTaskStore {
         } catch (ignored: Exception) { ErrLog.add("ScheduledTaskStore", ignored.toString()) }
     }
 
-    private fun scheduleAlarm(ctx: Context, e: Entry): Boolean {
+    private fun scheduleAlarm(ctx: Context, e: Entry): Boolean = scheduleAlarmState(ctx, e) == "exact"
+
+    /** v7.08: "exact" (exact alarm set), "inexact" (a delayed-but-set alarm) or "failed" (Android refused every alarm). */
+    fun scheduleAlarmState(ctx: Context, e: Entry): String {
         scheduleLead(ctx, e)
-        val am = ctx.getSystemService(AlarmManager::class.java) ?: return false
+        val am = ctx.getSystemService(AlarmManager::class.java) ?: return "failed"
         return try {
             val pi = pending(ctx, e)
             if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.nextAtMs, pi)
-                false
+                "inexact"
             } else {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.nextAtMs, pi)
-                true
+                "exact"
             }
         } catch (ignored: SecurityException) {
-            try { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.nextAtMs, pending(ctx, e)) } catch (ignored: Exception) { ErrLog.add("ScheduledTaskStore", ignored.toString()) }
-            false
-        } catch (ignored: Exception) { false }
+            try { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.nextAtMs, pending(ctx, e)); "inexact" }
+            catch (ignored2: Exception) { ErrLog.add("ScheduledTaskStore", ignored2.toString()); "failed" }
+        } catch (ignored: Exception) { ErrLog.add("ScheduledTaskStore", ignored.toString()); "failed" }
     }
 
     private fun cancelAlarm(ctx: Context, id: String) {

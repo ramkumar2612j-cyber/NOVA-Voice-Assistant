@@ -14,11 +14,23 @@ object ActionLog {
     private const val KEY_SEEN = "seen_ts"
     private const val KEY_AR_ON = "auto_reply_on"
     private const val KEY_AR_TEXT = "auto_reply_text"
+    private const val KEY_AR_SMART = "auto_reply_smart"
+    private const val KEY_AR_OWNER = "auto_reply_owner_name"
     private const val MAX = 300
 
     private fun p(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun autoReplyOn(ctx: Context): Boolean = p(ctx).getBoolean(KEY_AR_ON, true)
+
+    /** Part 7: AI smart reply (talks by itself). OFF unless the owner switches it on. */
+    fun smartReplyOn(ctx: Context): Boolean = p(ctx).getBoolean(KEY_AR_SMART, false)
+
+    fun setSmartReply(ctx: Context, on: Boolean) { p(ctx).edit().putBoolean(KEY_AR_SMART, on).apply() }
+
+    /** Part 8: the name the AI uses for the owner ("Sonu ka assistant"). Blank = "the owner". Stored only on this phone. */
+    fun ownerName(ctx: Context): String = SmartReplyRules.cleanName(p(ctx).getString(KEY_AR_OWNER, "") ?: "")
+
+    fun setOwnerName(ctx: Context, name: String) { p(ctx).edit().putString(KEY_AR_OWNER, SmartReplyRules.cleanName(name)).apply() }
 
     fun autoReplyText(ctx: Context): String = AutoReplyRules.cleanText(p(ctx).getString(KEY_AR_TEXT, "") ?: "")
 
@@ -26,8 +38,8 @@ object ActionLog {
         p(ctx).edit().putBoolean(KEY_AR_ON, on).putString(KEY_AR_TEXT, AutoReplyRules.cleanText(text)).apply()
     }
 
-    /** status: "sent", "failed" or "skipped". src: "AI" or "fixed" for a sent reply ("" = not a reply). */
-    @Synchronized fun add(ctx: Context, app: String, sender: String, incoming: String, status: String, detail: String, pkg: String = "", src: String = "") {
+    /** status: "sent", "failed" or "skipped". */
+    @Synchronized fun add(ctx: Context, app: String, sender: String, incoming: String, status: String, detail: String, pkg: String = "") {
         try {
             val sp = p(ctx)
             val old = try { JSONArray(sp.getString(KEY_LOG, "[]") ?: "[]") } catch (e: Exception) { JSONArray() }
@@ -38,7 +50,6 @@ object ActionLog {
                 .put("in", incoming.take(80))
                 .put("st", status)
                 .put("pk", pkg)
-                .put("src", src.take(8))
                 .put("d", detail.take(MAX)))
             val out = JSONArray()
             for (i in maxOf(0, old.length() - MAX) until old.length()) out.put(old.get(i))

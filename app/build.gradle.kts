@@ -23,7 +23,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = (System.getenv("NOVA_VERSION_CODE") ?: "29").toIntOrNull() ?: 29
-        versionName = "6.99"
+        versionName = "6.97"
         // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
         ndk { abiFilters += listOf("arm64-v8a") }
     }

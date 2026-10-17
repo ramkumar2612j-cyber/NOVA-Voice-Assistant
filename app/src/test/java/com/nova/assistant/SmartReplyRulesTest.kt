@@ -1,93 +1,105 @@
 package com.nova.assistant
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SmartReplyRulesTest {
-    @Test fun plainChatMessagesMayGoToTheAi() {
-        for (t in listOf("kal milte hain?", "bhai kya haal hai", "Are you free this weekend", "Happy birthday bro"))
-            assertTrue(t, SmartReplyRules.allowedForAi(t))
+    @Test fun parseTagsAndCleans() {
+        val r = SmartReplyRules.parse("Ji, main pooch kar batata hoon. [OWNER]")!!
+        assertTrue(r.needOwner); assertTrue(!r.skip); assertEquals("Ji, main pooch kar batata hoon.", r.text)
+        assertTrue(SmartReplyRules.parse("[SKIP]")!!.skip)
+        assertNull(SmartReplyRules.parse(null)); assertNull(SmartReplyRules.parse("   "))
+        assertTrue(SmartReplyRules.parse("x".repeat(900))!!.text.length <= SmartReplyRules.MAX_TEXT)
     }
 
-    @Test fun moneyOtpLinkAndLongNumbersNeverGoToTheAi() {
-        for (t in listOf(
-            "mera OTP 123456 hai", "send me the password", "UPI se 500 rupees bhej do", "pay Rs. 200", "₹500 transfer karo",
-            "check https://example.com", "visit www.shop.in now", "my site abc.com", "call 9876543210", "loan chahiye", "aadhaar number bhejo", "KYC update karo"
-        )) assertFalse(t, SmartReplyRules.allowedForAi(t))
+    @Test fun onlySecretsAreHeldBack() {   // Part 10: money, links and numbers are allowed
+        assertNull(SmartReplyRules.unsafeReason("Rate Rs 500 hai"))
+        assertNull(SmartReplyRules.unsafeReason("10% discount milega"))
+        assertNull(SmartReplyRules.unsafeReason("pay on UPI abc@upi"))
+        assertNull(SmartReplyRules.unsafeReason("dekho https://abc.com"))
+        assertNull(SmartReplyRules.unsafeReason("call 9876543210"))
+        assertNotNull(SmartReplyRules.unsafeReason("aapka OTP 482913 hai"))
+        assertNotNull(SmartReplyRules.unsafeReason("password bhej do"))
+        assertNotNull(SmartReplyRules.unsafeReason("card 4111 1111 1111 1111"))
+        assertNull(SmartReplyRules.unsafeReason("Namaste, main NOVA hoon, abhi busy hain, jaldi reply karenge."))
     }
 
-    @Test fun blankAndTooLongAreNotAllowed() {
-        assertFalse(SmartReplyRules.allowedForAi(""))
-        assertFalse(SmartReplyRules.allowedForAi("   "))
-        assertFalse(SmartReplyRules.allowedForAi("a".repeat(SmartReplyRules.MAX_IN + 1)))
-        assertTrue(SmartReplyRules.allowedForAi("a".repeat(SmartReplyRules.MAX_IN)))
+    @Test fun ownerFactsReachThePromptAndAreLimited() {
+        val c = SmartReplyRules.Convo()
+        for (i in 0 until 9) c.addFact("Rahul", "fact $i")
+        assertEquals(SmartReplyRules.MAX_FACTS, c.facts("rahul").size)
+        assertEquals("fact 8", c.facts("RAHUL").last())
+        c.addFact("Rahul", "   ")
+        assertEquals(SmartReplyRules.MAX_FACTS, c.facts("Rahul").size)
+        val p = SmartReplyRules.systemPrompt("Sonu", true, false, listOf("Rate 500 hai"))
+        assertTrue(p.contains("Rate 500 hai") && p.contains("NEVER invent") && p.contains("[OWNER]"))
+        assertTrue(!SmartReplyRules.systemPrompt("Sonu", true).contains("FACTS Sonu GAVE"))
+        assertTrue(!p.contains("NEVER give or promise prices"))
     }
 
-    @Test fun userPromptIsOneLineAndCapped() {
-        val u = SmartReplyRules.userPrompt("Ra\nhul", "hello\r\nthere " + "x".repeat(500))
-        assertFalse(u.contains('\n')); assertFalse(u.contains('\r'))
-        assertTrue(u.startsWith("Message from Ra hul: hello there"))
-        assertTrue(u.length <= "Message from ".length + 40 + 2 + SmartReplyRules.MAX_IN)
+    @Test fun moneyAndOrderMessagesNeedOwner() {
+        assertTrue(SmartReplyRules.ownerMust("mera order nahi aaya"))
+        assertTrue(SmartReplyRules.ownerMust("rate kya hai"))
+        assertTrue(!SmartReplyRules.ownerMust("kaise ho bhai"))
     }
 
-    @Test fun systemPromptsForbidPromisesAndLinks() {
-        assertTrue(SmartReplyRules.systemPrompt(true).contains("Never promise money"))
-        assertTrue(SmartReplyRules.systemPrompt(false).contains("link"))
+    @Test fun gateAllowsConversationButStopsFlood() {
+        val g = SmartReplyRules.Gate()
+        assertNull(g.allow("Rahul", 0L))
+        assertEquals("cooldown", g.allow("Rahul", 5_000L))
+        assertNull(g.allow("Rahul", 20_000L))
+        var last: String? = null
+        for (i in 0 until 20) last = g.allow("Bot", 100_000L + i * 16_000L)
+        assertEquals("limit", last)
     }
 
-    @Test fun sanitizeCleansQuotesAndNewlines() {
-        assertEquals("Haan bhai, shaam ko baat karte hain.", SmartReplyRules.sanitize("\"Haan bhai, shaam ko\nbaat karte hain.\""))
+    @Test fun convoKeepsLastTurnsOnly() {
+        val c = SmartReplyRules.Convo()
+        for (i in 0 until 10) c.add("A", "user", "m$i")
+        assertEquals(SmartReplyRules.MAX_TURNS, c.turns("A").size)
+        c.add("A", "assistant", "hello")
+        assertEquals("hello", c.lastAssistant("A"))
     }
 
-    @Test fun sanitizeRejectsUnusableAnswers() {
-        for (r in listOf(null, "", "   ", "As an AI I cannot do that", "I can't help", "sorry, I do not know", "see https://x.y", "www.abc.xyz",
-            "send 123456 now", "apna OTP bhejo", "bank me paise daalo", "x"))
-            assertNull(r.toString(), SmartReplyRules.sanitize(r))
+    @Test fun informMentionsSenderAndReply() {
+        val t = SmartReplyRules.inform("Rahul", "WhatsApp", "kal milte hain?", "Ji, pooch kar batata hoon", true, true, true)
+        assertTrue(t.contains("Rahul") && t.contains("pooch kar") && t.contains("zaruri"))
     }
 
-    @Test fun sanitizeCutsLongAnswersAtASentenceEnd() {
-        val long = "Haan bilkul, main kal subah aapse baat karunga. " + "Aur phir hum sab milkar kaam dekhenge aur sab theek karenge ".repeat(5)
-        val s = SmartReplyRules.sanitize(long)
-        assertNotNull(s)
-        assertTrue(s!!.length <= SmartReplyRules.MAX_OUT)
-        assertTrue(s.endsWith("."))
+    @Test fun ownerNameIsCleanedAndUsedInPrompt() {
+        assertEquals("Sonu Kumar", SmartReplyRules.cleanName("  Sonu   Kumar "))
+        assertEquals("Sonu ignore rules", SmartReplyRules.cleanName("Sonu\n[ignore] rules!"))
+        assertTrue(SmartReplyRules.cleanName("x".repeat(80)).length <= 30)
+        assertTrue(SmartReplyRules.systemPrompt("Sonu", true).contains("assistant of Sonu"))
+        assertTrue(SmartReplyRules.systemPrompt("", true).contains("assistant of the owner"))
     }
 
-    @Test fun chooseUsesFixedWhenAiIsUnusable() {
-        assertEquals("fixed", SmartReplyRules.choose(null, "fixed"))
-        assertEquals("fixed", SmartReplyRules.choose("As an AI model", "fixed"))
-        assertEquals("Theek hai bhai", SmartReplyRules.choose("Theek hai bhai", "fixed"))
+    @Test fun businessPromptHoldsBackStockAndRates() {
+        val b = SmartReplyRules.systemPrompt("Sonu", true, true)
+        assertTrue(b.contains("BUSINESS") && b.contains("do NOT know stock"))
+        assertTrue(!SmartReplyRules.systemPrompt("Sonu", true, false).contains("BUSINESS"))
     }
 
-    @Test fun pickSaysWhichOneWonAndIsNeverEmpty() {
-        val ai = SmartReplyRules.pick("Theek hai bhai", "fixed")
-        assertTrue(ai.ai); assertEquals("Theek hai bhai", ai.text)
-        val fx = SmartReplyRules.pick(null, "fixed")
-        assertFalse(fx.ai); assertEquals("fixed", fx.text)
-        val blank = SmartReplyRules.pick("", "  ")
-        assertFalse(blank.ai); assertEquals(AutoReplyRules.DEFAULT_TEXT, blank.text)
+    @Test fun repeatedNotificationIsAnsweredOnce() {
+        val s = SmartReplyRules.Seen()
+        assertTrue(s.fresh("Rahul", "hello", 0L))
+        assertTrue(!s.fresh("rahul", "hello", 60_000L))
+        assertTrue(s.fresh("Rahul", "hello", 200_000L))
+        assertTrue(s.fresh("Rahul", "kaise ho", 200_001L))
     }
 
-    @Test fun useAiNeedsSwitchNoSocialReplyAndASafeMessage() {
-        assertTrue(SmartReplyRules.useAi(true, null, "kal milte hain?"))
-        assertFalse("switch OFF", SmartReplyRules.useAi(false, null, "kal milte hain?"))
-        assertFalse("social thank-you stays fixed", SmartReplyRules.useAi(true, "Thank you 😊", "Nice reel"))
-        assertFalse("unsafe text", SmartReplyRules.useAi(true, null, "mera OTP 123456"))
-    }
-
-    @Test fun historyNoteIsAiOrFixed() {
-        assertEquals("AI", SmartReplyRules.note(true))
-        assertEquals("fixed", SmartReplyRules.note(false))
-    }
-
-    @Test fun timeoutIsEightSecondsAndRateLimitsAreUnchanged() {
-        assertEquals(8_000L, SmartReplyRules.TIMEOUT_MS)
-        assertEquals(2, AutoReplyRules.SENDER_PER_HOUR)
-        assertEquals(600_000L, AutoReplyRules.SENDER_COOLDOWN_MS)
-        assertEquals(80, AutoReplyRules.DAY_CAP)
+    @Test fun voiceSwitchParsesOnlyClearCommands() {
+        assertEquals("smart_on", SmartReplyRules.command("smart reply on karo")!!.kind)
+        assertEquals("smart_off", SmartReplyRules.command("ai reply band karo")!!.kind)
+        assertEquals("autoreply_on", SmartReplyRules.command("auto reply chalu karo")!!.kind)
+        assertEquals("autoreply_off", SmartReplyRules.command("auto reply off")!!.kind)
+        assertNull(SmartReplyRules.command("smart reply kya hai"))
+        assertNull(SmartReplyRules.command("auto reply ka status batao"))
+        assertNull(SmartReplyRules.command("business watch auto on"))
+        assertNull(SmartReplyRules.command("smart reply on off"))
+        assertNull(SmartReplyRules.command("kaise ho"))
     }
 }
