@@ -44,20 +44,21 @@ class PhoneVoiceRulesTest {
     }
 
     @Test fun part2ScreenshotRingerRotation() {
-        assertEquals(PhoneVoiceRules.K_SHOT, Logic.classify("screenshot lo")?.kind)
-        assertEquals(PhoneVoiceRules.K_SHOT, Logic.classify("take screenshot")?.kind)
+        // v7.x: the app uses the repo's OWN rules for screenshot / ringer / rotation (see Logic.classify comment), same as PhoneVoiceRepoRulesTest
+        assertEquals("global", Logic.classify("screenshot lo")?.kind); assertEquals("screenshot", Logic.classify("screenshot lo")?.arg)
+        assertEquals("screenshot", Logic.classify("take screenshot")?.arg)
         val r = Logic.classify("ringer silent karo")
         assertEquals(PhoneVoiceRules.K_RINGER, r?.kind); assertEquals("silent", r?.arg)
         assertEquals("vibrate", Logic.classify("vibrate mode")?.arg)
         assertEquals("normal", Logic.classify("ringer normal")?.arg)
         val o = Logic.classify("rotation off karo")
-        assertEquals(PhoneVoiceRules.K_ROTATION, o?.kind); assertEquals("off", o?.arg)
-        assertEquals("on", Logic.classify("auto rotate on karo")?.arg)
+        assertEquals(PhoneVoiceRules.K_ROTATION, o?.kind); assertEquals("auto_off", o?.arg)
+        assertEquals("auto_on", Logic.classify("auto rotate on karo")?.arg)
     }
 
     @Test fun part2DoesNotStealOtherCommands() {
         assertEquals("volume", Logic.classify("volume mute")?.kind)
-        assertEquals("volume", Logic.classify("awaaz band karo")?.kind)
+        assertEquals("volume", Understand.classify("awaaz band karo")?.kind)   // Understand = Logic + the loose Hinglish reader (what the app calls)
         assertEquals("quiet_on", Logic.classify("silent replies on")?.kind)
         assertNull(k("screenshot delete karo"))
         assertNull(k("rotation"))                 // no on / off word: nothing is guessed

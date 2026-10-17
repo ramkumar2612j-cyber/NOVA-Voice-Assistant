@@ -40,12 +40,13 @@ class SocialReplyRulesTest {
         assertNull(SocialReplyRules.decide("com.telegram.messenger", "happy birthday"))   // other apps unchanged
     }
 
-    @Test fun twoMessagesPerPersonPerHour() {
+    @Test fun threeMessagesPerPersonPerHour() {   // limit is 3 per hour (AutoReplyRules.SENDER_PER_HOUR), same as AutoReplyRulesTest
         val g = AutoReplyRules.Gate()
         val t0 = 1_000_000L
         assertNull(g.allow("Anand", t0))
         assertNull(g.allow("Anand", t0 + 11 * 60_000L))
-        assertEquals("limit", g.allow("Anand", t0 + 25 * 60_000L))
+        assertNull(g.allow("Anand", t0 + 22 * 60_000L))
+        assertEquals("limit", g.allow("Anand", t0 + 33 * 60_000L))
         assertNull(g.allow("Anand", t0 + 75 * 60_000L))
     }
 }

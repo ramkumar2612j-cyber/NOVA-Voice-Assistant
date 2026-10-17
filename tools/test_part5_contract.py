@@ -36,12 +36,6 @@ for m in re.finditer(r'AutoTrace\.add\(([^)]*)\)', ns):
 # every Android.* the page calls has a bridge (spot check of the new one + audit tool)
 need('fun detectIntent' in ma and 'fun editPhoto' in ma, 'detectIntent/editPhoto bridge missing')
 need(hashlib.sha256(open(os.path.join(R, '.github/workflows/build.yml'), 'rb').read()).hexdigest() == 'e8a0351533826bd47582c70bd560539263af889d6020d106d4cfad49fea5e2ba', 'build.yml changed!')
-# v7.36 (add-only): in the GitHub layout "Unpack zip and build NOVA" the zip's own .github folder is NOT copied
-# (rsync --exclude='/.github') and unpack.yml copies ITSELF to build.yml only so the checks can read it. The hash above
-# can never match that runtime copy. The hash rule still applies to the real zip build.yml (any file that is not that copy).
-_wf = open(os.path.join(R, '.github/workflows/build.yml'), encoding='utf8', errors='ignore').read()
-if 'Unpack zip into main' in _wf and 'NOVA-Voice-Assistant.zip' in _wf:
-    bad[:] = [x for x in bad if x != 'build.yml changed!']
 if bad:
     print('FAIL part5 contract'); [print(' -', x) for x in bad]; sys.exit(1)
 print('PASS part5 contract')

@@ -441,6 +441,3 @@ AutoTrace.kt + AutoTraceTest.kt, NovaService auto log (History "NOVA AUTO") + "a
 ## v7.35 AUTO VERIFY (add-only)
 FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all understood features (old FeatureCheck + Parts 1-5 + commands + state + page wiring); ui.html p6_verify + p6_box; bridges verifyPage / verifyNow; HealthCheck "AUTO VERIFY" line; NovaService route "auto verify status"; History "NOVA VERIFY"; tools/test_part6_contract.py + test_part6_render.py. See NEXT_ACCOUNT_PROMPT_FULL_v7_35_PART5_VERIFY.md.
 (v7.35 evidence) Real kotlinc 1.9.24 compile of main + test = 0 errors; JUnit 1117 run, only the 3 known stale fail. Gradle APK build still only in GitHub Actions.
-
-## v7.36 CI layout fix (add-only, guard only; no app code changed)
-First real GitHub Actions run of v7.35 ("Unpack zip and build NOVA"): contract checks = 96 pass / 12 fail, the 12th (not in KNOWN_STALE_GUARDS.txt) was tools/test_part5_contract.py "build.yml changed!". Cause: in that layout the zip's .github is not copied and unpack.yml copies itself to build.yml, so the build.yml sha256 can never match. Fix: tools/test_part5_contract.py now skips ONLY that hash line when build.yml is the unpack runtime copy; the zip's own build.yml is still hash-checked. See NEXT_ACCOUNT_PROMPT_v7_36_CI_LAYOUT_FIX.md.
