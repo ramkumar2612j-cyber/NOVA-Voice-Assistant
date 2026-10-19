@@ -19,7 +19,7 @@ object MovieScanCapture {
     class Result(val stop: MovieFrameRules.Stop, val frames: List<ByteArray>)
 
     /** Takes up to [count] frames, [MovieFrameRules.GAP_MS] apart. A protected screen at ANY point discards everything. */
-    fun run(src: Source, count: Int): Result {
+    fun run(src: Source, count: Int, gapMs: Long = MovieFrameRules.GAP_MS): Result {
         if (!src.supported()) return Result(MovieFrameRules.Stop.OLD_ANDROID, emptyList())
         val n = MovieFrameRules.frameCount(count)
         val kept = ArrayList<ByteArray>()
@@ -34,7 +34,7 @@ object MovieScanCapture {
                 if (after == null || MovieFrameRules.gate(after) != AnalysisRules.Gate.OK) return Result(MovieFrameRules.Stop.PROTECTED, emptyList())
                 if (MovieFrameRules.usable(f) && !MovieFrameRules.isDuplicate(kept, f) && MovieFrameRules.fitsBudget(kept, f)) kept.add(f)
             }
-            if (i < n - 1) src.sleep(MovieFrameRules.GAP_MS)
+            if (i < n - 1) src.sleep(gapMs)   // v7.81 PART 4: the quick scan passes a shorter gap; every other caller keeps GAP_MS
         }
         if (src.cancelled()) return Result(MovieFrameRules.Stop.CANCELLED, emptyList())
         return if (kept.isEmpty()) Result(MovieFrameRules.Stop.NO_FRAMES, emptyList()) else Result(MovieFrameRules.Stop.OK, kept)

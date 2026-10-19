@@ -11,8 +11,10 @@ object VideoScanPipeline {
 
     fun run(
         frames: List<ByteArray>, screenText: String, brain: AnalysisPipeline.Brain,
-        alive: () -> Boolean, stage: (String, Int) -> Unit, now: () -> Long = { System.currentTimeMillis() }
+        alive: () -> Boolean, stage: (String, Int) -> Unit, now: () -> Long = { System.currentTimeMillis() },
+        budgetStartMs: Long = -1L   // v7.81 PART 4: >= 0 = quick scan (QuickScan budget); -1 = the old unlimited behaviour
     ): Done {
+        val quick = budgetStartMs >= 0L
         val en = brain.en()
         if (frames.isEmpty()) return Done("OTHER", null, null)
         stage(MovieGuessPipeline.ST_READ, 10)
@@ -32,11 +34,13 @@ object VideoScanPipeline {
             for (f in frames.take(AnalysisRules.VISION_FRAMES_PER_CALL)) b64.add(enc.encodeToString(f))
             val ut0 = ScreenVideoRules.userPrompt(text, b64.size, en)
             for (attempt in 0..1) {
+                if (attempt == 1 && quick && !QuickScan.searchAllowed(now() - budgetStartMs)) break   // v7.81: no retry once the budget is mostly gone
                 val ut = if (attempt == 0) ut0 else ut0 + AnalysisPipelineRules.retryNote(en)
                 var res: Pair<Int, String> = Pair(0, "")
                 var outcome = "OK"
                 if (!useFree) {
-                    res = brain.call(AnalysisPipelineRules.visionRequestJson(sys, ut, b64))
+                    res = if (quick) brain.callTextWith(AnalysisPipelineRules.visionRequestJson(sys, ut, b64), QuickScan.VISION_READ_MS, QuickScan.VISION_DEADLINE_MS)   // v7.81: 7 s, not 30 s
+                          else brain.call(AnalysisPipelineRules.visionRequestJson(sys, ut, b64))
                     if (!alive()) return Done("CANCELLED", null, null)
                     outcome = AnalysisPipelineRules.callOutcome(res.first)
                     if (AnalysisPipelineRules.tryFreeAfter(outcome, brain.freeVisionReady(), false)) useFree = true
@@ -59,13 +63,14 @@ object VideoScanPipeline {
         if (!ScreenVideoRules.isWork(r.kind) || cands.isEmpty()) { stage(MovieGuessPipeline.ST_RESULT, 100); return Done("OK", r, null) }
 
         // only short title queries leave the phone (no picture, no screen text)
-        stage(MovieGuessPipeline.ST_SEARCH, 60)
-        val queries = MovieGuessRules.searchQueries(cands)
+        val doSearch = !quick || QuickScan.searchAllowed(now() - budgetStartMs)   // v7.81: a late scan skips the web search and says "not verified"
+        if (doSearch) stage(MovieGuessPipeline.ST_SEARCH, 60)
+        val queries = MovieGuessRules.searchQueries(cands).let { if (quick) it.take(QuickScan.MAX_QUERIES) else it }
         var found: List<AnalysisRules.Result> = emptyList()
         var ran = false
-        if (queries.isNotEmpty() && alive()) {
+        if (queries.isNotEmpty() && alive() && doSearch) {
             val gem: ((String) -> Pair<Int, String>)? =
-                if (brain.blocked().isEmpty()) ({ j: String -> brain.callRaw(j, AnalysisSearchRules.SEARCH_READ_MS, AnalysisSearchRules.SEARCH_DEADLINE_MS) }) else null
+                if (brain.blocked().isEmpty()) ({ j: String -> brain.callRaw(j, if (quick) QuickScan.SEARCH_READ_MS else AnalysisSearchRules.SEARCH_READ_MS, if (quick) QuickScan.SEARCH_DEADLINE_MS else AnalysisSearchRules.SEARCH_DEADLINE_MS) }) else null
             val so = AnalysisSearchRules.runSearch(
                 queries, en, gem, { u -> brain.webGet(u, AnalysisSearchRules.KEYLESS_GET_MS) },
                 alive, now, { d, tt -> stage(MovieGuessPipeline.ST_SEARCH, 60 + (if (tt <= 0) 0 else 35 * d / tt)) }

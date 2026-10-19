@@ -6,7 +6,13 @@ if(t!=="low"&&t!=="mid"&&t!=="high"){var q=/[?&]tier=(low|mid|high)/.exec(locati
 window.__tier=t;window.__dprCap=t==="high"?3:(t==="mid"?2:1.5);
 if(t==="low"){window.__forceLow=true;document.documentElement.classList.add("lowfx")}
 /* v7.4 Quality: Auto (default, tier based) / Sharp (more pixels, capped) / Smooth (light effects, fewer pixels, no hang) */
-try{var q=localStorage.getItem("nova_q")||"auto";window.__quality=q;if(q==="smooth"){window.__dprCap=1.5;window.__forceLow=true;document.documentElement.classList.add("lowfx")}else if(q==="sharp"){window.__dprCap=Math.min(3,Math.max(window.__dprCap||2,2))}}catch(e){}})();</script>
+try{var q=localStorage.getItem("nova_q")||"auto";window.__quality=q;if(q==="smooth"){window.__dprCap=1.5;window.__forceLow=true;document.documentElement.classList.add("lowfx");document.documentElement.classList.add("qsmooth")}else if(q==="sharp"){window.__dprCap=Math.min(3,Math.max(window.__dprCap||2,2))}}catch(e){}})();</script>
+<script id="qsmooth-init-v784">/* v7.84: SMOOTH = still theme. The live theme (3D orb, starfield, NOVA core, HUD rings) is drawn once per state change instead of 30 times a second, so the phone stays free for the real work. Helpers only: classes and one throttle gate. */
+(function(){var h=document.documentElement,W=window,G={};
+W.__isSmooth=function(){return h.classList.contains("qsmooth")};
+/* true = draw this frame. In SMOOTH a loop keyed k draws at most about 3 times a second (state colour still follows within 0.3 s). Other modes: always true. */
+W.__qsGate=function(k,now){if(!h.classList.contains("qsmooth"))return true;var l=G[k]||0;if(now-l<300)return false;G[k]=now;return true};
+})();</script>
 <script>/* v6.38: repeating UI timers pause while the page is hidden */(function(){var si=window.setInterval;window.setInterval=function(f,t){var a=[].slice.call(arguments,2);if(typeof f!=="function")return si(f,t);return si(function(){if(document.hidden)return;f.apply(null,a)},t)}})();</script>
 <style>
 :root{--c1:#00f0ff;--c2:#2a6bff;--bg:#05060f}
@@ -1387,7 +1393,7 @@ function frame(now){
   ctx.globalAlpha=1;
 }
 var raf=0;
-function loop(now){if(window.__orb3d!==true&&!window.__cover)frame(now);raf=requestAnimationFrame(loop)}   /* v6.18b: the old 2D orb is hidden while the 3D orb runs, so do not redraw it (saves one shadowBlur canvas per frame) */
+function loop(now){if(window.__orb3d!==true&&!window.__cover&&(!window.__qsGate||window.__qsGate('orb2d',now)))frame(now);raf=requestAnimationFrame(loop)}   /* v6.18b: the old 2D orb is hidden while the 3D orb runs, so do not redraw it (saves one shadowBlur canvas per frame) */
 function start(){if(!raf)raf=requestAnimationFrame(loop)}
 function stop(){if(raf){cancelAnimationFrame(raf);raf=0}}
 document.addEventListener('visibilitychange',function(){document.hidden?stop():start()});
@@ -1637,7 +1643,7 @@ function gframe(now){var cls=$('app').className||'',on=/on|listen|think/.test(cl
  if(ls)for(var r2=0;r2<3;r2++){var ph2=((now/900)+r2/3)%1;g.strokeStyle='rgba('+col+','+(1-ph2)*.5+')';g.lineWidth=1.5;g.beginPath();g.arc(0,0,R+8+ph2*42,0,6.2832);g.stroke()}
  if(th){g.save();g.beginPath();g.arc(0,0,R,0,6.2832);g.clip();g.fillStyle='rgba('+col+',.55)';g.fillRect(-R,-R+((now/5)%(2*R)),2*R,2);g.restore()}
  for(var k=0;k<28;k++){var h=ls?6+24*Math.abs(Math.sin(now/130+k*.6)*Math.sin(now/310+k*.25)):on?2+3*Math.pow(Math.sin(now/500+k*.4),2):1.5;g.fillStyle='rgba('+col+','+(.35+.55*al)+')';g.fillRect(-111+k*8,106-h/2,3,h)}}
-var _lg=0;function gloop(n){requestAnimationFrame(gloop);if(n-_lg<33)return;_lg=n;if(!window.__orb3d&&!window.__cover&&B.classList.contains('ready')&&!document.hidden)gframe(n)}requestAnimationFrame(gloop);
+var _lg=0;function gloop(n){requestAnimationFrame(gloop);if(n-_lg<33)return;if(window.__qsGate&&!window.__qsGate('gl2d',n))return;_lg=n;if(!window.__orb3d&&!window.__cover&&B.classList.contains('ready')&&!document.hidden)gframe(n)}requestAnimationFrame(gloop);
 gl.onclick=function(){$('btn').click()};
 var greeted=false;
 function greetOnce(){if(greeted)return;greeted=true;var h=new Date().getHours(),w=h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night',d=document.createElement('div');d.className='greet';d.innerHTML='<b>'+w+'</b><span></span><i>Ready for your command</i>';var lg=$('log');lg.insertBefore(d,lg.firstChild);var tx='Main NOVA hoon, aapka AI companion',k=0,sp=d.querySelector('span');(function ty(){sp.textContent=tx.slice(0,k++);if(k<=tx.length)setTimeout(ty,40)})()}
@@ -1682,6 +1688,7 @@ function mdRender(box,t){var lines=String(t).split('\n'),i=0,list=null,listType=
     i++}}
 function cadd(t,c){var d=document.createElement('div');d.className='msg '+c;
   if(c==='ai'&&/[\n`*#]/.test(t)){mdRender(d,t)}else d.textContent=t;
+  if(c==='me'&&t.length>500){var tx=document.createElement('span');tx.className='ctext';tx.textContent=t;d.textContent='';d.appendChild(tx);var tg=document.createElement('button');tg.type='button';tg.className='ctog';tg.textContent='POORA DEKHO';tg.onclick=function(){var o=tx.classList.toggle('open');tg.textContent=o?'CHHOTA KARO':'POORA DEKHO'};d.appendChild(tg)}   /* v7.77: long pasted brief folds to 8 lines */
   if(c==='ai'){var bar=document.createElement('span');bar.className='mbar';
     var sp=document.createElement('button');sp.type='button';sp.className='spk';sp.textContent='\uD83D\uDD0A';sp.setAttribute('aria-label','Bolkar sunao');sp.style.cssText='margin-left:8px;background:none;border:0;color:inherit;opacity:.7;font-size:15px;cursor:pointer';sp.onclick=function(ev){ev.stopPropagation();try{Android.speakMsg(t)}catch(x){}};bar.appendChild(sp);
     if(t.length>60)bar.appendChild(copyBtn(function(){return t}));d.appendChild(bar)}
@@ -2721,6 +2728,7 @@ try{
 }catch(e){return}
 var CSS=250,DPR=Math.min(window.devicePixelRatio||1,Math.min(2,window.__dprCap||2)),SC=[.8,.6,.45],si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si,RM=false,lost=false;
 try{RM=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches}catch(e){}
+var RM0=RM;   /* v7.84: SMOOTH = still orb (one draw per state change) */
 cv.style.background='url(orb_poster.png) center/contain no-repeat';
 function fallback(){window.__orb3d=false;cv.style.display='none';old.style.display=''}
 function size(){var n=Math.max(96,Math.round(CSS*DPR*SC[si]));if(cv.width!==n){cv.width=n;cv.height=n}cv.style.width=CSS+'px';cv.style.height=CSS+'px';gl.viewport(0,0,n,n)}
@@ -2742,6 +2750,7 @@ function loop(now){
   if(lost||document.hidden||window.__cover||!document.body.classList.contains('ready')){last=0;return}   /* v6.50: nothing is drawn while a full-screen panel covers the orb */
   if(window.__orb3d!==true){window.__orb3d=true;old.style.display='none';cv.style.display=''}
   var cls=app.className||'';
+  RM=RM0||(window.__isSmooth&&window.__isSmooth());
   if(RM){var k=cls;if(k===lastKey&&first)return;lastKey=k;m=[/listen/.test(cls)?1:0,/think/.test(cls)?1:0,/speak/.test(cls)?1:0,0]}
   if(last){var dt=now-last;if(dt<250)ema=ema*.9+dt*.1}
   last=now;
@@ -3679,6 +3688,8 @@ button.nova-press{animation:nvPress .28s ease-out}
 .cn-code{color:var(--c1);border-color:var(--line2);background:rgba(47,216,255,.08)}
 @media(max-height:640px){.logo{font-size:18px}.orbbox{min-height:92px}.fstat{padding:7px 10px}.f{padding:7px 11px 7px 9px}.f i{display:none}.msg{font-size:13px}}
 @media(max-height:520px){.orbbox{display:none}}
+/* v7.80 PART 3B (add-only): short phones (<=640px tall, e.g. 320x568). Home content is taller than the screen, so the orb box was squeezed to ~92px and the last rows were clipped. Orb gets a sane fixed size; Home scrolls instead of hiding rows. */
+@media(max-height:640px) and (min-height:521px){#app.wrap{overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}#app.wrap>.orbbox{flex:0 0 150px!important;min-height:150px!important}#app.wrap>.log{flex:0 0 140px!important;min-height:90px!important}}
 @media(min-height:780px){.orbbox{flex-basis:210px!important}}
 @media(min-width:700px){#app.wrap{max-width:560px}}
 html.lowfx .orbbox:before,html.lowfx .orbbox:after,html.lowfx #btn:after,html.lowfx #dot,html.lowfx .orbbox canvas,html.lowfx .vw.on,html.lowfx .msg{animation:none!important}
@@ -3990,6 +4001,8 @@ if(th&&tw)new MutationObserver(function(){if(calm())return;tw.classList.remove('
 #p4_core{position:absolute;left:calc(50% - 125px);top:calc(50% - 125px);width:250px;height:250px;animation:none!important;filter:none!important;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #p4_stars{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none}
 @media (max-height:640px){#p4_core{transform:scale(.86)}}
+/* v7.79 PART 3A: core orb was shrunk + pushed left by the old .orbbox canvas rule (height:100% !important, position:relative). Add-only: centre it and keep it square inside the orb box. */
+.orbbox #p4_core{position:absolute!important;left:50%!important;top:50%!important;height:100%!important;width:auto!important;max-width:none!important;aspect-ratio:1/1;transform:translate(-50%,-50%)!important}
 </style>
 <script id="p4_fx">
 /* v7.33 PART 4. #p4_core = rings / hexagon / neural lines / scan arc + the word NOVA written live (letter shimmer), state text from #app class (STANDBY / ONLINE / LISTENING / THINKING / SPEAKING).
@@ -3999,6 +4012,7 @@ if(th&&tw)new MutationObserver(function(){if(calm())return;tw.classList.remove('
 var d=document,app=d.getElementById('app'),box=d.querySelector('.orbbox');
 if(!app||!box||!d.body)return;
 var RM=false;try{RM=!!(matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)}catch(e){}
+var RM0=RM;   /* v7.84: SMOOTH keeps the picture still (drawn on state change only) */
 function low(){return d.documentElement.classList.contains('lowfx')}
 function dpr(){return Math.min(window.__dprCap||3,3,Math.max(1,window.devicePixelRatio||1))}
 var c=d.createElement('canvas');c.id='p4_core';c.setAttribute('aria-label','NOVA');box.appendChild(c);
@@ -4083,6 +4097,7 @@ var last=0;
 function loop(now){requestAnimationFrame(loop);
   if(d.hidden||window.__cover||!d.body.classList.contains('ready')){last=0;return}
   var lo=low();
+  RM=RM0||(window.__isSmooth&&window.__isSmooth());
   if(RM){var k=(app.className||'')+'|'+SW;if(k===lastKey&&!dirty)return;lastKey=k;dirty=false}
   var gap=lo?33:16;if(last&&now-last<gap)return;var dt=last?Math.min(.05,(now-last)/1000):.016;last=now;
   tx+=(ttx-tx)*.08;ty+=(tty-ty)*.08;core(now);starFrame(now,dt)}
@@ -4176,6 +4191,41 @@ W.NovaPerf={
 };
 apply(lvl,seen!==null?"learned":"init");
 begin()
+})();
+</script>
+<style id="qsmooth-v784">
+/* v7.84 SMOOTH mode (html.qsmooth): every decorative loop of the live theme is off. Functional signals stay (typing dots, busy spinner, voice bars, laser scan). */
+html.qsmooth .orb,html.qsmooth .orb:before,html.qsmooth .orb:after,html.qsmooth .orbbox,html.qsmooth .orbbox:before,html.qsmooth .orbbox:after,html.qsmooth .orbbox canvas,
+html.qsmooth #btn:after,html.qsmooth #dot,html.qsmooth #spl .ring,html.qsmooth #intro::after,html.qsmooth #hint,html.qsmooth .c3w,html.qsmooth .c3r,html.qsmooth #c3act:before,html.qsmooth #c3act:after,html.qsmooth #c3act .c3b3,
+html.qsmooth #fut_ring,html.qsmooth #fut_ring:before,html.qsmooth #fut_ring:after,html.qsmooth #fut_edge,html.qsmooth #c_auto i,html.qsmooth .p6c.bad i{animation:none!important}
+html.qsmooth #fut_bg,html.qsmooth #fut_scan,html.qsmooth .fut_rip{display:none!important}
+html.qsmooth .vw,html.qsmooth #chat,html.qsmooth #panel,html.qsmooth #sheet,html.qsmooth .box,html.qsmooth .msg,html.qsmooth button.sm{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.qsmooth *{scroll-behavior:auto!important}
+</style>
+<script id="qsmooth-live-v784">
+/* v7.84: GRAPHICS QUALITY applies at once. Choosing SMOOTH stops the live theme immediately (no app restart). Leaving SMOOTH removes the still mode right away; only the 3D orb pixel size and the effects level climb back after the next app start. Uses the same store as before (localStorage nova_q). */
+(function(){
+var d=document,h=d.documentElement,W=window;
+function q(){var v="auto";try{v=localStorage.getItem("nova_q")||"auto"}catch(e){}return v}
+function note(t){var a=d.getElementById("s_qnote"),b=d.getElementById("p17_qn");setTimeout(function(){if(a)a.textContent=t;if(b)b.textContent=t},40)}
+function apply(v){
+  W.__quality=v;
+  if(v==="smooth"){
+    W.__dprCap=1.5;W.__forceLow=true;h.classList.add("lowfx");h.classList.add("qsmooth");
+    try{if(W.NovaPerf)W.NovaPerf.set(3)}catch(e){}
+    note("SMOOTH abhi se laga diya: live theme band, bina atke. Restart ki zaroorat nahi.")
+  }else{
+    h.classList.remove("qsmooth");W.__forceLow=false;
+    try{if(W.NovaPerf)W.NovaPerf.set("auto")}catch(e){}
+    note(v.toUpperCase()+" lag gaya. Poore effects aur pixel size ke liye app ek baar band karke dobara kholo.")
+  }
+  try{W.dispatchEvent(new CustomEvent("novaquality",{detail:{q:v}}))}catch(e){}
+}
+W.NovaQuality={get:q,apply:apply,smooth:function(){return h.classList.contains("qsmooth")}};
+var prev=q();
+function changed(){var v=q();if(v===prev)return;prev=v;apply(v)}
+d.addEventListener("change",function(e){if(e.target&&e.target.id==="s_quality")setTimeout(changed,0)},true);
+d.addEventListener("click",function(e){var t=e.target&&e.target.closest&&e.target.closest("#p17_q button");if(t)setTimeout(changed,0)},true);
 })();
 </script>
 <style id="native-v738">
@@ -5176,6 +5226,13 @@ html body #st_box>b,html body #st_box>small,html body #rm_recover,html body #pro
 /* v7.74 add-only: photo / video / file now live ONLY under the + button. The separate paperclip and MEDIA buttons are hidden (their ids and code stay; the + menu clicks them). */
 html body #c_attach,html body #m11_btn{display:none!important}
 #cn_strip button.p21{border-color:rgba(47,216,255,.7);background:rgba(47,216,255,.12)}
+
+/* v7.77 chat polish: long messages fold, status line stays clean above the list */
+.msg .ctext{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.msg .ctext.open{display:block;-webkit-line-clamp:unset}
+.msg .ctog{display:block;margin-top:6px;background:none;border:1px solid currentColor;border-radius:10px;color:inherit;opacity:.85;font-size:11px;letter-spacing:.08em;padding:4px 10px;cursor:pointer}
+#c_ctx{position:relative;z-index:2;background:var(--bg,#050a14);padding-bottom:4px;border-bottom:1px solid rgba(120,220,255,.18);margin-bottom:2px}
+#clog{overscroll-behavior:contain;padding-top:6px}
 </style>
 <script id="p21_oneplus">
 /* v7.74: ONE place for photo / video / file = the + menu (#cn_strip). Items are added at the TOP every time the menu is drawn. */

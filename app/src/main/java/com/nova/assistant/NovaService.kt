@@ -2429,6 +2429,8 @@ class NovaService : Service() {
             lastKind = "gmail"
             return gmailRun(gmCmd)
         }
+        // v7.83: "aaj whatsapp pe koi naya message aaya?" is answered on the phone (read-only), never sent to the AI as a guess.
+        unreadQueryReply(text)?.let { return it }
         val appReq = if (text.isBlank()) null else AppSearchRules.parse(text)
         if (appReq != null) {
             val appRes = appControl(appReq)
@@ -2612,6 +2614,7 @@ class NovaService : Service() {
             lastKind = "gmail"
             return gmailRun(gmCmd2)
         }
+        if (c == null && groqText.isNotBlank()) unreadQueryReply(groqText)?.let { return it }   // v7.83: same question heard by the cloud listener
         val appReq2 = if (c == null && groqText.isNotBlank()) AppSearchRules.parse(groqText) else null
         if (appReq2 != null) {   // v6.92: same any-app search/share for text heard by the cloud listener
             val appRes2 = appControl(appReq2)
@@ -2703,10 +2706,30 @@ class NovaService : Service() {
             "Ye abhi samajh nahi aaya. Chhota bolo, jaise 'phone lock karo'. Lambi baat ke liye Settings mein Gemini key daalo.",
             "I did not catch that. Say it short, like 'lock phone'. For long sentences add a Gemini key in Settings."
         )
+        // v7.83: when the AI was only resting after a failure, say THAT (the old line blamed the owner's words).
+        if (now < cloudCoolUntil) {
+            val secs = ((cloudCoolUntil - now) / 1000L).coerceIn(1L, 120L)
+            return tr(
+                "AI abhi thodi der ke liye atka hua hai, lagbhag $secs second baad dobara bolo. Phone ke seedhe command (torch, volume, call) abhi bhi chalenge.",
+                "The AI is paused after an error, try again in about $secs seconds. Direct phone commands (torch, volume, call) still work."
+            )
+        }
         return tr(
             "Ye samajh nahi aaya. Ek baar aur, thoda saaf bolo.",
             "I did not catch that. Please say it once more, a bit clearer."
         )
+    }
+
+    /** v7.83: answers "koi naya message aaya?" from the live notifications. null = not that kind of question. */
+    private fun unreadQueryReply(said: String): String? {
+        if (said.isBlank()) return null
+        val req = UnreadQueryRules.parse(said) ?: return null
+        lastTurnLocal = true
+        lastKind = "unread_query"
+        val en = cfg.lang == "en"
+        if (!DrivingBridge.listenerEnabled(this)) return UnreadQueryRules.noAccessText(en)
+        val items = NovaNotificationService.snapshotMessages() ?: return UnreadQueryRules.notReadyText(en)
+        return UnreadQueryRules.reply(items, req, en)
     }
 
     /** The cloud as one answer source: runs askCloud and reports whether it failed and whether a tool already acted. */
@@ -3207,7 +3230,7 @@ class NovaService : Service() {
     private fun hearTwice(f: () -> String): String {
         val first = f()
         if (first.isNotBlank()) return first
-        try { Thread.sleep(700) } catch (e: InterruptedException) { return first }
+        try { Thread.sleep(SpeedRules.HEAR_RETRY_MS) } catch (e: InterruptedException) { return first }   // v7.78: 350 ms (was 700)
         return f()
     }
 
@@ -4613,6 +4636,17 @@ class NovaService : Service() {
         try { Thread.sleep(ms) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) }
     }
 
+    /** v7.78 speed: wait at least [minMs], then until [ready] is true, but never longer than [maxMs] (the old fixed wait). Worker thread. false = interrupted. */
+    private fun waitReady(minMs: Long, maxMs: Long, ready: () -> Boolean): Boolean {
+        val t0 = SystemClock.elapsedRealtime()
+        while (true) {
+            val el = SystemClock.elapsedRealtime() - t0
+            val ok = try { ready() } catch (e: Exception) { false }
+            if (SpeedRules.shouldStop(el, minMs, maxMs, ok)) return true
+            try { Thread.sleep(SpeedRules.STEP_MS) } catch (e: InterruptedException) { return false }
+        }
+    }
+
     /**
      * v6.68 speed + correctness: instead of a fixed sleep after every action, wait only until the screen has CHANGED and then stopped
      * changing (two equal reads in a row). A fast app returns after ~minMs, a slow app gets up to maxMs, so the next step never
@@ -5183,8 +5217,8 @@ class NovaService : Service() {
         am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
         am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
         if (action == "play" || action == "pause") {
-            try { Thread.sleep(400) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) }
             val want = action == "play"
+            waitReady(100L, 400L) { am.isMusicActive == want }   // v7.78: was a fixed 400 ms; returns as soon as the state is what we asked for
             return if (am.isMusicActive == want) R(true, tr(if (want) "Music chal raha hai" else "Music ruk gaya", if (want) "Media is playing" else "Media is paused"))
             else R(true, tr("$action ki request bheji, par confirm nahi hua. Shayad koi player active nahi hai",
                 "I sent $action but it is not confirmed. Maybe no player is active"))
@@ -5514,7 +5548,16 @@ class NovaService : Service() {
         if (NovaAccessibilityService.instance == null) {
             return R(true, tr("$label khul gaya. $q search karne ke liye Accessibility ON honi chahiye", "$label opened. Accessibility must be ON to search for $q"))
         }
-        try { Thread.sleep(1800) } catch (e: InterruptedException) { return opened }
+        run {   // v7.78: was a fixed 1800 ms; now returns once the app is in front and its screen stopped changing (cap still 1800 ms)
+            var lastSig = 0; var stable = 0
+            val okWait = waitReady(500L, 1800L) {
+                val front = NovaAccessibilityService.agentSnapshot()?.first == pkg
+                val sig = NovaAccessibilityService.screenSignature()
+                if (sig == lastSig) stable++ else { stable = 0; lastSig = sig }
+                SpeedRules.appReady(front, stable)
+            }
+            if (!okWait) return opened
+        }
         val done = NovaAccessibilityService.searchInApp(q, req.play)
         return when (done.code) {
             "played" -> R(true, tr("$label me $q search karke pehle result par tap kar diya", "Searched $q in $label and tapped the first result"))
@@ -5540,7 +5583,16 @@ class NovaService : Service() {
         if (target.isBlank()) {
             return R(true, tr("Share khul gaya, jisko bhejna hai use chun lo", "Share is open, pick who to send it to"))
         }
-        try { Thread.sleep(1300) } catch (e: InterruptedException) { return R(true, tr("Share khul gaya", "Share is open")) }
+        run {   // v7.78: was a fixed 1300 ms; returns when the share sheet screen stopped changing (cap 1300 ms)
+            val before = NovaAccessibilityService.screenSignature()
+            var lastSig = before; var stable = 0
+            val okWait = waitReady(400L, 1300L) {
+                val sig = NovaAccessibilityService.screenSignature()
+                if (sig == lastSig) stable++ else { stable = 0; lastSig = sig }
+                sig != before && stable >= 2
+            }
+            if (!okWait) return R(true, tr("Share khul gaya", "Share is open"))
+        }
         val picked = NovaAccessibilityService.tapLabel(target)
         return if (picked.ok) R(true, tr("$target chun liya. Bhejne ka button aap dabao", "Picked $target. Press send yourself"))
         else R(true, tr("Share khul gaya par $target nahi dikha, aap chun lo", "Share is open but I could not see $target, please pick it"))
@@ -5610,8 +5662,8 @@ class NovaService : Service() {
         if (NovaAccessibilityService.instance == null) {
             return R(true, tr("Mail tayyar hai, Send aap dabao (Send ke liye Accessibility ON karni hogi)", "The mail is ready, press Send yourself (Accessibility must be ON for NOVA to press it)"))
         }
-        for (k in 0 until 8) {
-            try { Thread.sleep(800) } catch (e: InterruptedException) { break }
+        for (k in 0 until SpeedRules.steps(6400L, 300L)) {   // v7.78: same ~6.4 s cap, polled every 300 ms (was 8 x 800 ms)
+            try { Thread.sleep(300) } catch (e: InterruptedException) { break }
             if (NovaAccessibilityService.tapLabel("Send").ok) {
                 return R(true, tr("$to ko mail bhejne ke liye Send daba diya", "Pressed Send for the mail to $to"))
             }
@@ -6397,6 +6449,7 @@ class NovaService : Service() {
         h.post { try { moviePopup?.destroy(); moviePopup = null } catch (e: Throwable) { } }
         movieScanCancel = false
         screenStage = "CAPTURE 3"
+        val quickStart = System.currentTimeMillis()   // v7.81 PART 4: the 10 s budget starts here
         val lz = if (screenLaserOn) laser else null
         var taken = 0
         val src = object : MovieScanCapture.Source {
@@ -6413,13 +6466,13 @@ class NovaService : Service() {
             override fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (e: InterruptedException) { movieScanCancel = true } }
             override fun supported(): Boolean = android.os.Build.VERSION.SDK_INT >= 30
         }
-        val r = MovieScanCapture.run(src, ScreenVideoRules.FRAMES)
+        val r = MovieScanCapture.run(src, QuickScan.FRAMES, QuickScan.GAP_MS)   // v7.81: 3 frames, 0.7 s apart
         if (r.stop == MovieFrameRules.Stop.CANCELLED) return MovieFrameRules.statusText(r.stop, 0, en)
         if (r.stop == MovieFrameRules.Stop.PROTECTED) return MovieFrameRules.statusText(r.stop, 0, en)
         if (r.stop != MovieFrameRules.Stop.OK) return null
         if (NovaAccessibilityService.movieProtected() != false) return MovieFrameRules.statusText(MovieFrameRules.Stop.PROTECTED, 0, en)
         val txt = try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" }
-        val d = VideoScanPipeline.run(r.frames, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> screenStage = "$st $pct" })
+        val d = VideoScanPipeline.run(r.frames, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> screenStage = "$st $pct" }, budgetStartMs = quickStart)
         val rd = d.read
         val out: String = when (d.kind) {
             "OK" -> if (rd == null) return null else {
@@ -6831,7 +6884,7 @@ class NovaService : Service() {
             else "Is Android version par FLAG_SECURE verify nahi kar sakta, isliye screen ka text AI ko nahi bhejunga.")
         val lz = if (screenLaserOn) laser else null
         try { lz?.hideForShot() } catch (e: Throwable) { }   // v7.75: no laser in the screenshot
-        val verifyShot = try { NovaAccessibilityService.agentScreenshot() } finally { screenStage = "VISION 60" }
+        val verifyShot = try { NovaAccessibilityService.agentScreenshot() } finally { screenStage = "VISION 60" }   // v7.81: real step, the clock on the laser keeps running
         if (verifyShot == null) return Pair(false, if (en)
             "The screenshot was blocked or its security could not be verified. I will not send this screen to AI."
             else "Screenshot block hua ya screen ki security verify nahi hui. Main is screen ko AI ko nahi bhejunga.")
@@ -6860,7 +6913,10 @@ class NovaService : Service() {
             sys += "\nFor this one question you MAY use Google Search to identify what is visible (title, name, song, person). Say if you are not sure."
             body = JSONObject(cloudBody(contents, false, sys)).put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject()))).toString()
         }
-        val (code, resp) = postFallback(body, 15000L, 30000L)   // v7.75
+        val firstRead = (scrState?.turns ?: 1) == 0   // v7.81 PART 4: only the FIRST reading is held to the 10 s promise; follow-ups keep the old limits
+        val (code, resp) = if (!firstRead) postFallback(body, 15000L, 30000L)   // v7.75
+            else if (intent == ScreenSession.Intent.IDENTIFY) postFallback(body, QuickScan.IDENT_READ_MS, QuickScan.IDENT_DEADLINE_MS)
+            else postFallback(body, QuickScan.TEXT_READ_MS, QuickScan.TEXT_DEADLINE_MS)
         if (code !in 200..299) return Pair(false, cloudFailure(code))
         val out = candidateText(resp).trim()
         if (out.isEmpty()) return Pair(false, tr("Jawab nahi mila", "No answer received"))

@@ -80,3 +80,4 @@ Honest limit: Instagram jaise app ki screen par kuch apps screen capture rok sak
 - v7.71 PART 19 FULL REGRESSION: compile 0 errors, JUnit 1352/1352 PASS (real org.json built by the script), run_all_checks 136/136, FeatureStatus safemode row. Phone / Actions NOT TESTED. Next: Part 20 FINAL (docs, handover prompt, final zip, owner steps = CHECKPOINT 4).
 - v7.72 PART 20 FINAL: final docs (README FINAL section, OWNER_SETUP section G), OWNER_PHONE_TEST_LIST_v7_72.md (= CHECKPOINT 4), handover prompt NEXT_ACCOUNT_PROMPT_v7_72_AFTER_PART20.md, PART20_STATUS_v7_72.md, final zip. PARTS 1-20 ALL WRITTEN. Kotlin unchanged since v7.71. GitHub Actions NOT RUN, phone NOT TESTED. Next = owner runs APK build + phone list, then fixes only from his results.
 
+- v7.79 PART 3A (UI glitches, core orb centering) done in ui.html; 3B next. Phone NOT TESTED.

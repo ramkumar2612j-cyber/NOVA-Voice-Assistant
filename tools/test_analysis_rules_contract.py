@@ -62,7 +62,7 @@ if 'org.json' in TC: bad.append('AnalysisRulesTest must not use org.json (sandbo
 # 13A adds no permission and no UI / bridge (nothing dead): later sub-parts wire it
 perms = re.findall(r'uses-permission android:name="([^"]+)"', MF)
 if len(perms) != 30: bad.append('permission count is %d (was 30)' % len(perms))
-G = rd('app/build.gradle.kts')
+G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else '')
 if 'versionName = "7.52"' not in G and 'versionName = "7.53"' not in G and 'versionName = "7.54"' not in G and 'versionName = "7.55"' not in G and 'versionName = "7.56"' not in G and 'versionName = "7.57"' not in G and 'versionName = "7.58"' not in G and 'versionName = "7.59"' not in G and 'versionName = "7.61"' not in G and 'versionName = "7.62"' not in G and 'versionName = "7.63"' not in G and 'versionName = "7.64"' not in G and 'versionName = "7.65"' not in G and 'versionName = "7.66"' not in G and 'versionName = "7.67"' not in G and 'versionName = "7.68"' not in G and 'versionName = "7.69"' not in G and 'versionName = "7.70"' not in G and 'versionName = "7.71"' not in G and 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G: bad.append('versionName not 7.52 or later 13B-1 (7.53)')
 if bad: print('FAIL', *bad, sep='\n  '); sys.exit(1)
 print('PASS analysis rules contract (static; %d JUnit tests written; Kotlin compile + JUnit run NOT done here)' % len(tests))

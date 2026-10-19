@@ -19,11 +19,12 @@ def rd(p):
         return ''
     return open(fp, encoding='utf-8', errors='replace').read()
 
-G = rd('app/build.gradle.kts')
+G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else '')
 if 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G:   # v7.73: add-only, both accepted
     bad.append('versionName is not 7.72 or 7.73')
 CH = rd('CHANGELOG.md')
-if not (CH.lstrip().startswith('## v7.72') or CH.lstrip().startswith('## v7.73') or CH.lstrip().startswith('## v7.74') or CH.lstrip().startswith('## v7.75') or CH.lstrip().startswith('## v7.76')):   # v7.73: add-only, both accepted
+if not (CH.lstrip().startswith('## v7.72') or CH.lstrip().startswith('## v7.73') or CH.lstrip().startswith('## v7.74') or CH.lstrip().startswith('## v7.7') or CH.lstrip().startswith('## v7.8')):   # v7.82: later add-only versions on top are fine; the v7.72 entry is checked below
+      # v7.73: add-only, both accepted
     bad.append('CHANGELOG does not start with the v7.72 / v7.73 entry')
 
 ST = rd('PART20_STATUS_v7_72.md')

@@ -1,3 +1,43 @@
+## v7.84 - SMOOTH graphics mode really smooth (add-only), versionName 7.84
+- PROBLEM FOUND: in SMOOTH the live theme (3D orb, NOVA core, starfield) still redrew about 30 times a second, and a quality change needed an app restart.
+- FIX (ui.html only, nothing removed): SMOOTH = still theme. Orb, core and starfield are drawn once per state change (listen / think / speak colour and text still follow), decorative CSS loops and HUD rings are off, old 2D orb fallback is throttled. Functional signals stay (typing dots, busy spinner, voice bars, laser scan).
+- Settings: choosing SMOOTH applies at once (no restart). Leaving SMOOTH removes still mode at once; full pixel size / effects level return after the next app start (said in the note under the switch).
+- Headless Chrome (real ui.html): AUTO 115 draws in 2 s, SMOOTH 0 draws in 2 s, repaint on state change works, live switch AUTO -> SMOOTH -> SHARP works. NEW tools/test_part6_smooth_contract.py.
+- NOT TESTED: real phone. Native popup HUD (NovaHud.kt) is separate and unchanged. No Kotlin changed (v7.83 unread fix kept as is).
+
+## v7.82 - PART 5 (final check; add-only), versionName 7.82
+- FIRST real Kotlin compile of v7.78-v7.81: 0 errors. JUnit 1389 tests: 1388 PASS + 1 FAIL found, fixed below.
+- BUG FIXED: SiteIntent.smartSubject stopped at the linking word ("... fitness brand KI website") and returned only "fitness". Now skips ki/ka/ke/ko/of/for right before the noun -> "international fitness brand". SiteSubjectTest unchanged. After fix: JUnit 1389/1389 PASS.
+- Audit (tools/audit_dead_ui.py): 0 dead controls, 0 unused bridge methods, 0 missing help topics. A few unused helper functions exist (e.g. PhoneActions.setRinger/setRotation duplicates of NovaService tools, MovieScanRules.notYetText, ScreenVideoRules.noFramesText); NOT wired, left as is.
+- test_part20_contract: stale CHANGELOG-top check now accepts v7.8x on top.
+- Final: python guards 143/143 PASS (part20 fixed), fx_render tests PASS. NOT DONE: phone 10 s timing (reel / normal screen / "ye kaun si movie hai"), GitHub Actions, phone tests.
+
+## v7.81 - PART 4 of 5 (live scan in 10 s: "nova dekho, kya chal raha hai") (add-only), versionName 7.81
+- NEW QuickScan.kt: the 10 s budget (3 frames 0.7 s apart instead of 4 x 1.5 s; vision call waits 7 s instead of 30 s; first plain reading 7 s / 9 s; no new web search after 5.5 s; 1 short title query) + the clock text + the phrase rule.
+- Voice: "nova dekho btao kya chal ra h", "ye dekho batao" now start the same scan without the word "screen" (narrow rule; battery / gaana / gallery / call / open etc. are NOT taken over).
+- Laser overlay: shows the REAL elapsed clock ("3.2 s / 10 s") under the real stage + percent. Old stages unchanged.
+- Add-only: MovieScanCapture.run(gapMs default = old 1500), VideoScanPipeline.run(budgetStartMs default -1 = old behaviour). Follow-up questions keep the old limits. Protected screens still never captured or sent.
+- NEW tools/test_part4_quickscan_contract.py + app/src/test/.../QuickScanTest.kt. RUN: all python contract guards PASS except test_part20_contract (stale CHANGELOG check, fails the same on the untouched v7.80 zip). NOT RUN: Kotlin compile, JUnit, GitHub Actions. NOT TESTED: phone, real timing.
+## v7.80 - PART 3B of 5 (UI glitches: short phones) (add-only), versionName 7.80
+- FOUND by headless Chrome (real ui.html, 320x568): Home content (618 px) is taller than the 508 px area, so the orb box was squeezed to ~95 px and the chat log / quick-action rows were clipped (Home was overflow:hidden). FIX (add-only, old rules kept): one new rule for phones 521-640 px tall: `#app.wrap` scrolls vertically, `.orbbox` = fixed 150 px, chat log = 140 px. Result at 320x568: orb 150 px, centred in its rings, all rows reachable by scroll, no side overflow. Phones taller than 640 px and the <=520 px landscape rule are unchanged.
+- Sweep (t_home t_skills t_limits chatb gear x 320x568 / 360x740 / 412x915): 0 JS errors, 0 horizontal overflow, nothing else found to fix. Chat bubble speaker/COPY row and the Skills filter-chip scroller looked intended -> left alone.
+- NEW tools/test_part3b_contract.py (static + NOVA_HEADLESS=1 geometry at 320x568, 360x640, 360x740, 412x915). test_part3a_contract version pin relaxed to ">= 7.79" so later add-only versions pass.
+- RUN: part3b + part3a + 125 python guards PASS; 13 headless tests re-run with a longer limit: 11 PASS. 2 FAIL identically on the untouched v7.79 zip (so NOT caused by 3B, NOT fixed): test_part3_fx_render ("typing reveal did not start" / "typing flag stuck") and test_part4_fx_render ("360x700 lowfx star count 23 -> 23").
+- NOT RUN: Kotlin compile / JUnit (no Kotlin changed), GitHub Actions. NOT TESTED: phone.
+
+## v7.79 - PART 3A of 2 (UI glitches: core orb) (add-only), versionName 7.79
+- FOUND by headless Chrome (real ui.html, 320 / 360 / 412 px): old rule `.orbbox canvas{height:100%!important;position:relative}` overrode #p4_core -> NOVA core orb was shrunk (92 px at 320) and pushed LEFT of its ring. FIX (add-only, old rule kept): `.orbbox #p4_core{position:absolute;left:50%;top:50%;height:100%;aspect-ratio:1/1;transform:translate(-50%,-50%)}` (all !important).
+- Sweep result: no horizontal overflow, no JS error on HOME / SKILLS / LIMITS / CHAT / SETUP at 3 sizes; chat input sits above the tab bar. Quick-action row (PHONE CONTROLS ...) is an intended swipe scroller (#feats), unchanged.
+- OPEN for 3B: at 320x568 the orb box itself is squeezed (~92 px) because Home content is taller than the screen.
+- NEW tools/test_part3a_contract.py (static + NOVA_HEADLESS=1 geometry). RUN: this + 8 older guards = PASS. NOT RUN: Kotlin compile, JUnit (no Kotlin changed), GitHub Actions. NOT TESTED: phone.
+
+## v7.78 - PART 2 of 5 (40%) SPEED: thinking + kaam (add-only), versionName 7.78
+- THINKING: CloudTaskText Gemini call now also uses GeminiSpeed.withFastThinking (2.5 Flash budget 0, 3.x Flash level minimal); a 400 retries the old body once. Cloud listener retry pause 700 -> 350 ms (retry itself unchanged).
+- KAAM: fixed sleeps replaced by early-exit waits that keep the OLD time as the cap: in-app search 1800 ms (now: app in front + screen stable), share sheet 1300 ms (screen changed + stable), media play/pause confirm 400 ms (until state matches), Gmail Send poll 8 x 800 ms -> same ~6.4 s cap polled every 300 ms.
+- NEW SpeedRules.kt (pure) + SpeedRulesTest.kt (7 JUnit) + tools/test_part2_speed_contract.py. Version-pinned old contract guards now accept later add-only versions.
+- Deliberately UNCHANGED: music playback verification (1500 ms first sample), WhatsApp batch send waits (17 s / 900 ms), accessibility button-tap waits - accuracy over speed there.
+- RUN: test_part2_speed_contract + 7 version guards (python). NOT RUN: Kotlin compile, JUnit, full run_all_checks, GitHub Actions. NOT TESTED: phone.
+
 ## v7.76 patch - VIDEO / REEL READ + MOVIE POPUP + PROFESSIONAL UI (add-only; versionName still 7.74)
 - "screen dekho" on Instagram / YouTube / Netflix / Hotstar etc. (or "reel me kya chal raha hai", "ab ye reel dekho") now takes 4 frames over ~5 s and asks the vision AI what HAPPENS in the video (not the like / comment / ID buttons). NEW ScreenVideoRules.kt (pure) + VideoScanPipeline.kt. Same AI chain as before: Gemini, then free Groq / OpenRouter keys. No key = old one-screenshot reading.
 - If it looks like a movie / web series / anime: short title web search, name + honest confidence (LOW = "verify nahi hua"), then a small POPUP BROWSER over the app (NEW MoviePopup.kt, overlay permission already used by the laser; https only, no file access; without permission the normal browser opens). Popup has the video summary, 4 suggestion chips (Story & cast, Where to watch, Trailer, Review / Episodes) and BROWSER / BAND buttons. The explicit "ye kon si movie hai" scan opens the same popup.
@@ -707,3 +747,8 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - ui.html: `p6_home_css` + `p6_home`: status board (AI / INTERNET / PERMISSION / KAAM / AWAAZ), dock (CHAT / CHUP / SILENT / STOP), orb state NO INTERNET. Old row hidden, ids kept. No new Kotlin.
 - tools/check_p6_home.py (static check, PASS).
 - NOT TESTED: compile, JUnit, phone.
+
+## v7.83 (unread-message question + honest AI-pause line)
+- ADDED UnreadQueryRules.kt + NovaNotificationService.snapshotMessages(): "aaj whatsapp pe koi naya message aaya?" is answered on the phone from live notifications (read-only, codes never read). 7 new JUnit.
+- ADDED honest line when the AI is only cooling down after an error (old "samajh nahi aaya" lines untouched).
+- Compile + JUnit: 1396/1396 PASS (sandbox). Phone: NOT TESTED. Version string left at 7.82.

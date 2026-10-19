@@ -51,6 +51,13 @@ object CloudTaskText {
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", user.take(1200))))))
             .put("generationConfig", JSONObject().put("temperature", 0.25).put("maxOutputTokens", 900))
             .toString()
+        // v7.78 speed: same fast-thinking field as the chat call (2.5 Flash budget 0, 3.x Flash level minimal); a 400 retries the old body once.
+        val fast = GeminiSpeed.withFastThinking(model, body)
+        val first = geminiPost(model, key, fast)
+        if (fast != body && first.first == 400) geminiPost(model, key, body) else first
+    } catch (e: Exception) { Pair(599, "") }
+
+    private fun geminiPost(model: String, key: String, body: String): Pair<Int, String> = try {
         val c = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
         c.requestMethod = "POST"; c.connectTimeout = 8000; c.readTimeout = 25000; c.doOutput = true
         c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("x-goog-api-key", key)

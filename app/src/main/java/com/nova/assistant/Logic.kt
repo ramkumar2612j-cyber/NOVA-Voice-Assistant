@@ -462,6 +462,7 @@ object Logic {
                 "describe", "tell", "see") ||
                 (has("what") && has("on")))
         ) return Cmd("analyze")
+        if (QuickScan.wantsLook(text)) return Cmd("analyze", text)   // v7.81 PART 4: "nova dekho batao kya chal raha hai" (no word "screen") = the same live scan
 
         if (!wantsSettings && size <= 6 && has("battery", "charging", "charge")) return Cmd("battery")
 

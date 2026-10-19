@@ -47,9 +47,34 @@ object SiteIntent {
         if (head.none { it in VERBS } || head.none { it in NOUNS }) return null
         if (head.take(6).any { it in setOf("kholo", "khol", "open", "whatsapp", "call", "delete", "hatao", "bhejo", "send", "share") }) return null
         val blocked = isBlocked(t)
-        val keep = head.filter { it !in VERBS && it !in NOUNS && it !in FILLER }
-        val subject = keep.take(8).joinToString(" ").let { if (it.length < 3) "website" else it }
+        val subject = smartSubject(t)
         return Parsed(subject, blocked, text.trim().take(MAX_RAW))
+    }
+
+    // v7.77: what the site is ABOUT. Business words first (anywhere in the brief), then the 1-3 clean words right before "website".
+    private val BIZ = setOf("gym", "fitness", "restaurant", "cafe", "salon", "spa", "hotel", "resort", "school", "college", "clinic", "hospital", "shop", "store", "boutique", "agency", "travel", "photography", "studio", "bakery", "jewellery", "jewelry", "fashion", "furniture", "dentist", "lawyer", "yoga", "academy", "coaching", "ecommerce", "portfolio", "startup", "church", "wedding", "garage", "pharmacy", "realestate", "construction", "music", "restaurant", "app", "game")
+    private val JUNK = setOf("h", "hai", "hain", "to", "toh", "or", "aur", "jo", "bhi", "itna", "itni", "thodi", "thoda", "achi", "acchi", "accha", "app", "isme", "isse", "wahi", "bas", "sirf", "bahut", "bohot", "futuristic", "futurastic", "luxury", "premium", "modern", "world", "class", "best", "ultra", "high", "end", "full", "complete", "final", "result", "every", "section", "must", "feel", "like", "with", "and", "that", "this", "is", "are", "be", "it", "in", "on", "at", "as", "no", "not")
+
+    private val LINK_WORDS = setOf("ki", "ka", "ke", "ko", "of", "for")
+
+    fun smartSubject(t: List<String>): String {
+        val scan = t.take(300)
+        val idx = scan.indexOfFirst { it in NOUNS }
+        if (idx > 0) {
+            val before = ArrayList<String>()
+            var j = idx - 1
+            // v7.82: a linking word right before the noun ("fitness brand KI website", "gym KA site") is skipped, not a stop. Without this the subject fell back to one business word.
+            while (j >= 0 && scan[j] in LINK_WORDS) j--
+            while (j >= 0 && before.size < 3) {
+                val w = scan[j]
+                if (w in VERBS || w in FILLER || w in JUNK || w.length < 3) break
+                before.add(0, w); j--
+            }
+            if (before.isNotEmpty()) return before.joinToString(" ")
+        }
+        val biz = scan.firstOrNull { it in BIZ && it != "app" }
+        if (biz != null) return biz
+        return "website"
     }
 
     // v7.0: edits of the site NOVA already built: "background colour white chahiye", "hero mein meri photo lagao", "button ka rang lal karo".

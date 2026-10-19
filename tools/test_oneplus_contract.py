@@ -12,6 +12,7 @@ need("click('c_photo')" in H and "click('m11_pick')" in H, '+ menu items call th
 need('html body #c_attach,html body #m11_btn{display:none!important}' in H, 'paperclip and MEDIA buttons hidden')
 need("id=\"c_plus\"" in H and "b.id='c_attach'" in H and "tb.id='m11_btn'" in H, 'old buttons / ids still in the page (add-only)')
 need('Main abhi busy hoon' not in H, 'no prefilled auto-reply message in the page')
-need('versionName = "7.74"' in open(os.path.join(R, 'app/build.gradle.kts')).read(), 'versionName 7.74')
+import re as _re
+need(bool(_re.search(r'versionName = "7\.(74|7[5-9]|[89][0-9])"', open(os.path.join(R, 'app/build.gradle.kts')).read())), 'versionName 7.74 or later')
 if bad: print('FAILED', len(bad)); sys.exit(1)
 print('PASS oneplus contract')

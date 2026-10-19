@@ -76,6 +76,9 @@ object LaserMath {
 
     fun stopText(en: Boolean): String = if (en) "STOP" else "ROKO"
 
+    /** v7.81 PART 4: the real elapsed time of this scan against the 10 s promise, e.g. "3.2 s / 10 s". */
+    fun clock(elapsedMs: Long, en: Boolean): String = QuickScan.clock(elapsedMs, en)
+
     /** Bottom bar fill 0..1 follows the real percent. */
     fun barFill(percent: Int): Float = percent.coerceIn(0, 100) / 100f
 }
@@ -162,6 +165,7 @@ private class LaserView(ctx: Context, private val en: Boolean, private val simpl
     private val barFg = Paint().apply { color = green }
     private val btnBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(230, 190, 30, 40) }
     private val btnTx = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); textSize = 15f * d; textAlign = Paint.Align.CENTER }
+    private val clk = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = green; typeface = Typeface.MONOSPACE; textSize = 14f * d; textAlign = Paint.Align.CENTER }   // v7.81
     private val btn = RectF()
     private var t0 = SystemClock.uptimeMillis()
 
@@ -220,6 +224,7 @@ private class LaserView(ctx: Context, private val en: Boolean, private val simpl
             yy += 18f * d
         }
         c.drawText(LaserMath.label(st.name, en) + "  " + st.percent + "%", w / 2, h * 0.5f, big)
+        c.drawText(LaserMath.clock(now - t0, en), w / 2, h * 0.5f + 26f * d, clk)   // v7.81: real clock of this scan
 
         // progress bar + STOP
         val bw = w - 36f * d; val by = h - 120f * d

@@ -24,6 +24,45 @@ class NovaNotificationService : NotificationListenerService() {
         MessageMode.load(this)
     }
 
+    // v7.83 UNREAD QUERY: lets NOVA answer "koi naya message aaya?" from the notifications still in the shade (read-only).
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        live = this
+    }
+
+    override fun onDestroy() {
+        if (live === this) live = null
+        super.onDestroy()
+    }
+
+    companion object {
+        @Volatile private var live: NovaNotificationService? = null
+
+        /** Messages from the allow-listed messaging apps that are still showing. null = the listener is not connected. Never logged, never uploaded. */
+        fun snapshotMessages(): List<Driving.Msg>? {
+            val svc = live ?: return null
+            return try {
+                val out = ArrayList<Driving.Msg>()
+                for (sbn in svc.activeNotifications ?: return null) {
+                    val pkg = sbn.packageName ?: continue
+                    if (pkg == svc.packageName || pkg !in Driving.APPS) continue
+                    val n = sbn.notification ?: continue
+                    if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
+                    if (n.flags and Notification.FLAG_ONGOING_EVENT != 0) continue
+                    val ex = n.extras ?: continue
+                    val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+                    val body = (ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT))?.toString() ?: ""
+                    val m = Driving.makeMsg(sbn.key ?: "$pkg:${sbn.id}", pkg, title, body, sbn.postTime, false) ?: continue
+                    out.add(m)
+                }
+                out
+            } catch (e: Throwable) {
+                ErrLog.add("NotifListener", "snapshot: $e")
+                null
+            }
+        }
+    }
+
     /** v7.17: if Android drops the listener, ask it to bind again so auto-reply / alerts do not silently stop. */
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
