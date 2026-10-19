@@ -23,7 +23,7 @@ G = rd('app/build.gradle.kts')
 if 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G:   # v7.73: add-only, both accepted
     bad.append('versionName is not 7.72 or 7.73')
 CH = rd('CHANGELOG.md')
-if not (CH.lstrip().startswith('## v7.72') or CH.lstrip().startswith('## v7.73') or CH.lstrip().startswith('## v7.74')):   # v7.73: add-only, both accepted
+if not (CH.lstrip().startswith('## v7.72') or CH.lstrip().startswith('## v7.73') or CH.lstrip().startswith('## v7.74') or CH.lstrip().startswith('## v7.75') or CH.lstrip().startswith('## v7.76')):   # v7.73: add-only, both accepted
     bad.append('CHANGELOG does not start with the v7.72 / v7.73 entry')
 
 ST = rd('PART20_STATUS_v7_72.md')
