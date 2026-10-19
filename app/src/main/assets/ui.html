@@ -1883,19 +1883,21 @@ window.onImage=function(ok,msg,b,saved){
     cl.appendChild(d);cl.scrollTop=cl.scrollHeight
   }else say(msg||'Image nahi bani','ai')
 };
+function openSitePreview(html){
+  var o=document.createElement('div');o.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#000;display:flex;flex-direction:column';
+  var x=document.createElement('button');x.className='sm';x.textContent='BAND KARO';x.style.cssText='margin:8px;align-self:flex-end';
+  x.onclick=function(){o.remove()};
+  var f=document.createElement('iframe');f.setAttribute('sandbox','allow-scripts');f.style.cssText='flex:1;border:0;background:#fff';f.srcdoc=html;
+  o.appendChild(x);o.appendChild(f);document.body.appendChild(o)
+}
 window.onSite=function(ok,msg,html,saved){
   if(!ok||!html){say(msg||'Website nahi bani','ai');return}
+  if(saved==='__PREVIEW__'){openSitePreview(html);return}   // v7.75: spoken "website dikhao"
   var d=document.createElement('div');d.className='msg ai';
   var t=document.createElement('div');t.textContent='Website ban gayi/update ho gayi: '+msg;d.appendChild(t);
   if(saved){var sv=document.createElement('div');sv.className='sv';sv.textContent='Saved: '+saved;d.appendChild(sv)}
   var b=document.createElement('button');b.className='sm';b.textContent='DEKHO (PREVIEW)';
-  b.onclick=function(){
-    var o=document.createElement('div');o.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#000;display:flex;flex-direction:column';
-    var x=document.createElement('button');x.className='sm';x.textContent='BAND KARO';x.style.cssText='margin:8px;align-self:flex-end';
-    x.onclick=function(){o.remove()};
-    var f=document.createElement('iframe');f.setAttribute('sandbox','allow-scripts');f.style.cssText='flex:1;border:0;background:#fff';f.srcdoc=html;
-    o.appendChild(x);o.appendChild(f);document.body.appendChild(o)
-  };
+  b.onclick=function(){openSitePreview(html)};
   d.appendChild(b);
   var pb=document.createElement('button');pb.className='sm';pb.textContent='PUBLISH (GITHUB)';
   pb.onclick=function(){

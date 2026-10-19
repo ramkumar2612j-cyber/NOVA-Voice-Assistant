@@ -7,6 +7,8 @@
 - RUN: Kotlin compile + JUnit 1360 / 1360 PASS, run_all_checks 139 / 139 PASS. NOT TESTED: phone.
 - MORE SPEED: command end-of-speech silence 1800 -> 1300 ms (Logic.END_SILENCE_MS + CaptureRules.SILENCE_MS; long / open-ended sentences still wait longer via adaptiveSilence); on-device AI waits max 3.5 s (was 9 s) while online before the cloud answers; a hung Gemini model is skipped after 15 s (voice / screen) or 10 s (transcribe) instead of 25 s. Pinned tests and scripts updated. To undo: set END_SILENCE_MS back to 1800 if sentences get cut.
 - RUN: Kotlin compile + JUnit 1360 PASS, run_all_checks all PASS. NOT TESTED: phone.
+- WEBSITE PREVIEW BY VOICE: SitePreviewRules ("website dikhao", "website ka preview dikhao", "preview dikhao", "show website preview"; never build / publish / Chrome / edit sentences). NovaService.sitePreview() sends the newest website (also restored from disk for 6 h) to the chat page, which opens the full-screen preview (ui.html openSitePreview, same sandboxed iframe as the DEKHO button). 2 new JUnit.
+- RUN: Kotlin compile + JUnit 1362 PASS, run_all_checks 139 / 139 PASS. NOT TESTED: phone.
 
 ## v7.74 - ONE + MENU for photo / video / file (add-only), versionName 7.74
 - Owner screenshots (19 Oct 2026): chat me photo / video / file alag-alag jagah the. Ab SAB + button ke menu me ek jagah: PHOTO / VIDEO CHUNO, FILE / MEDIA CHUNO (aur website media laga ho to HATAO). Alag paperclip aur MEDIA button chhupa diye (ids / code nahi hata, add-only).

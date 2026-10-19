@@ -2333,6 +2333,10 @@ class NovaService : Service() {
                 "For leads, open a target business's public listing in Google Maps or your browser, then say 'lead capture'. I can save visible public details and draft outreach; this build does not independently search the web for new leads. I will not create a website for this request."
             )
         }
+        if (text.isNotBlank() && SitePreviewRules.isPreview(text)) {   // v7.75: "website dikhao / preview dikhao" = the in-app preview of the newest website
+            lastTurnLocal = true; lastKind = "site_preview"
+            return sitePreview()
+        }
         if (text.isNotBlank()) {   // v7.05 H: "vercel par publish karo" / "lovable par daalo"
             val pt = PublishTarget.parse(text)
             if (pt != null) { lastTurnLocal = false; lastKind = "publish"; return publishTargetBegin(pt) }
@@ -2565,6 +2569,9 @@ class NovaService : Service() {
                 lastKind = "rec"
                 return runRecording(gr)
             }
+        }
+        if (c == null && groqText.isNotBlank() && SitePreviewRules.isPreview(groqText)) {   // v7.75
+            lastTurnLocal = true; lastKind = "site_preview"; return sitePreview()
         }
         if (c == null && groqText.isNotBlank()) {
             val pt2 = PublishTarget.parse(groqText)
@@ -4301,6 +4308,23 @@ class NovaService : Service() {
     // shown in the chat with a preview button. Nothing is published. Only the topic text leaves the phone.
     // Evidence level: written + statically checked. Not compiled here, not phone tested.
     @Volatile private var siteRunning = false
+
+    /** v7.75: open the in-app preview of the newest website (also after an app restart: the page comes back from disk for 6 hours). */
+    private fun sitePreview(): String {
+        if (lastSiteHtml.isBlank()) {
+            val saved = SiteMedia.loadLast(this, 6 * 3_600_000L)
+            if (saved != null) {
+                lastSiteSubject = saved.first
+                lastSiteTemplate = saved.second
+                lastSiteHtml = SiteMedia.substitute(saved.second, SiteMedia.list(this))
+                lastSiteAtMs = System.currentTimeMillis()
+            }
+        }
+        if (lastSiteHtml.isBlank()) return tr("Abhi koi website nahi hai. Pehle bolo: ek restaurant ki website banao", "There is no website yet. First say: build a restaurant website")
+        val l = siteListener ?: return tr("Preview ke liye NOVA app ko saamne kholo aur dobara bolo", "Open the NOVA app in front and say it again")
+        l.invoke(true, lastSiteSubject, lastSiteHtml, "__PREVIEW__")
+        return tr("Website ka preview khol diya. BAND KARO se wapas aa jao", "The website preview is open. Press BAND KARO to come back")
+    }
 
     /** v6.90: "isko professional banao" right after NOVA built a website = improve THAT website (not a chat answer, not a fake claim). */
     private fun siteFollowUp(text: String): SiteIntent.Parsed? {
