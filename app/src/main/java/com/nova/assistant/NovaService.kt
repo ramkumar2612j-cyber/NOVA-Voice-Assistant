@@ -2239,6 +2239,10 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "media"
             return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
         }
+        if (text.isNotBlank() && ScreenVideoRules.isScreenVideoAsk(text)) {   // v7.76: "reel me kya chal raha hai"
+            lastTurnLocal = true; lastKind = "screen"
+            return analyzeScreen(text)
+        }
         if (text.isNotBlank()) {
             val askA = AnalysisVoiceRules.parse(text)
             if (askA != AnalysisVoiceRules.Ask.NONE) {
@@ -6365,6 +6369,79 @@ class NovaService : Service() {
         } catch (e: Throwable) { ErrLog.add("movieScan", "deliver") }
     }
 
+    // ---- v7.76: "screen dekho" on a video / reel = take a few frames and say what HAPPENS in the video; a movie / series gets a popup browser.
+    private var moviePopup: MoviePopup? = null
+
+    /** Any thread. Opens the small popup browser for a found title; without the overlay permission the normal browser opens instead. */
+    private fun showMoviePopup(o: MovieGuessRules.Outcome, kind: ScreenVideoRules.Kind, note: String = "") {
+        val en = cfg.lang == "en"
+        val url = ScreenVideoRules.popupUrl(o.title, o.year, kind)
+        h.post {
+            try {
+                moviePopup?.destroy(); moviePopup = null
+                val p = MoviePopup(this)
+                val ok = p.show(url, o.title, if (en) "CLOSE" else "BAND", "BROWSER", note, ScreenVideoRules.suggestions(o.title, o.year, kind, en)) { u -> openUrl(u) }
+                if (ok) moviePopup = p else { overlayNudge(); openUrl(url) }
+            } catch (e: Throwable) { ErrLog.add("moviePopup", "open") }
+        }
+    }
+
+    /**
+     * v7.76 worker thread. The text to say about the video on screen, or null = could not be read as a video here (the caller then uses the normal one-screenshot reading).
+     * Protected screens are never captured (checked before and after every frame, and once more before anything leaves the phone).
+     */
+    private fun screenVideoRead(): String? {
+        val en = cfg.lang == "en"
+        if (Build.VERSION.SDK_INT < 30 || movieScanRunning) return null
+        if (NovaAccessibilityService.movieProtected() != false) return null
+        h.post { try { moviePopup?.destroy(); moviePopup = null } catch (e: Throwable) { } }
+        movieScanCancel = false
+        screenStage = "CAPTURE 3"
+        val lz = if (screenLaserOn) laser else null
+        var taken = 0
+        val src = object : MovieScanCapture.Source {
+            override fun foregroundProtected(): Boolean? = NovaAccessibilityService.movieProtected()
+            override fun shot(): ByteArray? {
+                try { lz?.hideForShot() } catch (e: Throwable) { }
+                try { return NovaAccessibilityService.movieShot() }
+                finally {
+                    try { lz?.showAfterShot() } catch (e: Throwable) { }
+                    taken++; screenStage = "CAPTURE " + minOf(9, taken * 3)
+                }
+            }
+            override fun cancelled(): Boolean = movieScanCancel
+            override fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (e: InterruptedException) { movieScanCancel = true } }
+            override fun supported(): Boolean = android.os.Build.VERSION.SDK_INT >= 30
+        }
+        val r = MovieScanCapture.run(src, ScreenVideoRules.FRAMES)
+        if (r.stop == MovieFrameRules.Stop.CANCELLED) return MovieFrameRules.statusText(r.stop, 0, en)
+        if (r.stop == MovieFrameRules.Stop.PROTECTED) return MovieFrameRules.statusText(r.stop, 0, en)
+        if (r.stop != MovieFrameRules.Stop.OK) return null
+        if (NovaAccessibilityService.movieProtected() != false) return MovieFrameRules.statusText(MovieFrameRules.Stop.PROTECTED, 0, en)
+        val txt = try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" }
+        val d = VideoScanPipeline.run(r.frames, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> screenStage = "$st $pct" })
+        val rd = d.read
+        val out: String = when (d.kind) {
+            "OK" -> if (rd == null) return null else {
+                val o = d.outcome
+                val popup = ScreenVideoRules.isWork(rd.kind) && ScreenVideoRules.shouldPopup(o)
+                if (popup && o != null) showMoviePopup(o, rd.kind, rd.summary)
+                ScreenVideoRules.resultText(rd, o, en, popup)
+            }
+            "REFUSED" -> MovieGuessRules.privateText(en)
+            "NO_AI" -> return null
+            "UNREADABLE" -> MovieGuessRules.unreadableText(en)
+            "CANCELLED" -> MovieFrameRules.statusText(MovieFrameRules.Stop.CANCELLED, 0, en)
+            else -> MovieGuessRules.failedText(d.kind, en)
+        }
+        if (d.kind == "OK") synchronized(scrHist) {   // follow-ups ("aur detail") know what the video showed
+            scrHist.add(msg("user", "(video dekho)"))
+            scrHist.add(msg("model", out))
+            Logic.boundHistory(scrHist, ScreenSession.MAX_HIST)
+        }
+        return out
+    }
+
     private fun startMovieScan(): String {
         val en = cfg.lang == "en"
         if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
@@ -6418,6 +6495,7 @@ class NovaService : Service() {
                             val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en) else line
                             val ok = d.kind == "OK"
                             deliverMovie(line, said, if (ok) MovieGuessRules.card(d.outcome, en) else "", if (ok) MovieGuessRules.historyLine(d.outcome) else "")
+                            if (ok && d.outcome != null && ScreenVideoRules.shouldPopup(d.outcome)) showMoviePopup(d.outcome, ScreenVideoRules.Kind.MOVIE)   // v7.76: popup browser
                         }
                     }
                 }
@@ -6837,6 +6915,10 @@ class NovaService : Service() {
         scrState = ScreenSession.start(sn.pkg, System.currentTimeMillis())
         val ident = ScreenSession.wantsIdentify(spoken)
         val firstIntent = if (ident) ScreenSession.Intent.IDENTIFY else ScreenSession.Intent.REFRESH
+        if (ScreenVideoRules.useVideoMode(sn.pkg, spoken) && !ScreenSession.isProtected(scrPkg, packageName)) {   // v7.76: reel / video = what happens in it, not the buttons
+            val v = screenVideoRead()
+            if (v != null) return v
+        }
         val gate = screenGate(firstIntent)
         if (gate != null) return gate
         val (ok, out) = if (ident) screenTalk(ScreenSession.askFor(firstIntent, spoken), "(identify) " + spoken.take(120), firstIntent)
@@ -6911,6 +6993,11 @@ class NovaService : Service() {
             "Mujhe naya screen nahi dikha. Jo screen dekhni hai wo kholo, phir bolo: ab ye dekho",
             "I do not see a new screen. Open the one you want, then say: look at this now"
         )
+        if ((intent == ScreenSession.Intent.REFRESH || intent == ScreenSession.Intent.IDENTIFY || intent == ScreenSession.Intent.WHAT) &&
+            ScreenVideoRules.useVideoMode(scrPkg, said) && !ScreenSession.isProtected(scrPkg, packageName)) {   // v7.76
+            val v = screenVideoRead()
+            if (v != null) return v
+        }
         val gate = screenGate(intent)
         if (gate != null) return gate
         val ask = ScreenSession.askFor(intent, said)

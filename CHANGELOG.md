@@ -1,3 +1,10 @@
+## v7.76 patch - VIDEO / REEL READ + MOVIE POPUP + PROFESSIONAL UI (add-only; versionName still 7.74)
+- "screen dekho" on Instagram / YouTube / Netflix / Hotstar etc. (or "reel me kya chal raha hai", "ab ye reel dekho") now takes 4 frames over ~5 s and asks the vision AI what HAPPENS in the video (not the like / comment / ID buttons). NEW ScreenVideoRules.kt (pure) + VideoScanPipeline.kt. Same AI chain as before: Gemini, then free Groq / OpenRouter keys. No key = old one-screenshot reading.
+- If it looks like a movie / web series / anime: short title web search, name + honest confidence (LOW = "verify nahi hua"), then a small POPUP BROWSER over the app (NEW MoviePopup.kt, overlay permission already used by the laser; https only, no file access; without permission the normal browser opens). Popup has the video summary, 4 suggestion chips (Story & cast, Where to watch, Trailer, Review / Episodes) and BROWSER / BAND buttons. The explicit "ye kon si movie hai" scan opens the same popup.
+- Unchanged: no face / actor identification (only the title of the work), protected screens (bank, payment, settings) never captured, frames only in memory.
+- UI: developer / test items HIDDEN with CSS only (style id v76_pro_css in ui.html; nothing removed, ids and code stay): 5 browser test button, TEST REPORT texts, extra jaanch tests, galtiyan buttons, report copy / share, crash recover, quota status box. Delete that one style block to show them again.
+- RUN: Kotlin compile + JUnit 1373 PASS (11 new in ScreenVideoRulesTest), run_all_checks 139 / 139 PASS. NOT RUN: GitHub Actions. NOT TESTED: phone.
+
 ## v7.74 patch - false wake guard + self-test fix (add-only; versionName still 7.74)
 - FeatureVerify: KYA CHALTA HAI check now reads the {"items":[...]} object (was parsed as an array -> always "0 rows").
 - Logic.heardWake(json, wake, isFinal): the weak form "[unk] nova" counts only on a FINAL recognizer result. "nova ..." / "hey nova ..." unchanged. NovaService uses it. New JUnit unkNovaNeedsFinalResult.

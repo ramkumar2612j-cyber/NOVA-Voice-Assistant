@@ -5167,6 +5167,11 @@ d.addEventListener('visibilitychange',function(){if(!d.hidden){if(timer)clearTim
 timer=setTimeout(poll,1600);
 }catch(e){}})();
 </script>
+<style id="v76_pro_css">
+/* v7.76 add-only: hide developer / test items so the app looks professional. NOTHING is removed: ids, buttons and code stay, only display:none. Delete this block to show them again. */
+html body #wb_bt_all,html body #wb_bt,html body #st_more,html body #st_err,html body #st_out,html body #st_copy,html body #st_share,
+html body #st_box>b,html body #st_box>small,html body #rm_recover,html body #provider_health_box{display:none!important}
+</style>
 <style id="p21_oneplus_css">
 /* v7.74 add-only: photo / video / file now live ONLY under the + button. The separate paperclip and MEDIA buttons are hidden (their ids and code stay; the + menu clicks them). */
 html body #c_attach,html body #m11_btn{display:none!important}
