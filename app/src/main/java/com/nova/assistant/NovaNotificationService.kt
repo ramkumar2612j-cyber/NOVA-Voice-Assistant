@@ -111,17 +111,14 @@ class NovaNotificationService : NotificationListenerService() {
             if (!ActionLog.autoReplyOn(ctx)) return
             val now = System.currentTimeMillis()
             if (WaBiz.active(now) && (m.pkg == "com.whatsapp" || m.pkg == "com.whatsapp.w4b")) return   // business watch has its own rules
-            val smart = ActionLog.smartReplyOn(ctx)
-            val reason = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text) ?: (if (smart) SmartReplyRules.gate.allow(m.sender, now) else AutoReplyRules.gate.allow(m.sender, now))
+            val smart = true   // v7.46: every auto-reply is the AI's own answer, never a fixed text
+            val pre = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text)
+            val reason = pre ?: (if (smart) SmartReplyRules.gate.allow(m.sender, now) else AutoReplyRules.gate.allow(m.sender, now))
             if (reason != null) {
                 if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true))
                 return
             }
-            if (smart) { smartAutoReply(ctx, m); return }
-            val text = ActionLog.autoReplyText(ctx)
-            val ok = DrivingBridge.sendReply(ctx, m.key, text)
-            ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
-            NovaService.instance?.onAutoReplied(m.sender, m.app, text, ok)
+            smartAutoReply(ctx, m)   // v7.46: the AI's own answer only; no fixed text path exists any more
         } catch (e: Exception) {
             // one odd notification must never crash the listener
         }
@@ -137,27 +134,21 @@ class NovaNotificationService : NotificationListenerService() {
                 if (SmartReplyRules.convo.lastAssistant(m.sender) == m.text) return@Thread   // our own reply showing up again
                 if (!SmartReplyRules.seen.fresh(m.sender, m.text, System.currentTimeMillis())) return@Thread   // the same notification posted twice
                 val svc = NovaService.instance
-                // v7.15 Part 2 SAFETY: money talk never reaches the AI. Codes / OTP / passwords get no reply; other money talk gets ONE safe fixed line.
-                val pay = PaymentReplyRules.decide(m.text)
-                if (pay != null) {
-                    if (pay.kind == PaymentReplyRules.Kind.SECRET) {
-                        ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", PaymentReplyRules.secretNote(), m.pkg)
-                        return@Thread
-                    }
-                    val fixed = pay.reply ?: return@Thread
-                    val sentFixed = DrivingBridge.sendReply(ctx, m.key, fixed)
-                    ActionLog.add(ctx, m.app, m.sender, m.text, if (sentFixed) "sent" else "failed", fixed, m.pkg)
-                    GmailStore.notifyPhone(ctx, "NOVA: paise ki baat", PaymentReplyRules.note(pay.kind))
-                    svc?.onSmartReplied(PaymentReplyRules.note(pay.kind))
-                    return@Thread
-                }
                 val res = try { svc?.smartDraft(m.sender, m.text, business) } catch (e: Throwable) { null }
                 if (res != null && res.skip) {
                     ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", "Jawab ki zaroorat nahi thi", m.pkg)
                     return@Thread
                 }
-                val text = res?.text ?: ActionLog.autoReplyText(ctx)
-                val needOwner = res?.needOwner ?: false
+                // v7.46 owner rule: NO fixed / canned text is ever sent. Only the AI's own answer goes out; no AI answer = nothing is sent and the owner is told.
+                val text = res?.text?.trim().orEmpty()
+                val needOwner = res?.needOwner ?: true
+                if (text.isEmpty()) {
+                    ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", "AI jawab nahi de paya ya message me code / password tha: kuch nahi bheja", m.pkg)
+                    val held = SmartReplyRules.inform(m.sender, m.app, m.text, "(kuch nahi bheja)", true, false, true)
+                    GmailStore.notifyPhone(ctx, "NOVA: zaruri message", held)
+                    svc?.onSmartReplied(held)
+                    return@Thread
+                }
                 val ok = DrivingBridge.sendReply(ctx, m.key, text)
                 ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
                 val line = SmartReplyRules.inform(m.sender, m.app, m.text, text, needOwner, ok, true)

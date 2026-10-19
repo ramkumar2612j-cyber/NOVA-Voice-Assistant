@@ -145,6 +145,7 @@ object AutoSetup {
 
     private fun startPack(app: Context) {
         if (!ExtCfg.autoModels(app)) return
+        if (!HeavyGate.charging(app)) return   // wip15: the five extra offline models only start by themselves while charging
         if (!packStarted.compareAndSet(false, true)) return
         Thread({
             try {

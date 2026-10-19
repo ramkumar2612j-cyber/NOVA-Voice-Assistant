@@ -74,6 +74,14 @@ object FeatureStatus {
         row(a, "rotation", "Screen rotation + screenshot", if (ws && acc) "ok" else "warn",
             if (ws && acc) "Rotation (Write settings) aur screenshot (Accessibility) dono taiyaar hain"
             else if (!ws) "Rotation ke liye Brightness control (Write settings) ON karo" else "Screenshot ke liye Accessibility ON karo", if (!ws) "writeSettings" else if (!acc) "acc" else "")
+        // 7c. v7.68 Part 16: "call uthao / call kaato" by voice. Needs the Phone permission ANSWER_PHONE_CALLS (asked once in the permission round).
+        val ansOk = Build.VERSION.SDK_INT < 26 || granted(ctx, Manifest.permission.ANSWER_PHONE_CALLS)
+        row(a, "callanswer", "Call uthana / kaatna (awaaz se)", if (ansOk) "ok" else "off",
+            if (ansOk) "Phone permission hai: 'call uthao' aur 'call kaato' chalenge" else "Call uthane ki Phone permission nahi hai: 'call uthao' kaam nahi karega", "")
+        // 7d. v7.71 Part 19: safe mode after repeated crashes (Part 18). "warn" only while it is ON.
+        val safeNow = CrashGuardStore.isSafe(ctx)
+        row(a, "safemode", "Safe mode (crash ke baad)", if (safeNow) "warn" else "ok",
+            if (safeNow) "Safe mode chalu hai: NOVA haal me crash hua tha, halke effects chal rahe hain (30 minute me apne aap band)" else "Safe mode band hai: sab normal", if (safeNow) "Upar ke banner ka SAFE MODE BAND KARO dabao" else "")
         // 8. background (v6.74: brand-aware advice, e.g. Xiaomi Autostart)
         val bat = (ctx.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager)?.isIgnoringBatteryOptimizations(ctx.packageName) == true
         val br = VoiceDiagnosis.battery(bat, Build.MANUFACTURER ?: "", false)
@@ -170,6 +178,23 @@ object FeatureStatus {
             if (rows != null) for (i in 0 until rows.length()) { val r = rows.optJSONObject(i); if (r != null && r.optInt("percent", -1) >= 90) near++ }
             row(a, "apilimits", "API limits (aaj ka use)", if (near == 0) "ok" else "warn",
                 if (near == 0) "Koi AI limit ke paas nahi (poori list LIMITS screen par)" else "$near AI limit ke paas hai: LIMITS screen dekho", "")
+        } catch (e: Throwable) { }
+
+        // v7.57 (Part 13B-2d): photo / video ANALYSE. Reads only the real saved keys + the free-chain switch; nothing is started.
+        try {
+            val gem = SecureStore.hasKeys(ctx)
+            val free = ExtCfg.freeChain(ctx) && (SecureStore.hasGroq(ctx) || SecureStore.hasSlot(ctx, "openrouter"))
+            row(a, "analyse", "Photo / video ANALYSE (tasveer dekhna)", if (gem || free) "ok" else "warn",
+                if (gem) "Gemini key hai: ANALYSE tasveer dekh sakta hai" else if (free) "Gemini key nahi, par free Groq / OpenRouter key se tasveer dekhi jayegi (3 frames tak)"
+                else "Koi vision key nahi: ANALYSE sirf file ki size / length batayega (Gemini ya Groq / OpenRouter key daalo)", "")
+        } catch (e: Throwable) { }
+
+        // v7.59 (Part 13D): web check of the claims + voice / chat-photo analysis. Reads only the real saved keys; nothing is started.
+        try {
+            val gem = SecureStore.hasKeys(ctx)
+            row(a, "analyse_web", "ANALYSE: dawon ki web jaanch + bolkar analyse", if (gem) "ok" else "warn",
+                if (gem) "Gemini key hai: dawe web par check hote hain; \"nova ye video analyse karo\" ya chat me photo + sawaal bhi chalta hai"
+                else "Gemini key nahi: web jaanch sirf Wikipedia / News se, aur dawe sources se jodne wala AI nahi chalega (saare dawe 'verify nahi hua' rahenge)", "")
         } catch (e: Throwable) { }
 
         // 13. install

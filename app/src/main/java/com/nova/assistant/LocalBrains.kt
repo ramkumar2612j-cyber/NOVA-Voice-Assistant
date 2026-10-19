@@ -84,6 +84,7 @@ object LocalBrains {
      */
     fun warmUp(ctx: Context) {
         val app = ctx.applicationContext
+        if (!HeavyGate.charging(app)) return   // wip15: no eager 491 MB RAM load while the phone is busy; it loads on first use
         if (factory == null || !available(app)) return
         val am = app.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return
         val mi = android.app.ActivityManager.MemoryInfo()

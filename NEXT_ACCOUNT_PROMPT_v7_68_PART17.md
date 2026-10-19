@@ -1,0 +1,5 @@
+NOVA v7.68 zip (repo skfashion142/NOVA-Voice-Assistant). Part 1-16 done in code. Part 16 MISSING WIRES: padho PART16_STATUS_v7_68.md + NOVA_20_PARTS_PLAN.md. Ab PART 17 = SETTINGS / SKILLS RESTYLE (new switches: quality, persona, stop behaviour). Add-only, Hinglish, honest PASS / FAIL / NOT RUN, har 5% par % batao, 95% par ruko mat.
+Compile: bash /ABS/PATH/tools/local_compile_check.sh /tmp/nova_check (ABSOLUTE path, background me, ~5 min, internet + kotlinc download chahiye). Is zip ke Kotlin edits (MainActivity ANSWER_PHONE_CALLS, SetupChainRules.VERSION 2, FeatureStatus callanswer row, HelpGuide 2 topics) abhi COMPILE NAHI hue: pehle compile karo.
+Tools: python3 tools/audit_dead_ui.py (har naye control ke baad), python3 tools/test_part16_contract.py, bash tools/run_all_checks.sh (background me, 5 min se lamba).
+Owner faisla pending (bina poochhe mat badlo): voice command jab NOVA busy ho queue me nahi jaata (mic loop echo rok), wb_ll (locked phone par wake word, Lock Guard se takrata hai).
+Hissa poora hone par zip + preview + direct link https://github.com/skfashion142/NOVA-Voice-Assistant/actions

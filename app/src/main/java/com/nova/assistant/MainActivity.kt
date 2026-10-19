@@ -32,6 +32,7 @@ class MainActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         cfg = Cfg(this)
+        try { getSharedPreferences("nova_perm", Context.MODE_PRIVATE).edit().putBoolean("user_stopped", false).apply() } catch (e: Exception) { }   // wip15: ACTIVATE button is hidden; every fresh app start lets NOVA start by itself again
         ApiUsage.init(this)
         Thread { try { ScheduledTaskReceiver().notifyMissed(applicationContext, ScheduledTaskStore.rescheduleAll(applicationContext)) } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()) } }.start()   // v7.12: alarms re-armed at every open
         LocalBrains.installEngine(this)
@@ -223,6 +224,8 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         NovaService.uiVisible = true
+        try { web.onResume() } catch (e: Throwable) { }   // v7.38 PART 3: the WebView renders again; JS timers are NOT paused (replies arriving while the screen is off must still reach the page)
+        runJs(NativeSmooth.backgroundJs(false))
         pushFlow("resumed")
         nextSpecialPermission()   // v6.38: continues the one-time permission chain after the user comes back from a Settings page
         autoActivate()            // v6.94: NOVA starts by itself once the microphone is allowed and the Settings chain is finished
@@ -282,8 +285,33 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         NovaService.uiVisible = false
+        runJs(NativeSmooth.backgroundJs(true))   // v7.38 PART 3: the page pauses its CSS animations / effects
+        try { web.onPause() } catch (e: Throwable) { }
         AutoTest.stop()   // Part 10: the 5-second feature watcher sleeps while the screen is closed
         super.onPause()
+    }
+
+    // ---- v7.38 PART 3: memory pressure -> the page lowers its effects level (NovaPerf), nothing is killed or restarted ----
+    @Volatile private var lastTrimMs = 0L
+    @Volatile private var lastTrimPressure = 0
+
+    private fun pressurePage(p: Int, why: String) {
+        val now = System.currentTimeMillis()
+        if (!NativeSmooth.shouldSend(now, lastTrimMs, lastTrimPressure, p)) return
+        lastTrimMs = now; lastTrimPressure = p
+        ErrLog.add("Memory", why + " -> page pressure " + p)
+        runJs(NativeSmooth.pressureJs(p))
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        pressurePage(NativeSmooth.pressure(level), "trim " + level)
+    }
+
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onLowMemory() {
+        super.onLowMemory()
+        pressurePage(NativeSmooth.pressure(0, true), "low memory")
     }
 
     override fun onNewIntent(i: Intent?) {
@@ -330,7 +358,17 @@ class MainActivity : Activity() {
     }
 
     // No auto-start of any kind: intents never start the microphone service.
-    private fun handleIntent(i: Intent?) { i?.removeExtra("autostart") }
+    private fun handleIntent(i: Intent?) {
+        i?.removeExtra("autostart")
+        // v7.51 Part 11-B: Share -> NOVA. MediaIntakeStore copies on its own background thread (stream, size-limited, private cache, 24 h).
+        try {
+            Thread { try { MediaIntakeStore.cleanExpired(applicationContext) } catch (e: Throwable) { ErrLog.add("MainActivity", "media clean: " + e.toString()) } }.start()
+            MediaIntakeStore.onChanged = { mediaChanged() }
+            if (MediaIntakeStore.onIntent(this, i)) {
+                i?.action = null   // handled once: a rotation / re-open must not copy the same share again
+            }
+        } catch (e: Throwable) { ErrLog.add("MainActivity", "media intake: " + e.toString()) }
+    }
 
     private fun isDefaultAssistant(): Boolean = try {
         (Settings.Secure.getString(contentResolver, "assistant") ?: "").startsWith("$packageName/")
@@ -428,6 +466,8 @@ class MainActivity : Activity() {
         }
         if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS)) ask.add(Manifest.permission.POST_NOTIFICATIONS)
         if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.97-wip9: watch mic over Bluetooth
+        // v7.68 PART 16 missing wire: "call uthao" (PhoneActions.answerCall) needs ANSWER_PHONE_CALLS at runtime (API 26+); it was in the manifest and checked, but never asked for.
+        if (Build.VERSION.SDK_INT >= 26 && !granted(Manifest.permission.ANSWER_PHONE_CALLS)) ask.add(Manifest.permission.ANSWER_PHONE_CALLS)
         val runs = prefs.getInt("setup_runs", 0)
         val opens = specialOpenCounts(prefs)
         val specialMissing = missingSpecial().keys.filter { (opens[it] ?: 0) < SetupChainRules.maxOpens(it) }
@@ -528,6 +568,28 @@ class MainActivity : Activity() {
     @Volatile private var pendingExportChat: String? = null
     @Volatile private var lastRenderRecover = 0L
 
+    /** v7.51 Part 11-C: one place that reacts when MediaIntakeStore finished a share / pick: honest Toast + page refresh. */
+    private fun mediaChanged() {
+        runOnUiThread {
+            try { if (!isDestroyed) android.widget.Toast.makeText(this, MediaIntakeStore.lastMessage, android.widget.Toast.LENGTH_LONG).show() } catch (e: Throwable) { }
+        }
+        runJs("try{onMediaIntake()}catch(e){}")
+    }
+
+    /** System picker result (several photos / videos): same size / type / 24 h rules as a Share. */
+    private fun handleMediaPick(data: Intent?) {
+        try {
+            val uris = ArrayList<Uri>()
+            val cd = data?.clipData
+            if (cd != null) for (k in 0 until cd.itemCount) cd.getItemAt(k).uri?.let { uris.add(it) }
+            data?.data?.let { if (it !in uris) uris.add(it) }
+            MediaIntakeStore.onChanged = { mediaChanged() }
+            if (uris.isEmpty()) { runJs("try{onMediaIntake()}catch(e){}"); return }
+            MediaIntakeStore.ingest(this, uris, null, null)
+            runJs("try{onMediaIntake()}catch(e){}")   // shows the busy state at once
+        } catch (e: Throwable) { ErrLog.add("MainActivity", "media pick: " + e.toString()) }
+    }
+
     private fun runJs(js: String) {
         runOnUiThread { if (!isDestroyed) web.evaluateJavascript(js, null) }
     }
@@ -542,6 +604,7 @@ class MainActivity : Activity() {
         }
         if (resultCode != RESULT_OK) return
         if (requestCode == REQ_SITE_MEDIA) { handleSiteMedia(data); return }
+        if (requestCode == REQ_MEDIA_INTAKE) { handleMediaPick(data); return }
         val uri = data?.data ?: return
         if (requestCode == REQ_PPN) {
             Thread {
@@ -1175,6 +1238,146 @@ class MainActivity : Activity() {
             return "ok"
         }
 
+        // ---- v7.51 Part 11-C: media intake (Share -> NOVA, picker). No path / uri ever leaves Kotlin: the page only sees ids, names, size text and small thumbnails.
+        @JavascriptInterface
+        fun mediaIntakeList(): String = try { MediaIntakeStore.listJson(this@MainActivity) } catch (e: Throwable) { "{\"items\":[],\"busy\":false,\"progress\":0,\"name\":\"\",\"message\":\"\"}" }
+
+        /** Small JPEG data URL of one item (photo or first video frame), made on the bridge thread. big = larger preview. "" if none. */
+        @JavascriptInterface
+        fun mediaIntakeThumb(id: String?, big: Boolean): String = try { MediaIntakeStore.thumbDataUrl(this@MainActivity, id, if (big) 720 else 160) } catch (e: Throwable) { "" }
+
+        /** DEKHO for a video (and big photo): opens the system viewer through the FileProvider. Returns "ok" or a short honest reason. */
+        @JavascriptInterface
+        fun mediaIntakeOpen(id: String?): String {
+            val f = MediaIntakeStore.fileOf(this@MainActivity, id) ?: return "File nahi mili (24 ghante ho gaye ya hata di)."
+            val e = MediaIntakeStore.list(this@MainActivity).firstOrNull { it.id == id } ?: return "File nahi mili."
+            return try {
+                val u = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                val i = Intent(Intent.ACTION_VIEW)
+                i.setDataAndType(u, if (e.kind == MediaIntake.Kind.VIDEO) "video/*" else "image/*")
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                runOnUiThread { try { startActivity(i) } catch (x: Exception) { android.widget.Toast.makeText(this@MainActivity, "Dekhne wala app nahi mila.", android.widget.Toast.LENGTH_SHORT).show() } }
+                "ok"
+            } catch (x: Throwable) { "Khol nahi paya: " + (x.message ?: x.javaClass.simpleName).take(60) }
+        }
+
+        @JavascriptInterface
+        fun mediaIntakeRemove(id: String?): Boolean = try { val ok = MediaIntakeStore.remove(this@MainActivity, id); FrameExtractor.cleanStale(this@MainActivity); AnalysisPipeline.forgetMissing(this@MainActivity); ok } catch (e: Throwable) { false }
+
+        /** SAAF KARO: every cached file now. Returns how many went. */
+        @JavascriptInterface
+        fun mediaIntakeClear(): Int = try { val n = MediaIntakeStore.clear(this@MainActivity); FrameExtractor.cleanStale(this@MainActivity); AnalysisPipeline.forgetMissing(this@MainActivity); n } catch (e: Throwable) { 0 }
+
+        /** Stops a copy in progress. */
+        @JavascriptInterface
+        fun mediaIntakeCancel(): String { MediaIntakeStore.cancel(); return "ok" }
+
+        /** CHAT ME JODO: remembers which item the next chat message is about (Part 13 reads it). Returns the chat label (name + size, no path) or "". */
+        @JavascriptInterface
+        fun mediaIntakeAttach(id: String?): String = try { MediaIntakeStore.attach(this@MainActivity, id) } catch (e: Throwable) { "" }
+
+        /** MEDIA CHUNO: system picker (photos / videos, several). Result goes through MediaIntakeStore like a Share. */
+        @JavascriptInterface
+        fun mediaPick(): String {
+            runOnUiThread {
+                try {
+                    val i = Intent(Intent.ACTION_GET_CONTENT)
+                    i.type = "*/*"
+                    i.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    i.addCategory(Intent.CATEGORY_OPENABLE)
+                    startActivityForResult(Intent.createChooser(i, "Photo / video chuno"), REQ_MEDIA_INTAKE)
+                } catch (e: Exception) { runJs("try{onMediaIntake()}catch(e){}") }
+            }
+            return "ok"
+        }
+
+        // ---- v7.51 Part 12: frame extraction (background thread inside FrameExtractor, never here). No path leaves Kotlin.
+        /** FRAMES NIKALO: starts the extraction of media [id] (video: up to 6 frames, photo: one resized JPEG). "ok" or a short honest reason. */
+        @JavascriptInterface
+        fun frameExtractStart(id: String?): String = try { FrameExtractor.start(this@MainActivity, id, null) } catch (e: Throwable) { FrameRules.errorText((e.message ?: "start nahi hua")) }
+
+        /** ROKO: ends a running extraction at once. */
+        @JavascriptInterface
+        fun frameExtractCancel(): String { try { FrameExtractor.cancel() } catch (e: Throwable) { }; return "ok" }
+
+        /** JSON: state (idle / running / done / error / cancelled), done / total, message, error, frames, secs. */
+        @JavascriptInterface
+        fun frameExtractStatus(): String = try { FrameExtractor.statusJson() } catch (e: Throwable) { "{\"state\":\"idle\",\"done\":0,\"total\":0,\"message\":\"\",\"error\":\"\",\"frames\":0,\"secs\":[]}" }
+
+        /** Small JPEG data URL of kept frame [n] (1-based) for the thumbnail strip. "" if none. */
+        @JavascriptInterface
+        fun frameExtractThumb(n: Int): String = try { FrameExtractor.thumbDataUrl(this@MainActivity, n, 160) } catch (e: Throwable) { "" }
+
+        // ---- v7.53 Part 13B-1: analysis (background thread inside AnalysisPipeline, never here). No path leaves Kotlin; the question is gated before any network use.
+        /**
+         * v7.59 13D (KNOWN BUG FIX): a photo is attached in the chat and the owner wrote a QUESTION about it. "asking" (the native HAAN / NAHI box is open; nothing is sent before HAAN),
+         * "notquestion" / "nophoto" (the old chat route goes on), or a short honest sentence (refused / busy / NOVA off: shown to the owner, nothing sent).
+         */
+        @JavascriptInterface
+        fun chatPhotoAsk(question: String?): String {
+            return try {
+                val en = Cfg(this@MainActivity).lang == "en"
+                val photo = pickedPhoto ?: return "nophoto"
+                val q = (question ?: "").trim().take(400)
+                if (!AnalysisVoiceRules.isPhotoQuestion(q)) return "notquestion"
+                val svc = NovaService.instance ?: return AnalysisPipelineRules.noServiceText(en)
+                val (cq, refusal) = AnalysisPipelineRules.intake(q, en)
+                if (refusal.isNotEmpty()) return refusal                         // face / harm / secret: refused here, no box, nothing sent
+                if (AnalysisPipeline.state == AnalysisPipelineRules.ST_RUNNING) return AnalysisPipelineRules.busyText(en)
+                runOnUiThread {
+                    try {
+                        android.app.AlertDialog.Builder(this@MainActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                            .setTitle(AnalysisVoiceRules.chatPhotoAskTitle(en))
+                            .setMessage(AnalysisVoiceRules.chatPhotoAskMessage(en))
+                            .setPositiveButton(if (en) "YES, SEND" else "HAAN, BHEJO") { _, _ ->
+                                Thread {
+                                    try {
+                                        val r = AnalysisPipeline.startChat(this@MainActivity, photo, cq, svc.analysisBrain(),
+                                            AnalysisPipeline.Notify { ok, out, speech -> svc.deliverAnalysis(ok, out, speech, false) })
+                                        if (r == "ok") {
+                                            svc.analysisChatLine("me", cq)
+                                            svc.analysisChatLine("ai", AnalysisVoiceRules.chatPhotoWorking(en))
+                                            runJs("onChatPhotoGo()")
+                                        } else svc.analysisChatLine("ai", r)
+                                    } catch (e: Throwable) { ErrLog.add("analysis", "chatphoto") }
+                                }.start()
+                            }
+                            .setNegativeButton(if (en) "NO" else "NAHI") { _, _ -> runJs("onChatPhotoNo()") }
+                            .setOnCancelListener { runJs("onChatPhotoNo()") }
+                            .show()
+                    } catch (e: Exception) { runJs("onChatPhotoNo()") }
+                }
+                "asking"
+            } catch (e: Throwable) { "notquestion" }
+        }
+
+        /** ANALYSE: starts the analysis of media [id] with the owner's [question] (may be ""). "ok" or a short honest reason / refusal (nothing was sent). */
+        @JavascriptInterface
+        fun analysisStart(id: String?, question: String?): String {
+            return try {
+                val svc = NovaService.instance
+                if (svc == null) AnalysisPipelineRules.noServiceText(Cfg(this@MainActivity).lang == "en")
+                else AnalysisPipeline.start(this@MainActivity, id, question, svc.analysisBrain())
+            } catch (e: Throwable) { AnalysisPipelineRules.unreadableText(false) }
+        }
+
+        /** JSON: state (idle / running / done / error / cancelled), stage, done / total, percent, message, error, id. */
+        @JavascriptInterface
+        fun analysisStatus(): String = try { AnalysisPipeline.statusJson() } catch (e: Throwable) { "{\"state\":\"idle\",\"stage\":\"INTAKE\",\"done\":0,\"total\":0,\"percent\":0,\"message\":\"\",\"error\":\"\",\"id\":\"\"}" }
+
+        /** ROKO: ends a running analysis at once. */
+        @JavascriptInterface
+        fun analysisCancel(): String { try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; return "ok" }
+
+        /** Report JSON (AnalysisRules.toJson) of media [id]; "" if there is none. */
+        @JavascriptInterface
+        fun analysisResult(id: String?): String = try { AnalysisPipeline.resultJson(id) } catch (e: Throwable) { "" }
+
+        /** Report as plain chat text (no address, only title + host); "" if none. */
+        @JavascriptInterface
+        fun analysisResultText(id: String?): String = try { AnalysisPipeline.resultText(id) } catch (e: Throwable) { "" }
+
         @JavascriptInterface
         fun clearPhoto() { pickedPhoto = null; editedPhoto = null; synchronized(editHistory) { editHistory.clear() } }
 
@@ -1273,6 +1476,21 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun editedToSite(): String {
             val b = editedPhoto ?: return "Pehle photo edit karo"
+            var side = 1600
+            var jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya"
+            while (jpg.size > SiteMedia.MAX_IMG_BYTES && side > 640) { side -= 320; jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya" }
+            val o = android.graphics.BitmapFactory.Options()
+            o.inJustDecodeBounds = true
+            android.graphics.BitmapFactory.decodeByteArray(jpg, 0, jpg.size, o)
+            val err = SiteMedia.add(this@MainActivity, "img", "jpg", jpg, o.outWidth, o.outHeight)
+            runJs("onSiteMedia(" + SiteMedia.count(this@MainActivity) + "," + (if (err == null) 1 else 0) + "," + JSONObject.quote(err ?: "") + ")")
+            return err ?: "ok"
+        }
+
+        /** v7.42: the attached photo (edited one if there is, else the picked one) goes into the website media by itself when the owner asks for a website. ok or a short reason. */
+        @JavascriptInterface
+        fun photoToSite(): String {
+            val b = editedPhoto ?: pickedPhoto ?: return "nophoto"
             var side = 1600
             var jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya"
             while (jpg.size > SiteMedia.MAX_IMG_BYTES && side > 640) { side -= 320; jpg = ImageGen.shrink(b, side) ?: return "Photo padh nahi paya" }
@@ -1795,6 +2013,27 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun setLockGuard(on: Boolean): String { ExtCfg.setLockGuard(this@MainActivity, on); return "ok" }
+
+        // ---- v7.48 PART 9 JARVIS PERSONA switch ----
+        @JavascriptInterface
+        fun getPersona(): Boolean = ExtCfg.persona(this@MainActivity)
+
+        @JavascriptInterface
+        fun setPersona(on: Boolean): String { ExtCfg.setPersona(this@MainActivity, on); return "ok" }
+
+        // ---- v7.69 PART 17: STOP behaviour switch (OFF = STOP only stops talking / the job; ON = the floating card's STOP also switches NOVA off) ----
+        @JavascriptInterface
+        fun getStopPowersOff(): Boolean = ExtCfg.stopPowersOff(this@MainActivity)
+
+        @JavascriptInterface
+        fun setStopPowersOff(on: Boolean): String { ExtCfg.setStopPowersOff(this@MainActivity, on); return "ok" }
+
+        // ---- v7.69 PART 18: safe mode after repeated crashes ----
+        @JavascriptInterface
+        fun getSafeMode(): Boolean = CrashGuardStore.isSafe(this@MainActivity)
+
+        @JavascriptInterface
+        fun exitSafeMode(): String { CrashGuardStore.exit(this@MainActivity); return "ok" }
 
         /** One line: what the lock guard needs and whether it has it (notification access for calls / messages, accessibility for the volume-key stop). */
         @JavascriptInterface
@@ -2511,6 +2750,7 @@ class MainActivity : Activity() {
         const val REQ_BASIC = 3
         const val REQ_PICK = 4
         const val REQ_SITE_MEDIA = 47
+        const val REQ_MEDIA_INTAKE = 48
         const val REQ_VIDEO = 5
         const val REQ_ALL = 9
         const val REQ_EXPORT_TEACH = 6

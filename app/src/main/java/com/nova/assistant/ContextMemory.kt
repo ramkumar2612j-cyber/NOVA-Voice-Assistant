@@ -36,7 +36,11 @@ object ContextMemory {
                 "open_app" -> Logic.Cmd("global", "back")
                 else -> null
             }
-            else -> null
+            else -> {   // v7.50 Part 10: wider, still harmless-only follow-ups
+                if (RoundaboutRules.repeat(t)) Logic.Cmd(x.kind, x.arg, x.num)
+                else if (RoundaboutRules.undo(t)) RoundaboutRules.reverseOf(x.kind, x.arg)
+                else null
+            }
         }
     }
 }

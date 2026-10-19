@@ -1,0 +1,5 @@
+NOVA v7.69 zip (repo skfashion142/NOVA-Voice-Assistant). Part 1-17 done in code. Pehle PART17_STATUS_v7_69.md ka "Bacha hua" + NOVA_20_PARTS_PLAN.md padho. Phir PART 18 = HANG PROTECTION (watchdogs, crash ke baad safe mode, memory trimming). Add-only, Hinglish, honest PASS / FAIL / NOT RUN, har 5% par % batao, 95% par ruko mat.
+Compile: bash /ABS/PATH/tools/local_compile_check.sh /tmp/nova_check (ABSOLUTE path, background). Agar android.jar curl se na aaye (raw.githubusercontent.com block): git clone --depth 1 --filter=blob:none --sparse https://github.com/Reginer/aosp-android-jar, sparse-checkout set android-34, android.jar ko /tmp/nova_check/android.jar copy karo. 
+Tools: python3 tools/audit_dead_ui.py, python3 tools/test_part17_contract.py, bash tools/run_all_checks.sh (background, ~7 min). Naye version par 4 version-pinned guards (test_analysis_rules / analysis_voice / search_compose / android_runtime) me naya versionName add karo.
+Owner faisla pending (bina poochhe mat badlo): voice command busy NOVA par queue nahi hota; wb_ll locked phone par wake word.
+Hissa poora hone par zip + preview + link https://github.com/skfashion142/NOVA-Voice-Assistant/actions

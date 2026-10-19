@@ -86,6 +86,28 @@ class NovaAccessibilityService : AccessibilityService() {
 
         fun foregroundPackage(): String? = instance?.rootInActiveWindow?.packageName?.toString()
 
+        /**
+         * v7.64 PART 14B-2: movie scan. null = service not running; true = the app on screen is protected (bank, payment, settings, installer ...) or cannot be told;
+         * false = fine to capture. NOVA's own window is skipped (the user speaks to NOVA while the reel is on top), the same way readScreen() does it.
+         * Fail closed: no window at all counts as protected.
+         */
+        fun movieProtected(): Boolean? {
+            val s = instance ?: return null
+            var root = s.rootInActiveWindow
+            if (root == null || root.packageName?.toString() == s.packageName) {
+                val alt = otherAppRoot(s)
+                if (alt != null) root = alt
+            }
+            val pkg = root?.packageName?.toString() ?: return true
+            return ScreenSession.isProtected(pkg, s.packageName)
+        }
+
+        /** v7.64 PART 14B-2: one small in-memory JPEG for the movie scan; refuses (null) on a protected screen. Never saved to disk. */
+        fun movieShot(): ByteArray? {
+            if (movieProtected() != false) return null
+            return agentScreenshot()
+        }
+
         /** v6.78: second way to start an activity when the foreground service is blocked from the background: the same intent from the Accessibility service's own context. false = service not running or Android refused. */
         fun startFromService(i: Intent): Boolean {
             val svc = instance ?: return false

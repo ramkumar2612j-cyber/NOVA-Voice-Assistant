@@ -183,6 +183,17 @@ object ExtCfg {
         } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
     }
 
+    /** v7.73: voice commands said while NOVA is busy (not speaking) wait in the queue. Default ON (owner said yes). Locked phone is NOT affected. */
+    fun busyListen(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("busy_listen", true)
+    } catch (e: Exception) { true }
+
+    fun setBusyListen(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean("busy_listen", on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
     fun setFreeKeyless(ctx: Context, on: Boolean) {
         try {
             ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(FREE_KEYLESS, on).apply()
@@ -230,5 +241,30 @@ object ExtCfg {
         val clean = city.replace(Regex("[^A-Za-z .'-]"), " ").replace(Regex("\\s+"), " ").trim().take(40)
         try { ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("home_city", clean).apply() } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
         return clean
+    }
+    private const val STOP_OFF = "stop_powers_off"   // v7.39 PART 4
+
+    /** v7.39 PART 4: does the floating card's STOP button also switch NOVA off? Default NO: STOP only stops talking / the job. PART 17 adds the Settings switch. */
+    fun stopPowersOff(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(STOP_OFF, false)
+    } catch (e: Exception) { false }
+
+    fun setStopPowersOff(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(STOP_OFF, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    private const val PERSONA = "persona_on"
+
+    /** v7.48 PART 9 JARVIS PERSONA: short humour / feeling lines and the owner's name in harmless replies. Speaking style only. Default ON. */
+    fun persona(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(PERSONA, true)
+    } catch (e: Exception) { true }
+
+    fun setPersona(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(PERSONA, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
     }
 }

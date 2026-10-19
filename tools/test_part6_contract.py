@@ -22,6 +22,7 @@ need('FeatureVerify.isAsk(text)' in ns and ns.index('FeatureVerify.isAsk(text)')
 need('id="p6_verify"' in ui and ui.index('id="p6_verify"') > ui.index('id="p5_log"'), 'ui.html: p6_verify must be appended after p5_log')
 need(ui.rstrip().endswith('</body></html>'), 'ui.html end changed')
 p6 = ui[ui.index('<script id="p6_verify">'):]
+if '<style id="p7_motion_css">' in p6: p6 = p6[:p6.index('<style id="p7_motion_css">')]   # v7.44: Part 7 block is checked by check_p7_motion.py, p6 slice ends where it starts
 m = re.search(r'var BRIDGE=(\[.*?\]);', p6, re.S); BR = set(re.findall(r'"(\w+)"', m.group(1))) if m else set()
 m = re.search(r'var CB=(\[.*?\]);', p6, re.S); CB = set(re.findall(r'"(\w+)"', m.group(1))) if m else set()
 used = set(re.findall(r"\bA\(\s*['\"](\w+)['\"]", ui)) | set(re.findall(r"\bAndroid\.(\w+)\s*\(", ui)) | set(re.findall(r"Android\[\s*['\"](\w+)['\"]", ui))

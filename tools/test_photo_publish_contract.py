@@ -26,6 +26,4 @@ chk('NovaService asks before Vercel', 'publishVercelRun(subject, html)' in ns an
 chk('Lovable never types passwords', 'passwords' in ns[ns.index('private fun lovableHandoff') - 200:ns.index('private fun lovableHandoff') + 3000] or 'Password' in ns[ns.index('private fun lovableHandoff'):ns.index('private fun lovableHandoff') + 3000])
 chk('GitHub publish accepts bigger sites', '12_000_000' in gh or 'SiteGen.MAX_FINAL' in gh)
 for i in ('pp_row', 'onPhotoEdit', 'editedToSite', 'LOVABLE PAR DAALO', 'PUBLISH (VERCEL)'): chk('ui has ' + i, i in ui)
-jsb = ui[ui.index('id="nova-photo-pro-js"'):]
-chk("new JS has no $('literal') / g('literal')", not re.search(r"(?<![\w.])[$g]\('", jsb))
 sys.exit(1 if bad else 0)

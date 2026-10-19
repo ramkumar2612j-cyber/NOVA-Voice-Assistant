@@ -1,0 +1,5 @@
+NOVA v7.70 zip (repo skfashion142/NOVA-Voice-Assistant). Part 1-18 done in code. Padho PART18_STATUS_v7_70.md + PART17_STATUS_v7_69.md + NOVA_20_PARTS_PLAN.md. Ab PART 19 = FULL REGRESSION (sab contract tests + compile + JUnit + FeatureVerify / FeatureStatus update). Add-only, Hinglish, honest PASS / FAIL / NOT RUN, har 5% par % batao, 95% par ruko mat.
+Compile: bash /ABS/PATH/tools/local_compile_check.sh /tmp/nova_check (background). android.jar curl se na aaye to: git clone --depth 1 --filter=blob:none --sparse https://github.com/Reginer/aosp-android-jar; sparse-checkout set android-34; android.jar -> /tmp/nova_check/android.jar.
+29 purane JUnit fail (org.json stub) alag hain: JSON_JAR se real org.json do to saaf ho sakte hain. bash tools/run_all_checks.sh (background ~7 min). Naye version par 4 version-pinned guards me versionName add karo.
+Owner faisla pending (bina poochhe mat badlo): voice command busy NOVA par queue nahi hota; wb_ll locked phone par wake word.
+Hissa poora hone par zip + link https://github.com/skfashion142/NOVA-Voice-Assistant/actions

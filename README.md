@@ -1,5 +1,7 @@
 # NOVA — Local-First Android Voice Assistant
 
+> **LATEST (v7.72, Part 20 FINAL):** README ke neeche "FINAL v7.72" section aur `OWNER_SETUP_AND_APK_STEPS.md` (section G) + `OWNER_PHONE_TEST_LIST_v7_72.md` sabse naye hain. Neeche ki purani lines (Version 6.88 wali table waghera) history ke liye waise hi rakhi hain - add-only rule.
+
 NOVA is an Android voice assistant (Kotlin, package `com.nova.assistant`) that talks Hinglish/English. Wake word and common phone commands run **on the phone** (offline Vosk recognizer, no API key). Optional cloud providers are used only for open-ended questions.
 
 | | |
@@ -67,3 +69,36 @@ Ambiguous call-contact matches can be shown in an Android selection dialog with 
 
 ### PART 3/5 centralized intent and routing foundation
 `IntentParser` classifies explicit call, message, app-specific communication, app-open, and ambiguous requests without executing anything. `CommandRouter` creates a side-effect-free route plan with app identity separate from action, and records which later stages are required. The service uses this as a clarification preflight for incomplete/mixed commands; the existing specialist handlers remain responsible for real contact lookup, app launch, permissions, confirmations, execution, and reporting. WhatsApp Business is recognized as a distinct app identity for the next integration part; no Part 4 behavior is enabled here.
+
+## FINAL v7.72 (Part 20 of 20) - sabse naya, honest status
+
+| | |
+|---|---|
+| Version | **7.72** (versionName), repo `skfashion142/NOVA-Voice-Assistant` |
+| Parts | 1-20 sab likhe ja chuke hain (plan: `NOVA_20_PARTS_PLAN.md`) |
+| Min / target SDK | 26 / 34, Kotlin 1.9.24, AGP 8.5.2, Gradle 8.7, JDK 17 |
+| Sandbox me RUN hua | Kotlin main + test compile, JUnit, `tools/run_all_checks.sh` - exact numbers: `PART20_STATUS_v7_72.md` |
+| **NOT RUN** | GitHub Actions (APK build) |
+| **NOT TESTED** | Asli phone par kuch bhi (Parts 5-19 ke sab owner checkpoints) |
+
+### Ab aap kya karo (sirf phone se)
+1. `OWNER_SETUP_AND_APK_STEPS.md` section **G** (repo me code daalo, Actions me APK banao, install karo).
+2. `OWNER_PHONE_TEST_LIST_v7_72.md` ke items ek-ek karke chalao, sirf PASS / FAIL batao (= **CHECKPOINT 4**).
+3. Do owner faisle pending hain (list ke end me): voice command busy NOVA par queue ho ya nahi; locked phone par wake word.
+
+### Naye Parts 16-20 ek line me
+- 16 MISSING WIRES: "call uthao" ki ANSWER_PHONE_CALLS permission pehle kabhi maangi hi nahi jaati thi - ab maangi jaati hai; 2 naye MADAD topics; `tools/audit_dead_ui.py`.
+- 17 SETTINGS: SWITCHES card (graphics quality, persona ON/OFF, STOP ka asar).
+- 18 HANG PROTECTION: 10 min me 2 crash = 30 min SAFE MODE (halke effects, laser band, banner + button).
+- 19 FULL REGRESSION: real org.json harness, JUnit + contract scripts, FeatureStatus "safemode" row.
+- 20 FINAL: docs, handover prompt (`NEXT_ACCOUNT_PROMPT_v7_72_AFTER_PART20.md`), owner test list, final zip.
+
+### Honest limits (jhooth nahi)
+- Sandbox ka "PASS" = code + stubs par PASS. Isse ye pakka nahi hota ki APK banega ya phone par chalega.
+- Instagram jaise apps screen capture rok sakte hain; tab NOVA "screen padh nahi paya" bolega.
+- NOVA chehre se kisi insaan ka naam nahi batata (jaan-boojhkar).
+- Agar koi key (Gemini / Groq / ...) nahi hai to cloud AI wale kaam honest line dete hain; phone ke local commands phir bhi chalte hain.
+
+
+## v7.73 note
+Busy NOVA par voice command queue = HAAN (v7.73 me ho gaya). Locked phone par wake word = NAHI (Lock Guard waisa hi). Dekho PART21_BUSY_VOICE_STATUS_v7_73.md.

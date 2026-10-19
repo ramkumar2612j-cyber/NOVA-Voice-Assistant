@@ -16,9 +16,18 @@ object SiteSummary {
         return STYLES.entries.firstOrNull { Regex("\\b" + it.key + "\\b").containsMatchIn(l) }?.value
     }
 
+    /** v7.42: a long spoken sentence is never echoed back whole; keep at most ~40 chars cut at a word. */
+    fun shortSubject(subject: String): String {
+        val t = subject.trim().replace(Regex("\\s+"), " ")
+        if (t.length <= 40) return t
+        val cut = t.take(40)
+        val sp = cut.lastIndexOf(' ')
+        return (if (sp > 15) cut.substring(0, sp) else cut).trimEnd(',', '.', ' ') + "..."
+    }
+
     fun samjha(subject: String, raw: String, followUp: Boolean, en: Boolean): String {
         val parts = ArrayList<String>()
-        parts.add(subject.trim())
+        parts.add(shortSubject(subject))
         style(raw)?.let { parts.add(if (en) "style $it" else "style $it") }
         photoCount(raw)?.let { parts.add(if (en) "$it photos" else "$it photo") }
         parts.add(if (followUp) (if (en) "edit of the last website" else "pichli website mein badlaav") else (if (en) "new website" else "nayi website"))

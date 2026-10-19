@@ -260,6 +260,7 @@ class NovaHud(private val ctx: Context) {
         row.setPadding((14 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
         val bg = android.graphics.drawable.GradientDrawable()
         bg.setColor(0xF20A1236.toInt())
+        bg.colors = intArrayOf(0xF2101C44.toInt(), 0xF20A1030.toInt(), 0xF2160C38.toInt())   // v7.44: same glass gradient as the pill
         bg.cornerRadius = 24 * d
         bg.setStroke((1.5f * d).toInt(), 0xFF27E1FF.toInt())
         row.background = bg

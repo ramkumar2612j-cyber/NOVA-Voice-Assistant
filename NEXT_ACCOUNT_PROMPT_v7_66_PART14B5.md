@@ -1,0 +1,4 @@
+NOVA v7.66 zip (Kotlin Android, repo skfashion142/NOVA-Voice-Assistant). Part 13 + 14 + 14B-1..14B-4 done in code. Padho: PART14B1_STATUS_v7_63.md (UPDATE v7.66 + compile result), NOVA_20_PARTS_PLAN.md (PART 14B).
+Ab 14B-5: RESULT CARD + HISTORY. Movie naam bolkar + chhota card (naam, bharosa HIGH/MEDIUM/LOW, sources) chat me; History me bhi (sirf text, frame / photo kabhi save nahi); laser overlay RESULT 100 par band hone se pehle result ek jhalak dikhe ya card turant aaye. Chehre se naam KABHI nahi. Phir parts 15-20.
+Pehle tools/local_compile_check.sh /ABS/PATH chalao; galti mile to dekho code galat ya expected galat.
+Rules: add-only, Hinglish, honest PASS / FAIL / NOT RUN, bina saboot DONE nahi, har 5% par batao, har hissa poora hone par zip + preview + direct check link (https://github.com/skfashion142/NOVA-Voice-Assistant/actions).

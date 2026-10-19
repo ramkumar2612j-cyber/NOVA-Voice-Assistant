@@ -45,6 +45,7 @@ object FeatureCheck {
         val scheduled = try { ScheduledTaskRules.parse("roz subah 8 baje weather bolo") } catch (e: Throwable) { null }
         chk(rec, scheduled != null && scheduled.hour == 8 && scheduled.repeatDaily && scheduled.kind == ScheduledTaskRules.Kind.WEATHER, "Schedule: Hinglish daily weather at 8", "")
         chk(rec, try { AgentTaskRules.isHistoryQuery("task history") && AgentTaskRules.canResumeCheckpoint("open_app", true) && !AgentTaskRules.canResumeCheckpoint("tap", true) && !AgentTaskRules.canResumeCheckpoint("type", true) && AgentTaskRules.isResumeQuery("resume last task") } catch (e: Throwable) { false }, "Agent checkpoint/history + safe resume: unsafe replay blocked", "")
+        chk(rec, try { AnalysisVoiceRules.parse("nova ye video analyse karo") == AnalysisVoiceRules.Ask.ANALYSE && AnalysisVoiceRules.parse("battery kitni hai") == AnalysisVoiceRules.Ask.NONE && AnalysisRules.gateQuestion("ye image kaun hai") == AnalysisRules.Gate.REFUSE_FACE_ID } catch (e: Throwable) { false }, "Samajh: video analyse karo (chehra pehchan mana)", "")
     }
 
     private fun appInstalled(ctx: Context, name: String): Boolean = try {
@@ -75,6 +76,9 @@ object FeatureCheck {
         feat(rec, gemOk || groq, "Website banana (voice)", "Gemini ya Groq key daalo")
         feat(rec, gh, "Website publish (GitHub)", "GitHub token daalo: Settings > GITHUB PUBLISH")
         feat(rec, brain, "Seekho (internet se seekhna)", "koi AI key daalo")
+        // v7.57 13B-2d: photo / video ANALYSE needs a vision-capable key (Gemini, or the owner's free Groq / OpenRouter key with the free chain ON)
+        val chainOn = try { ExtCfg.freeChain(ctx) } catch (e: Throwable) { false }
+        feat(rec, gemOk || (chainOn && (groq || orr)), "Photo / video ANALYSE (tasveer dekhna)", "Gemini ya Groq / OpenRouter key daalo (free chain ON)")
         feat(rec, brain && acc, "Task agent (app khol kar kaam)", if (!acc) "Accessibility ON karo" else "koi AI key daalo")
         feat(rec, appInstalled(ctx, "ChatGPT"), "ChatGPT app phone mein", "ChatGPT app install nahi mila; ChatGPT wale kaam nahi honge")
         feat(rec, appInstalled(ctx, "Gemini"), "Gemini app phone mein", "Gemini app install nahi mila (optional)")

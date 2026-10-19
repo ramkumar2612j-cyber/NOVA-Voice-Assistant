@@ -575,12 +575,17 @@ html.lowfx #sk_l .vc{content-visibility:auto;contain-intrinsic-size:auto 130px}
 <div class="box">
 <label style="margin-top:0">AUTO REPLY (WhatsApp / Instagram)</label>
 <label class="chk"><input type="checkbox" id="ar_on"> Naya message aate hi NOVA turant jawab bheje (poochhe bina), baad me bata de</label>
-<label class="chk"><input type="checkbox" id="ar_smart"> AI SMART: NOVA khud baat kare (message samjhe, apne hisab se jawab de, phir mujhe bata de). Isme NOVA ACTIVATE aur AI key chahiye, warna neeche wala text jayega. Jo use pata nahi wo mujhse puchta hai (apni taraf se rate ya number nahi ghadta). Aap "Rahul ko WhatsApp karo ..." bolkar jawab doge to aage ki baat wo sambhal leta hai.</label>
+<div id="ar_safe" style="margin:6px 0 10px;padding:9px 11px;border:1px solid rgba(80,230,255,.35);border-radius:12px;background:rgba(80,230,255,.06);font-size:12px;line-height:1.55">
+<b style="letter-spacing:.08em">AI HI BAAT KARTA HAI (fixed message nahi jata)</b><br>
+&#129302; Har message ka jawab AI apne shabdon me deta hai: OTP, payment, ya koi bhi baat<br>
+&#128274; OTP / password / PIN wo kabhi nahi deta na maangta hai; paise ya details apni taraf se nahi ghadta<br>
+&#128226; Har baat ke baad aapko bata deta hai: kisne kya likha aur NOVA ne kya jawab diya<br>
+&#128683; AI na chale to kuch nahi bhejta, sirf aapko bata deta hai
+</div>
 <input type="text" id="ar_owner" style="display:block;width:100%;margin-top:6px" maxlength="30" placeholder="Aapka naam (AI 'Sonu ka assistant' bolega)" autocomplete="off">
-<small>Business Watch mein bhi AI SMART tab chalta hai jab Business watch AUTO ON ho. Wahan rate, size, stock, delivery AI nahi batata, wo aap batate hain.</small>
-<textarea id="ar_text" rows="3" maxlength="300" placeholder="Jawab ka text"></textarea>
+<small>Business Watch mein bhi AI tab jawab deta hai jab Business watch AUTO ON ho. Wahan rate, size, stock, delivery AI nahi batata, wo aap batate hain.</small>
 <div class="row"><button class="sm" id="ar_save">SAVE</button></div>
-<small>Group chat, code/password wale message aur jin notification me Reply button nahi hota unko jawab nahi jata. Ek bande ko 10 min me ek, ghante me 3, din me 80 se zyada nahi. Har kaam upar ghanti wale HISTORY me dikhta hai.</small>
+<small>Group chat aur jin notification me Reply button ya message ka text nahi hota (Android ne chhupa diya) unko jawab nahi jata. Ek bande ko 10 min me ek, ghante me 3, din me 80 se zyada nahi. Har kaam upar ghanti wale HISTORY me dikhta hai.</small>
 </div>
 
 <div class="box">
@@ -841,13 +846,10 @@ html.lowfx #sk_l .vc{content-visibility:auto;contain-intrinsic-size:auto 130px}
       if(r==="notrunning")say("Pehle ACTIVATE dabao",false);else say(r,true)}catch(x){say("Nahi hua",false)}
     setTimeout(rcState,500)});
   rcState();setInterval(rcState,5000);
-  var arOn=g("ar_on"),arTx=g("ar_text"),arSv=g("ar_save");
-  try{var ar=JSON.parse(Android.getAutoReply());if(arOn)arOn.checked=!!ar.on;if(arTx)arTx.value=ar.text||""}catch(x){}
-  if(arSv)arSv.addEventListener("click",function(){try{Android.setAutoReply(!!(arOn&&arOn.checked),arTx?arTx.value:"");say("Auto reply save ho gaya",true)}catch(x){say("Save nahi hua",false)}});
-  if(arOn)arOn.addEventListener("change",function(){try{Android.setAutoReply(arOn.checked,arTx?arTx.value:"");say(arOn.checked?"Auto reply ON":"Auto reply OFF",true)}catch(x){say("Switch save nahi hua",false)}});
-  var arSm=g("ar_smart");
-  try{if(arSm)arSm.checked=!!Android.getSmartReply()}catch(x){}
-  if(arSm)arSm.addEventListener("change",function(){try{Android.setSmartReply(arSm.checked);say(arSm.checked?"AI smart reply ON":"AI smart reply OFF",true)}catch(x){say("Switch save nahi hua",false)}});
+  var arOn=g("ar_on"),arSv=g("ar_save");   // v7.46: no fixed-text box and no AI switch any more: the AI always answers
+  try{var ar=JSON.parse(Android.getAutoReply());if(arOn)arOn.checked=!!ar.on}catch(x){}
+  if(arSv)arSv.addEventListener("click",function(){try{Android.setAutoReply(!!(arOn&&arOn.checked),"");say("Auto reply save ho gaya",true)}catch(x){say("Save nahi hua",false)}});
+  if(arOn)arOn.addEventListener("change",function(){try{Android.setAutoReply(arOn.checked,"");say(arOn.checked?"Auto reply ON":"Auto reply OFF",true)}catch(x){say("Switch save nahi hua",false)}});
   var arOw=g("ar_owner");
   try{if(arOw)arOw.value=String(Android.getOwnerName()||"")}catch(x){}
   if(arOw)arOw.addEventListener("change",function(){try{var v=String(Android.setOwnerName(arOw.value));arOw.value=v;say(v?("Naam save: "+v):"Naam hata diya",true)}catch(x){say("Naam save nahi hua",false)}});
@@ -2306,6 +2308,7 @@ function skRegistry(X){
   {c:'PHONE',i:'sun',t:'Aaj ka schedule (calendar)',d:'Aaj ki meetings bol kar sunata hai. Calendar text sirf phone mein padha jaata hai, cloud ko nahi jaata. Meeting se pehle reminder bhi.',s:O,say:['aaj ka schedule','meri meetings'],act:[['CALENDAR ALLOW',call('requestCalendarRead')]]},
   {c:'PHONE',i:'bell',t:'Chup aur Quiet mode',d:'"chup" bolne par NOVA ruk jaata hai. Quiet mode me jawab sirf screen par. Order ke saath "chup rehna" bolo to us ek kaam me awaaz nahi.',s:null,say:['quiet mode on','voice replies on','stop'],act:[['ABHI CHUP',call('stopSpeak')]]},
   /* ---- COMM ---- */
+  {c:'COMM',i:'call',t:'Call uthana / kaatna',d:'Phone bajne par bolo "call uthao" ya "call kaato". Pehli baar phone ki call-uthane wali permission allow karni hoti hai (NOVA khud maangta hai).',s:null,say:['call uthao','call kaato']},
   {c:'COMM',i:'call',t:'Call karna',d:'Naam bolo. NOVA contact dhundhta hai, pakka na ho to poochta hai, call se pehle aapse haan leta hai.',s:!!st.contacts,say:['nova [naam] ko call karo'],act:[['CONTACTS ALLOW',call('requestContacts')]]},
   {c:'COMM',i:'msg',t:'SMS bhejna',d:'Naam se SMS taiyaar karta hai. Bhejne se pehle haan poochta hai.',s:!!st.contacts,say:['nova [naam] ko message karo [text]'],act:[['CONTACTS ALLOW',call('requestContacts')]]},
   {c:'COMM',i:'msg',t:'WhatsApp / WhatsApp Business',d:'Message bhejna. WhatsApp aur WhatsApp Business alag app ki tarah pehchane jaate hain. Bhejne se pehle haan. Accessibility chahiye.',s:!!st.acc&&!!st.contacts,say:['nova Rahul ko WhatsApp karo kal milte hain','whatsapp business kholo'],act:[['ACCESSIBILITY',call('openAccessibility')]]},
@@ -2323,7 +2326,7 @@ function skRegistry(X){
   {c:'APPS',i:'eye',t:'Screen dekh kar pehchano + search',d:'Bolo "ye kaun si movie hai" / "is gaane ka naam batao". Screenshot lekar web search se naam batata hai. Popup ke liye koi button nahi. Gemini key chahiye; bank/payment screen par kabhi nahi.',s:!!st.acc&&brain,say:['nova ye kaun si movie hai','nova is gaane ka naam batao'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('s_key')]]},
   {c:'PHONE',i:'mute',t:'Ringer / DND (silent, vibrate, normal)',d:'"ringer silent / vibrate / normal". Silent ke liye Do Not Disturb access chahiye.',s:!!st.dnd,say:['nova ringer silent karo','vibrate par karo'],act:[['DND ACCESS',call('openDndAccess')]]},
   {c:'PHONE',i:'scr',t:'Screenshot, auto-rotate',d:'"screenshot lo", "auto rotate off". Rotation ke liye Write settings chahiye.',s:!!st.writeSettings,say:['nova screenshot lo','nova auto rotate off'],act:[['WRITE SETTINGS',call('openWriteSettings')]]},
-  {c:'COMM',i:'spark',t:'AI SMART reply',d:'Notification / WhatsApp ka jawab NOVA khud likhta hai; OTP / password par ruk jata hai.',s:B('getSmartReply'),say:['smart reply on'],act:[['AUTO-REPLY',go('ar_smart')]]},
+  {c:'COMM',i:'spark',t:'AI reply (fixed text nahi)',d:'Notification / WhatsApp ka jawab hamesha NOVA ka AI khud likhta hai aur baad me aapko batata hai; OTP / password na deta hai na maangta hai.',s:B('getSmartReply'),say:['smart reply on'],act:[['AUTO-REPLY',go('ar_on')]]},
   {c:'APPS',i:'eye',t:'Screen analyze (deep)',d:'Screen ko samajh kar batata hai. AI key ho to behtar jawab.',s:!!st.acc&&brain,say:['analyze screen'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('s_key')]]},
   {c:'APPS',i:'scr',t:'Agent: doosre app me kaam',d:'App kholo, sawal poochho, naam se chat dhundo, YouTube chalao ya roko, jawab wapas lao. Payment/password screen par kaam nahi.',s:!!st.acc&&brain,say:['nova agent status','nova kaam chatgpt kholo aur ek joke poochho'],act:[['ACCESSIBILITY',call('openAccessibility')],['AI KEY',go('g_key')]]},
   {c:'APPS',i:'bell',t:'Screen alert (error / warning)',d:'Dialog me error dikhe to NOVA ek baar bol deta hai. Sab kuch phone ke andar.',s:!!st.acc,say:['monitor on'],act:[['SETTING',go('s_screen')]]},
@@ -2391,6 +2394,14 @@ function skRegistry(X){
   {c:'SAFE',i:'bolt',t:'Background me chalte rehna',d:'Battery / Autostart ki setting jahan NOVA ko chalne dena hai (Xiaomi jaise brand ke liye alag guide).',s:!!st.battery,say:[],act:[['BATTERY SETTING',call('openBatterySettings')]]},
   {c:'SAFE',i:'bell',t:'Battery kam: yaad + Papa-Mummy ko SOS',d:'Battery girne par NOVA bolta hai (SETTINGS me khud bolo wala switch). Bahut kam (5 percent) par Papa aur Mummy ko WhatsApp bhejne ki koshish karta hai. Contact ka naam \"Papa\" / \"Mummy\" ho aur Accessibility ON ho. Na bhej paye to sach batata hai.',s:!!st.acc,say:[],act:[['ACCESSIBILITY',call('openAccessibility')],['BATTERY SWITCH',go('al_bat')]]},
   {c:'SAFE',i:'hand',t:'Jo NOVA nahi karta',d:'Phone band / restart / factory reset, bank-payment-password screen par kaam, OTP / PIN yaad rakhna. Ye clear jawab deta hai, koshish nahi karta.',s:null,say:[]}
+  /* v7.50 Part 9 + 10 entries (add-only) */
+  ,{c:'AI',i:'brain',t:'Jarvis andaaz (naam + halka mazaak)',d:'Chhote aam jawab ke saath kabhi naam ya ek witty line. Call, message, payment, confirmation, galti aur dusron ko auto-reply mein kabhi nahi. Settings mein PERSONA ON / OFF.',s:B('getPersona'),say:['nova persona on karo'],act:[['SETTINGS (SAVE ke bagal me)',go('s_save')]]}
+  ,{c:'AI',i:'brain',t:'Settings ke 3 switch (quality, persona, stop)',d:'Settings me SWITCHES card: GRAPHICS QUALITY (auto / sharp / smooth), PERSONA ON / OFF aur STOP (default: sirf roke, NOVA chalu rehta hai).',s:B('getStopPowersOff'),say:['nova persona off karo'],act:[['SETTINGS (SWITCHES)',go('s_save')]]}
+  ,{c:'AI',i:'brain',t:'Safe mode (crash ke baad)',d:'10 minute me 2 crash => 30 minute safe mode: halke effects, laser overlay band. Banner se SAFE MODE BAND KARO.',s:B('getSafeMode'),say:['nova safe mode kya hai'],act:[['SETTINGS',go('s_save')]]}
+  ,{c:'PHONE',i:'brain',t:'Ghuma ke bole kaam samajhna',d:'Ha kr do, haan karo, theek hai ab sahi samajhta hai. Wahi dobara, ulta kar do, andhera hai (torch). Wo jo kal wale ko bhej do jaise ishare par call / message / payment / delete kabhi andaaze se nahi: pehle poochta hai kisko.',s:null,say:['nova andhera hai','nova usi ko dobara','nova ulta kar do']}
+  ,{c:'PHONE',i:'brain',t:'Media: Share karke bhejna',d:'Gallery, WhatsApp, Instagram ya Chrome se Share karke NOVA chuno, ya chat me MEDIA dabao. Photo, video, link mil jate hain; card me DEKHO, CHAT ME JODO, HATAO. File sirf phone me, 24 ghante baad saaf. Video link se video download nahi hota, video analysis abhi nahi hai.',s:null,say:['nova kya mila','nova ye video analyse karo']}
+  ,{c:'PHONE',i:'brain',t:'Video se frames nikalna',d:'MEDIA MILA card me video ke neeche FRAMES NIKALO: 6 tak saaf frames patti me dikhte hain (milte-julte hata diye jate hain). Peeche chalta hai, ROKO ya STOP turant rokta hai. Frames sirf phone me. Analysis ke liye ANALYSE dabao.',s:null,say:[]}
+  ,{c:'PHONE',i:'brain',t:'Photo / video ANALYSE karna',d:'MEDIA MILA card me ANALYSE dabao (sawaal likh sakte ho): AI frames dekhkar report deta hai - kya dikha, likha text, bharosa, limits. Abhi web jaanch nahi, isliye dawe verify nahi hue likhe aate hain. Chehre se naam, nuksaan, OTP / PIN par mana. ROKO / STOP turant rokta hai.',s:null,say:[]}
   ];
 }
 function skRun(X,t){X.closeOthers('chat');if(X.cb)X.cb.click();setTimeout(function(){var i=X.g('c_in');if(i){i.value=t;var s=X.g('c_send');setTimeout(function(){try{s.click()}catch(e){}},120)}},260)}
@@ -3134,7 +3145,7 @@ try{load();paint()}catch(e){}
 (function(){
 function $(i){return document.getElementById(i)}
 var w=$('helpw'),btn=$('c_help');if(!w||!btn)return;
-var CAPS=[{"id": "call", "t": "Call aur SMS", "ex": "nova mummy ko call karo", "d": "Naam bolo, main call ya SMS taiyaar kar deta hoon. Call se pehle aapse haan poochta hoon.", "need": "Contacts permission chahiye."}, {"id": "whatsapp", "t": "WhatsApp message", "ex": "nova Rahul ko WhatsApp karo kal milte hain", "d": "WhatsApp message bhej sakta hoon. Bhejne se pehle aapse haan poochta hoon.", "need": "Accessibility permission chahiye."}, {"id": "alarm", "t": "Alarm, timer, reminder", "ex": "nova subah 6 baje ka alarm lagao", "d": "Alarm, timer aur reminder lagata hoon, bina internet ke.", "need": ""}, {"id": "phone", "t": "Torch, volume, wifi", "ex": "nova torch jala do", "d": "Torch, volume, brightness, screenshot, vibrate ya ringer normal, screen rotation (auto rotate on/off, portrait, landscape) jaise phone ke kaam bolkar. Wifi, bluetooth, mobile data Android seedha on-off nahi karne deta, uska settings page khol deta hoon. Ringer silent ke liye Do Not Disturb access aur rotation ke liye ALLOW BRIGHTNESS permission chahiye.", "need": ""}, {"id": "apps", "t": "App kholna", "ex": "nova YouTube kholo", "d": "Koi bhi app ya phone ki setting khol deta hoon.", "need": ""}, {"id": "music", "t": "Gaana aur raasta", "ex": "nova Delhi ka raasta dikhao", "d": "YouTube par gaana ya video dhundhta hoon aur Google Maps mein jagah ya raasta dikhata hoon.", "need": "Internet chahiye."}, {"id": "camera", "t": "Camera kholna", "ex": "nova selfie camera kholo", "d": "Camera khol deta hoon (photo ya video). Photo ka button dabana mere haath mein nahi, wo aap dabao.", "need": ""}, {"id": "image", "t": "Photo banana (AI)", "ex": "nova ek billi ki photo banao", "d": "AI se nayi photo banata hoon.", "need": "Gemini key ya free image option chahiye."}, {"id": "chrome", "t": "Website Chrome mein kholna", "ex": "nova youtube google aur flipkart chrome pe kholo", "d": "Website ka naam bolo, main use Chrome mein khol deta hoon. Kai website ek saath bolo to har ek alag tab mein khulti hai.", "need": ""}, {"id": "download", "t": "App download karna", "ex": "nova whatsapp download karo", "d": "App ka naam bolo, main Play Store ka page khol kar Install dabata hoon aur tabhi batata hoon jab download sach mein shuru ho jaye. Paid app ya login ki zaroorat ho to khud nahi dabata.", "need": "Accessibility permission aur Play Store mein Google login chahiye."}, {"id": "website", "t": "Website banana", "ex": "nova ek restaurant ki website banao", "d": "Ek line bolo, poori website ban jaati hai. Baad mein bolo isko professional banao. Chaho to GitHub par publish bhi.", "need": "AI key chahiye, publish ke liye GitHub token."}, {"id": "screen", "t": "Screen padhna aur doosre app mein kaam", "ex": "nova screen padh kar batao", "d": "Screen padh kar samjha sakta hoon aur doosre app mein chhote kaam kar sakta hoon. Bank, payment aur password screen par kabhi nahi.", "need": "Accessibility permission chahiye."}, {"id": "memory", "t": "Yaad rakhna", "ex": "nova yaad rakh mera naam Shiv hai", "d": "Aapki baatein sirf is phone mein yaad rakhta hoon, kahin upload nahi hoti.", "need": ""}, {"id": "learn", "t": "Naya topic seekhna", "ex": "nova solar panel ke baare mein seekho", "d": "Naya topic Wikipedia se seekh leta hoon.", "need": "Internet chahiye."}, {"id": "driving", "t": "Driving mode", "ex": "nova driving mode on", "d": "Gaadi chalate waqt WhatsApp aur SMS bol kar sunata hoon, aur aap bolo to reply bhej deta hoon.", "need": "Notification access chahiye."}, {"id": "recording", "t": "Recording", "ex": "nova background me recording on karo", "d": "Sirf aapke kehne par recording chalata hoon. Status Settings mein dikhta hai.", "need": ""}, {"id": "live", "t": "Mausam, khabar, rate, matlab", "ex": "nova jaipur ka mausam batao", "d": "Mausam, taaza khabar, dollar ya bitcoin ka rate, shabd ka matlab aur kisi cheez ki jankari internet se turant laata hoon, bina kisi key ke. Chhote sawal phone ka offline AI bhi sambhalta hai.", "need": "Internet chahiye."}, {"id": "questions", "t": "Sawal ka jawab", "ex": "nova solar panel kaise kaam karta hai", "d": "Chat mein likhke poochho: likhna, code, translate, plan, padhai, analysis, sab ka poora jawab deta hoon (lists, code aur COPY button ke saath). Aaj ki khabar ya latest jaankari ke liye web se dhoondh kar Sources ke saath batata hoon. Internet chahiye.", "need": "AI key se behtar jawab milta hai."}, {"id": "wabiz", "t": "WhatsApp Business watch", "ex": "nova business watch 10 ghante", "d": "Kuch ghante ke liye business chats par nazar rakhta hoon: order, payment ya complaint ho to turant batata hoon, aam sawal aapke catalogue notes se. Shuru mein reply khud nahi bhejta, sirf draft.", "need": "Notification access chahiye."}, {"id": "autoreply", "t": "Auto-reply", "ex": "Settings mein AUTO-REPLY ON karo", "d": "Aap busy ho to WhatsApp jaise messages ka aapke apne likhe text se jawab de deta hoon aur baad mein batata hoon. AI SMART ON ho to message samajh kar apne shabdon mein jawab deta hoon (jo mujhe pata nahi wo aapse puchta hoon, apni taraf se rate ya number nahi ghadta). Bolkar ON ya OFF karne se pehle main haan ya nahi poochta hoon. Group, OTP ya password wale message ka kabhi nahi.", "need": "Notification access chahiye. Settings mein switch ON karna padta hai."}, {"id": "connectors", "t": "Connectors (GitHub, Vercel, n8n)", "ex": "nova github repos dikhao", "d": "GitHub, Vercel, n8n, MCP, Zapier ya Make jaisi services se judkar unka kaam bol kar karta hoon. Badalne wale kaam se pehle aapse haan poochta hoon.", "need": "Pehle connector jodna padta hai (token chahiye)."}, {"id": "routines", "t": "Routines", "ex": "Settings mein ROUTINES kholo", "d": "Apna naam aur bolne ka shabd rakho, phir ek bol par kai safe kaam ek ke baad ek ho jaate hain (zyada se zyada 8 step). Routine confirmation ke bina kuch risky nahi kar sakta.", "need": ""}, {"id": "lockguard", "t": "Lock Guard (locked phone)", "ex": "Settings mein LOCK GUARD ON karo", "d": "Phone lock ho to main chup rehta hoon aur command nahi sunta. Sirf zaroori baat bolta hoon: silent phone par call, ya Papa ya Mummy ka call ya message (message ka text kabhi nahi padhta). Volume key dabao to alert ruk jaata hai.", "need": "Notification access aur Accessibility chahiye."}, {"id": "teach", "t": "Nickname sikhana aur ROZ KA SUDHAAR", "ex": "nova yaad rakho insta ka matlab Instagram", "d": "Aap batao ki kisi app ko kis naam se bulate ho, main yaad rakhta hoon. ROZ KA SUDHAAR din mein ek baar naye nickname sujhata hai, aapke HAAN dabane par hi lagta hai aur WAPAS se hat jaata hai.", "need": "ROZ KA SUDHAAR ke liye apni free AI key chahiye."}, {"id": "powerguide", "t": "Battery aur background guide", "ex": "Settings mein BATTERY GUIDE kholo", "d": "Phone ki company ke hisaab se battery aur autostart ki sahi screen kholta hoon aur batata hoon kya dabana hai, taaki NOVA band na ho. Screen na mile to Android ki battery screen khulti hai.", "need": ""}, {"id": "gmail", "t": "Gmail", "ex": "nova important mail batao", "d": "Gmail ke notification padhta hoon (login ya token nahi chahiye): zaroori mail batata hoon, aapki watch list ka mail (jaise Jio bill) aate hi bolta hoon, aur mail bhej sakta hoon.", "need": "Notification access chahiye aur Gmail app ke notification ON."}, {"id": "agent", "t": "Lambe kaam (background jobs)", "ex": "nova screen padh kar batao", "d": "Lambe kaam bina atke peeche chalte hain, progress dikhta hai. Kaam adhura rah jaye to dobara try karta hoon. Maine kaam kiya bolna aur asli jaanch alag baat hai: jahan jaanch nahi ho paati wahan saaf bolta hoon.", "need": "Accessibility permission chahiye."}, {"id": "screenalert", "t": "Screen alerts", "ex": "nova analyze screen", "d": "Screen par error ya warning ka dialog dikhe to kam-kam bolta hoon aur sirf poochta hoon: detail bolun? Aap haan bolo to poori detail padhta hoon, warna chup.", "need": "Accessibility permission chahiye."}, {"id": "watchmic", "t": "Watch mic (smartwatch se bulana)", "ex": "Watch ka AI button dabao", "d": "Bluetooth calling watch ka AI ya voice button dabane par NOVA sunti hai aur watch ke mic se aapki baat sunti hai. Sirf tab chalta hai jab watch voice-command signal aur Bluetooth call-audio deti ho. Asli watch par abhi test nahi hua.", "need": "Bluetooth watch aur Microphone permission chahiye."}, {"id": "quiet", "t": "Quiet aur Silent mode", "ex": "nova quiet mode on", "d": "Quiet mode ON ho to jawab sirf screen par aate hain, bolte nahi. Kisi ek order ke saath chup rehna ya bina bole bolo to wo kaam chupchap hota hai. Haan ya nahi ke sawal hamesha bol kar hi poochta hoon.", "need": ""}, {"id": "offlineai", "t": "Offline AI pack (5 free AI)", "ex": "Settings mein OFFLINE AI PACK kholo", "d": "Phone ke andar chalne wale 5 free AI, bina key, bina account aur download ke baad bina internet ke. Pehla offline AI na chale to ye ek ek karke try hote hain.", "need": "Ek baar download chahiye (internet aur jagah)."}, {"id": "leads", "t": "Leads (business chats se)", "ex": "nova lead capture", "d": "Google Maps ya browser mein kisi business ki public listing kholo aur bolo, to dikhne wali public details phone par save karta hoon aur message ka draft banata hoon. Message aapki manzoori ke bina nahi jaata.", "need": "Accessibility permission chahiye."}, {"id": "limits", "t": "Update Center aur API limits", "ex": "Settings mein API LIMITS kholo", "d": "Dikhata hoon ki aaj har online AI service kitni baar use hui, roz ki limit kya hai aur kitni bachi hai. Ginti isi phone ki hai, doosre phone ya app ki call nahi dikhti. Update Center naya version dhundhta hai.", "need": "Internet chahiye."}, {"id": "featurestatus", "t": "Features ka haal (bolkar poocho)", "ex": "auto reply ka status batao", "d": "Auto-reply, Lock Guard, Routines, Battery alert, Offline pack ya API limit ON hai ya OFF, bolkar poochho. Main sirf haal batata hoon, kuch chalu ya band nahi karta; badalna ho to Settings mein jao. Home par KYA CHALTA HAI box mein bhi yahi dikhta hai.", "need": "Kuch nahi chahiye."}, {"id": "photoedit", "t": "Photo edit karna", "ex": "is photo ko bright karo", "d": "Chat mein PHOTO CHUNO se photo lo, phir PROFESSIONAL, BRIGHT, B&W ya SQUARE CROP dabao ya bolo. Ye phone ke andar hota hai. Background hatane mein AI lagta hai aur pehle aapse haan poochta hoon.", "need": "Pehle chat mein photo chuno. Background hatane ke liye AI chahiye."}, {"id": "sitemedia", "t": "Website ke liye apni photo", "ex": "Chat mein WEBSITE MEDIA dabao", "d": "Chat mein WEBSITE MEDIA se gallery ki photo chuno, kitni chuni dikhta hai. Website banate waqt wo photo use hoti hai. Edit ki hui photo WEBSITE MEIN LAGAO se bhi jaati hai.", "need": "Gallery ki photo chuni honi chahiye."}, {"id": "chathistory", "t": "Meri chats (history)", "ex": "Settings mein MERI CHATS kholo", "d": "Purani chats ki list, dhundna, pin karna, naam badalna aur file mein export karna. Sab sirf phone mein rehta hai.", "need": "Kuch nahi chahiye."}, {"id": "batterysos", "t": "Battery kam: yaad aur SOS", "ex": "Battery kam ho to NOVA bata dega", "d": "Battery girne par bolta hoon. Bahut kam (5 percent) par Papa aur Mummy ko WhatsApp bhejne ki koshish karta hoon. Na bhej paun to sach bata deta hoon.", "need": "Contact ka naam Papa aur Mummy ho aur Accessibility ON ho."}, {"id": "waitsec", "t": "Bolne ke baad kitna rukna", "ex": "Settings mein AAWAAZ KE BAAD KITNA RUKUN slider badlo", "d": "Aap bolna band karo to main kitni der ruk kar sunna band karun, ye 2 se 10 second tak badal sakte ho. Dheere bolte ho to badhao.", "need": "Kuch nahi chahiye."}, {"id": "musicplay", "t": "Gaana chalana (sach check)", "ex": "nova spotify par Tum Hi Ho chalao", "d": "Gaane ka naam bolo. Main search karke chalane ki koshish karta hoon aur sach mein baja ya nahi, wahi batata hoon. Na mile to saaf nahi mila bolta hoon.", "need": "Spotify ya YouTube phone mein hona chahiye."}];
+var CAPS=[{"id": "call", "t": "Call aur SMS", "ex": "nova mummy ko call karo", "d": "Naam bolo, main call ya SMS taiyaar kar deta hoon. Call se pehle aapse haan poochta hoon.", "need": "Contacts permission chahiye."}, {"id": "whatsapp", "t": "WhatsApp message", "ex": "nova Rahul ko WhatsApp karo kal milte hain", "d": "WhatsApp message bhej sakta hoon. Bhejne se pehle aapse haan poochta hoon.", "need": "Accessibility permission chahiye."}, {"id": "alarm", "t": "Alarm, timer, reminder", "ex": "nova subah 6 baje ka alarm lagao", "d": "Alarm, timer aur reminder lagata hoon, bina internet ke.", "need": ""}, {"id": "phone", "t": "Torch, volume, wifi", "ex": "nova torch jala do", "d": "Torch, volume, brightness, screenshot, vibrate ya ringer normal, screen rotation (auto rotate on/off, portrait, landscape) jaise phone ke kaam bolkar. Wifi, bluetooth, mobile data Android seedha on-off nahi karne deta, uska settings page khol deta hoon. Ringer silent ke liye Do Not Disturb access aur rotation ke liye ALLOW BRIGHTNESS permission chahiye.", "need": ""}, {"id": "apps", "t": "App kholna", "ex": "nova YouTube kholo", "d": "Koi bhi app ya phone ki setting khol deta hoon.", "need": ""}, {"id": "music", "t": "Gaana aur raasta", "ex": "nova Delhi ka raasta dikhao", "d": "YouTube par gaana ya video dhundhta hoon aur Google Maps mein jagah ya raasta dikhata hoon.", "need": "Internet chahiye."}, {"id": "camera", "t": "Camera kholna", "ex": "nova selfie camera kholo", "d": "Camera khol deta hoon (photo ya video). Photo ka button dabana mere haath mein nahi, wo aap dabao.", "need": ""}, {"id": "image", "t": "Photo banana (AI)", "ex": "nova ek billi ki photo banao", "d": "AI se nayi photo banata hoon.", "need": "Gemini key ya free image option chahiye."}, {"id": "chrome", "t": "Website Chrome mein kholna", "ex": "nova youtube google aur flipkart chrome pe kholo", "d": "Website ka naam bolo, main use Chrome mein khol deta hoon. Kai website ek saath bolo to har ek alag tab mein khulti hai.", "need": ""}, {"id": "download", "t": "App download karna", "ex": "nova whatsapp download karo", "d": "App ka naam bolo, main Play Store ka page khol kar Install dabata hoon aur tabhi batata hoon jab download sach mein shuru ho jaye. Paid app ya login ki zaroorat ho to khud nahi dabata.", "need": "Accessibility permission aur Play Store mein Google login chahiye."}, {"id": "website", "t": "Website banana", "ex": "nova ek restaurant ki website banao", "d": "Ek line bolo, poori website ban jaati hai. Baad mein bolo isko professional banao. Chaho to GitHub par publish bhi.", "need": "AI key chahiye, publish ke liye GitHub token."}, {"id": "screen", "t": "Screen padhna aur doosre app mein kaam", "ex": "nova screen padh kar batao", "d": "Screen padh kar samjha sakta hoon aur doosre app mein chhote kaam kar sakta hoon. Bank, payment aur password screen par kabhi nahi.", "need": "Accessibility permission chahiye."}, {"id": "memory", "t": "Yaad rakhna", "ex": "nova yaad rakh mera naam Shiv hai", "d": "Aapki baatein sirf is phone mein yaad rakhta hoon, kahin upload nahi hoti.", "need": ""}, {"id": "learn", "t": "Naya topic seekhna", "ex": "nova solar panel ke baare mein seekho", "d": "Naya topic Wikipedia se seekh leta hoon.", "need": "Internet chahiye."}, {"id": "driving", "t": "Driving mode", "ex": "nova driving mode on", "d": "Gaadi chalate waqt WhatsApp aur SMS bol kar sunata hoon, aur aap bolo to reply bhej deta hoon.", "need": "Notification access chahiye."}, {"id": "recording", "t": "Recording", "ex": "nova background me recording on karo", "d": "Sirf aapke kehne par recording chalata hoon. Status Settings mein dikhta hai.", "need": ""}, {"id": "live", "t": "Mausam, khabar, rate, matlab", "ex": "nova jaipur ka mausam batao", "d": "Mausam, taaza khabar, dollar ya bitcoin ka rate, shabd ka matlab aur kisi cheez ki jankari internet se turant laata hoon, bina kisi key ke. Chhote sawal phone ka offline AI bhi sambhalta hai.", "need": "Internet chahiye."}, {"id": "questions", "t": "Sawal ka jawab", "ex": "nova solar panel kaise kaam karta hai", "d": "Chat mein likhke poochho: likhna, code, translate, plan, padhai, analysis, sab ka poora jawab deta hoon (lists, code aur COPY button ke saath). Aaj ki khabar ya latest jaankari ke liye web se dhoondh kar Sources ke saath batata hoon. Internet chahiye.", "need": "AI key se behtar jawab milta hai."}, {"id": "wabiz", "t": "WhatsApp Business watch", "ex": "nova business watch 10 ghante", "d": "Kuch ghante ke liye business chats par nazar rakhta hoon: order, payment ya complaint ho to turant batata hoon, aam sawal aapke catalogue notes se. Shuru mein reply khud nahi bhejta, sirf draft.", "need": "Notification access chahiye."}, {"id": "autoreply", "t": "Auto-reply", "ex": "Settings mein AUTO-REPLY ON karo", "d": "Aap busy ho to WhatsApp jaise har message ka jawab main AI se apne shabdon mein deta hoon (OTP ya payment ki baat ho to bhi) aur baad mein aapko batata hoon ki kisne kya likha aur maine kya kaha. Koi fixed text kabhi nahi jata. Jo mujhe pata nahi wo aapse puchta hoon, apni taraf se rate ya number nahi ghadta, OTP ya password na deta hoon na maangta hoon. AI na chale to kuch nahi bhejta, sirf aapko batata hoon. Group message ka jawab nahi.", "need": "Notification access chahiye. Settings mein switch ON karna padta hai."}, {"id": "connectors", "t": "Connectors (GitHub, Vercel, n8n)", "ex": "nova github repos dikhao", "d": "GitHub, Vercel, n8n, MCP, Zapier ya Make jaisi services se judkar unka kaam bol kar karta hoon. Badalne wale kaam se pehle aapse haan poochta hoon.", "need": "Pehle connector jodna padta hai (token chahiye)."}, {"id": "routines", "t": "Routines", "ex": "Settings mein ROUTINES kholo", "d": "Apna naam aur bolne ka shabd rakho, phir ek bol par kai safe kaam ek ke baad ek ho jaate hain (zyada se zyada 8 step). Routine confirmation ke bina kuch risky nahi kar sakta.", "need": ""}, {"id": "lockguard", "t": "Lock Guard (locked phone)", "ex": "Settings mein LOCK GUARD ON karo", "d": "Phone lock ho to main chup rehta hoon aur command nahi sunta. Sirf zaroori baat bolta hoon: silent phone par call, ya Papa ya Mummy ka call ya message (message ka text kabhi nahi padhta). Volume key dabao to alert ruk jaata hai.", "need": "Notification access aur Accessibility chahiye."}, {"id": "teach", "t": "Nickname sikhana aur ROZ KA SUDHAAR", "ex": "nova yaad rakho insta ka matlab Instagram", "d": "Aap batao ki kisi app ko kis naam se bulate ho, main yaad rakhta hoon. ROZ KA SUDHAAR din mein ek baar naye nickname sujhata hai, aapke HAAN dabane par hi lagta hai aur WAPAS se hat jaata hai.", "need": "ROZ KA SUDHAAR ke liye apni free AI key chahiye."}, {"id": "powerguide", "t": "Battery aur background guide", "ex": "Settings mein BATTERY GUIDE kholo", "d": "Phone ki company ke hisaab se battery aur autostart ki sahi screen kholta hoon aur batata hoon kya dabana hai, taaki NOVA band na ho. Screen na mile to Android ki battery screen khulti hai.", "need": ""}, {"id": "gmail", "t": "Gmail", "ex": "nova important mail batao", "d": "Gmail ke notification padhta hoon (login ya token nahi chahiye): zaroori mail batata hoon, aapki watch list ka mail (jaise Jio bill) aate hi bolta hoon, aur mail bhej sakta hoon.", "need": "Notification access chahiye aur Gmail app ke notification ON."}, {"id": "agent", "t": "Lambe kaam (background jobs)", "ex": "nova screen padh kar batao", "d": "Lambe kaam bina atke peeche chalte hain, progress dikhta hai. Kaam adhura rah jaye to dobara try karta hoon. Maine kaam kiya bolna aur asli jaanch alag baat hai: jahan jaanch nahi ho paati wahan saaf bolta hoon.", "need": "Accessibility permission chahiye."}, {"id": "screenalert", "t": "Screen alerts", "ex": "nova analyze screen", "d": "Screen par error ya warning ka dialog dikhe to kam-kam bolta hoon aur sirf poochta hoon: detail bolun? Aap haan bolo to poori detail padhta hoon, warna chup.", "need": "Accessibility permission chahiye."}, {"id": "watchmic", "t": "Watch mic (smartwatch se bulana)", "ex": "Watch ka AI button dabao", "d": "Bluetooth calling watch ka AI ya voice button dabane par NOVA sunti hai aur watch ke mic se aapki baat sunti hai. Sirf tab chalta hai jab watch voice-command signal aur Bluetooth call-audio deti ho. Asli watch par abhi test nahi hua.", "need": "Bluetooth watch aur Microphone permission chahiye."}, {"id": "quiet", "t": "Quiet aur Silent mode", "ex": "nova quiet mode on", "d": "Quiet mode ON ho to jawab sirf screen par aate hain, bolte nahi. Kisi ek order ke saath chup rehna ya bina bole bolo to wo kaam chupchap hota hai. Haan ya nahi ke sawal hamesha bol kar hi poochta hoon.", "need": ""}, {"id": "offlineai", "t": "Offline AI pack (5 free AI)", "ex": "Settings mein OFFLINE AI PACK kholo", "d": "Phone ke andar chalne wale 5 free AI, bina key, bina account aur download ke baad bina internet ke. Pehla offline AI na chale to ye ek ek karke try hote hain.", "need": "Ek baar download chahiye (internet aur jagah)."}, {"id": "leads", "t": "Leads (business chats se)", "ex": "nova lead capture", "d": "Google Maps ya browser mein kisi business ki public listing kholo aur bolo, to dikhne wali public details phone par save karta hoon aur message ka draft banata hoon. Message aapki manzoori ke bina nahi jaata.", "need": "Accessibility permission chahiye."}, {"id": "limits", "t": "Update Center aur API limits", "ex": "Settings mein API LIMITS kholo", "d": "Dikhata hoon ki aaj har online AI service kitni baar use hui, roz ki limit kya hai aur kitni bachi hai. Ginti isi phone ki hai, doosre phone ya app ki call nahi dikhti. Update Center naya version dhundhta hai.", "need": "Internet chahiye."}, {"id": "featurestatus", "t": "Features ka haal (bolkar poocho)", "ex": "auto reply ka status batao", "d": "Auto-reply, Lock Guard, Routines, Battery alert, Offline pack ya API limit ON hai ya OFF, bolkar poochho. Main sirf haal batata hoon, kuch chalu ya band nahi karta; badalna ho to Settings mein jao. Home par KYA CHALTA HAI box mein bhi yahi dikhta hai.", "need": "Kuch nahi chahiye."}, {"id": "photoedit", "t": "Photo edit karna", "ex": "is photo ko bright karo", "d": "Chat mein PHOTO CHUNO se photo lo, phir PROFESSIONAL, BRIGHT, B&W ya SQUARE CROP dabao ya bolo. Ye phone ke andar hota hai. Background hatane mein AI lagta hai aur pehle aapse haan poochta hoon.", "need": "Pehle chat mein photo chuno. Background hatane ke liye AI chahiye."}, {"id": "sitemedia", "t": "Website ke liye apni photo", "ex": "Chat mein WEBSITE MEDIA dabao", "d": "Chat mein WEBSITE MEDIA se gallery ki photo chuno, kitni chuni dikhta hai. Website banate waqt wo photo use hoti hai. Edit ki hui photo WEBSITE MEIN LAGAO se bhi jaati hai.", "need": "Gallery ki photo chuni honi chahiye."}, {"id": "chathistory", "t": "Meri chats (history)", "ex": "Settings mein MERI CHATS kholo", "d": "Purani chats ki list, dhundna, pin karna, naam badalna aur file mein export karna. Sab sirf phone mein rehta hai.", "need": "Kuch nahi chahiye."}, {"id": "batterysos", "t": "Battery kam: yaad aur SOS", "ex": "Battery kam ho to NOVA bata dega", "d": "Battery girne par bolta hoon. Bahut kam (5 percent) par Papa aur Mummy ko WhatsApp bhejne ki koshish karta hoon. Na bhej paun to sach bata deta hoon.", "need": "Contact ka naam Papa aur Mummy ho aur Accessibility ON ho."}, {"id": "waitsec", "t": "Bolne ke baad kitna rukna", "ex": "Settings mein AAWAAZ KE BAAD KITNA RUKUN slider badlo", "d": "Aap bolna band karo to main kitni der ruk kar sunna band karun, ye 2 se 10 second tak badal sakte ho. Dheere bolte ho to badhao.", "need": "Kuch nahi chahiye."}, {"id": "musicplay", "t": "Gaana chalana (sach check)", "ex": "nova spotify par Tum Hi Ho chalao", "d": "Gaane ka naam bolo. Main search karke chalane ki koshish karta hoon aur sach mein baja ya nahi, wahi batata hoon. Na mile to saaf nahi mila bolta hoon.", "need": "Spotify ya YouTube phone mein hona chahiye."}, {"id": "persona", "t": "Jarvis andaaz (naam, halka mazaak)", "ex": "nova persona on karo", "d": "Chhote aam jawab ke saath kabhi aapka naam, kabhi ek chhoti witty line, raat ko halki feeling line. Ye sirf bolne ka andaaz hai: call, message, payment, confirmation, galti ke jawab aur dusron ko auto-reply mein kabhi nahi lagta. Settings mein PERSONA ON/OFF se band kar sakte ho.", "need": "Settings mein auto-reply wala owner naam bhara ho to naam se bulata hoon."}, {"id": "roundabout", "t": "Ghuma ke bole kaam samajhna", "ex": "nova andhera hai", "d": "Chhota haan jaise ha kr do, haan karo, theek hai, bilkul ab sahi samajhta hoon. Torch jaise kaam ke baad wahi dobara, ulta kar do bolo to ho jata hai. Andhera hai bolo to torch jalti hai. Wo jo kal wale ko bhej do jaise ishare par call, message, payment ya delete kabhi andaaze se nahi: pehle poochta hoon kisko.", "need": "Kuch nahi chahiye."}, {"id": "media", "t": "Share karke bhejna (MEDIA)", "ex": "nova kya mila", "d": "Kisi bhi app (Gallery, WhatsApp, Instagram, Chrome) se Share karke NOVA chuno, ya chat me MEDIA dabao. Photo, video aur link mil jate hain (ek baar me 6 file tak), file sirf phone me rehti hai aur 24 ghante baad apne aap saaf. Card me DEKHO, CHAT ME JODO, HATAO. Kya mila poochho to sach batata hoon. Video link se video download nahi hota. Photo / video ke neeche ANALYSE dabao to AI use dekhta hai; bolkar bhi: \"nova ye video analyse karo\".", "need": ""}, {"id": "frames", "t": "Video se frames nikalna", "ex": "Media card me FRAMES NIKALO dabao", "d": "Share ki hui video (ya photo) ke neeche FRAMES NIKALO dabao: video se 6 tak saaf frames (milte-julte hata kar) chhoti patti me dikhte hain, photo chhoti karke JPEG banti hai. Kaam peeche chalta hai, progress asli dikhta hai, ROKO ya STOP turant rok deta hai. Bahut bhari ya kharab video par app nahi atakta, saaf karan batata hoon. Frames sirf phone me, media hatane par ya 24 ghante baad saaf. Frames ke baad ANALYSE dabao.", "need": ""}, {"id": "analysis", "t": "Photo / video ANALYSE karna", "ex": "Media card me ANALYSE dabao", "d": "Share ki hui photo ya video ke neeche ANALYSE dabao (chaho to pehle sawaal likho). Video ke frames nikalkar AI ko dikhaye jate hain aur report aati hai: kya dikha, likha hua text, bharosa (low / medium / high) aur limits. Dawon ko web par check kiya jata hai (sirf chhoti text query jaati hai, photo nahi): jo asli source se mile wo source ke number ke saath, baaki 'verify nahi hua'; kuch banaya nahi jata. Kisi insaan ko chehre se pehchaan kar naam, nuksaan wali cheez, OTP / PIN / password / card number ke liye saaf mana. Key ya internet na ho to sirf file ki size / length batata hoon. ROKO ya STOP turant rok deta hai. Frames sirf ANALYSE dabane par AI ko jaate hain: pehle Gemini; Gemini na chale to aapki free Groq / OpenRouter key (ek baar me 3 frames tak). Bolkar bhi chalta hai: \"nova ye video analyse karo\", \"is photo me kya hai\", \"isko check karo ki sach hai ya nahi\" (sabse naya share kiya file; jawab chat me, bolkar sirf chhota summary; STOP rok deta hai). Chat me photo jodkar sawaal likho to HAAN dabane par AI photo dekhkar jawab deta hai.", "need": "Gemini ya (Groq / OpenRouter ki free) key aur internet chahiye."}, {"id": "callanswer", "t": "Call uthana / kaatna (awaaz se)", "ex": "nova call uthao", "d": "Phone bajne par bolo: call uthao ya call kaato. Main call utha deta hoon ya kaat deta hoon.", "need": "Phone ki call uthane wali permission chahiye (pehli baar allow karni hoti hai)."}, {"id": "calendar", "t": "Calendar aur meeting yaad dilana", "ex": "nova aaj ka schedule", "d": "Phone ke Calendar ki meetings padhta hoon. Bolo aaj ka schedule to aaj ki meetings bata deta hoon, aur agle 7 din ki har meeting se 10 minute pehle yaad bhi dilata hoon.", "need": "Calendar permission chahiye."}, {"id": "switches", "t": "Settings ke 3 switch (quality, persona, stop)", "ex": "nova persona off karo", "d": "Settings me SWITCHES card hai: GRAPHICS QUALITY (auto, sharp, smooth), PERSONA (Jarvis andaaz on ya off) aur STOP. STOP default me sirf bolna aur chalta kaam rokta hai, NOVA chalu rehta hai; chaho to ROKE + NOVA BAND chuno.", "need": "Kuch permission nahi chahiye. Quality badalne ke baad app band karke dobara kholo."}, {"id": "safemode", "t": "Safe mode (crash ke baad)", "ex": "nova safe mode kya hai", "d": "Agar NOVA 10 minute me 2 baar crash ho jaye to 30 minute ke liye safe mode chalta hai: halke effects, laser overlay band, upar ek banner. Banner ke SAFE MODE BAND KARO button se pehle bhi band kar sakte ho.", "need": "Kuch permission nahi chahiye."}];
 function J(f){try{return JSON.parse(window.Android[f]())||{}}catch(e){return {}}}
 function B(f){try{return !!window.Android[f]()}catch(e){return false}}
 function go(id){return function(){try{if(window.novaGo)window.novaGo(id)}catch(e){}}}
@@ -3996,6 +4007,7 @@ function stateOf(){var k=app.className||'';
   if(/speak/.test(k))return{k:'speak',col:'160,120,255',t:'SPEAKING',sp:1.8};
   if(/think/.test(k))return{k:'think',col:'255,241,201',t:'THINKING',sp:3};
   if(/listen/.test(k))return{k:'listen',col:'111,227,176',t:'LISTENING',sp:1.5};
+  if(/p6off/.test(k)&&/(^|\s)on(\s|$)/.test(k))return{k:'net',col:'255,190,80',t:'NO INTERNET',sp:.8};
   if(/(^|\s)on(\s|$)/.test(k))return{k:'on',col:'47,200,255',t:'ONLINE',sp:1};
   return{k:'off',col:'47,200,255',t:'STANDBY',sp:.4}}
 var CD=0;
@@ -4076,6 +4088,208 @@ requestAnimationFrame(loop);
 window.__p4={active:function(){return low()?Math.min(stars.length,LOWN):stars.length},state:function(){return stateOf().t},stars:function(){return stars},ptr:ptr,rips:function(){return rips.length}};
 }catch(e){}})();
 </script>
+<style id="perf-v737">
+/* v7.37 PART 2 (add-only): the page picks its own quality level 1 (best) .. 4 (safest). html[data-perf] carries the level. Levels 3 and 4 reuse the existing lowfx class. */
+html[data-perf="2"] .fut_rip,html[data-perf="2"] #fut_scan{display:none!important}
+html[data-perf="3"] #fut_bg,html[data-perf="4"] #fut_bg,html.perf4 #fut_ring,html.perf4 #fut_edge,html.perf4 #fut_scan,html.perf4 .fut_rip{display:none!important}
+</style>
+<script id="nova-perf-v737">
+/* v7.37 PART 2 performance governor. Reads only: frame times (requestAnimationFrame), long tasks (PerformanceObserver), page visibility, html classes.
+   Sends nothing to the app side. Level 1 full look, 2 no ripples / scan line, 3 + lowfx (no blur, no particles, orb at 30 fps), 4 + WebGL orb stopped through its own webglcontextlost hook.
+   Down fast (about 1.5 s of jank or 3 stalls), up slowly (about 10 s smooth, 25 s after any change, never out of level 4, at most 2 climbs back per run). */
+(function(){
+"use strict";
+var d=document,h=d.documentElement,W=window;
+if(W.NovaPerf)return;
+var KEY="nova_perf",LIFE=3*864e5;
+function rd(){try{var s=localStorage.getItem(KEY);if(!s)return null;var o=JSON.parse(s);if(o&&typeof o.l==="number"&&typeof o.t==="number"&&Date.now()-o.t<LIFE&&o.l>=1&&o.l<=4)return o.l}catch(e){}return null}
+function wr(n){try{localStorage.setItem(KEY,JSON.stringify({l:n,t:Date.now()}))}catch(e){}}
+var tier=String(W.__tier||"").toLowerCase(),qs=String(W.__quality||"auto");
+var floor=qs==="smooth"?3:1,cap=qs==="sharp"?3:4;      /* owner chose Sharp: never switch the orb off. Smooth: never above level 3 look */
+var lvl=tier==="low"?3:tier==="mid"?2:1;
+var seen=(qs==="auto")?rd():null;if(seen!==null)lvl=seen;
+lvl=Math.max(floor,Math.min(cap,lvl));
+var skipSave=false,applied=false,held=false,baseForce,pinned=false,orbDone=false,subs=[];
+var last=0,ema=16.7,bad=0,good=0,quiet=0,changed=0,downs=0,ups=0,raf=0,halted=false,hasLT=false,frames=0;
+var stalls=[];                                          /* [time, weight] of recent long tasks */
+function emit(prev,n,why){var o={level:n,prev:prev,why:why};try{d.dispatchEvent(new CustomEvent("novaperf",{detail:o}))}catch(e){}
+  for(var i=0;i<subs.length;i++){try{subs[i](o)}catch(e){}}}
+function killOrb(n){
+  if(orbDone)return;n=n||0;
+  var cv=d.getElementById("orb3d");
+  if(cv){try{cv.dispatchEvent(new Event("webglcontextlost",{cancelable:true}))}catch(e){}}   /* the orb script already listens: fallback to the 2D orb and stop drawing */
+  if(W.__orb3d===false||n>=6){orbDone=true;return}
+  setTimeout(function(){if(lvl>=4)killOrb(n+1)},700)                                          /* orb script starts about 0.9 s after load: try again until it listens */
+}
+function apply(n,why){
+  n=Math.max(floor,Math.min(cap,n));
+  if(applied&&n===lvl)return;
+  var prev=lvl;lvl=n;
+  h.setAttribute("data-perf",String(n));
+  if(n>=3){if(!held){held=true;baseForce=W.__forceLow}W.__forceLow=true;h.classList.add("lowfx")}
+  else if(held){held=false;W.__forceLow=baseForce}      /* the older smooth-fx script then removes lowfx itself once it measures a smooth phone */
+  if(n>=4)h.classList.add("perf4");else h.classList.remove("perf4");
+  if(n>=4)killOrb(0);
+  if(applied&&!skipSave)wr(n);                          /* memory pressure is not learned: other apps may have caused it */
+  applied=true;
+  emit(prev,n,why||"auto")
+}
+function weight(t){var s=0;for(var i=stalls.length-1;i>=0;i--){if(t-stalls[i][0]>8000){stalls.splice(0,i+1);break}}
+  for(var j=0;j<stalls.length;j++)s+=stalls[j][1];return s}
+var lastStall=-1e9;
+function stall(dur,t){if(t<quiet||t-lastStall<600)return;lastStall=t;stalls.push([t,dur>=500?2:1]);check(t)}   /* a long task and the slow frame it causes are ONE stall */
+function down(t,why){if(pinned||lvl>=cap||t-changed<8000)return;changed=t;downs++;bad=0;good=0;ema=16.7;apply(lvl+1,why)}
+function check(t){if(weight(t)>=3){stalls=[];down(t,"stalls")}}
+/* one frame. dt = ms since the previous frame, t = frame time. The real loop and the contract test both call this. */
+function step(dt,t){
+  if(t<quiet)return;
+  if(dt>=250){if(dt<5000)stall(dt,t);return}            /* slow frame (also when the GPU, not the main thread, is the bottleneck): a stall, never part of the average. 5 s+ = the phone slept */
+  frames++;ema=ema*.9+dt*.1;
+  if(ema>26){if(++bad>=45)down(t,"fps")}else bad=0;
+  if(ema<19&&weight(t)===0){
+    if(++good>=600&&!pinned&&lvl>floor&&lvl<4&&ups<2&&t-changed>=25000){good=0;ups++;changed=t;apply(lvl-1,"smooth")}
+  }else good=0
+}
+function tick(t){
+  raf=0;if(d.hidden||halted)return;
+  raf=requestAnimationFrame(tick);
+  if(last)step(t-last,t);
+  last=t
+}
+function begin(){if(raf||halted||d.hidden)return;last=0;ema=16.7;bad=0;good=0;quiet=(W.performance?performance.now():0)+3000;raf=requestAnimationFrame(tick)}
+function stop(){if(raf){cancelAnimationFrame(raf);raf=0}last=0}
+d.addEventListener("visibilitychange",function(){if(d.hidden)stop();else begin()});   /* nothing is measured, and nothing is requested, while the page is hidden */
+try{if(W.PerformanceObserver){var po=new PerformanceObserver(function(l){var es=l.getEntries();var t=W.performance?performance.now():0;
+  for(var i=0;i<es.length;i++){if(es[i].duration>=200&&!d.hidden)stall(es[i].duration,t)}});po.observe({entryTypes:["longtask"]});hasLT=true}}catch(e){hasLT=false}
+W.NovaPerf={
+  level:function(){return lvl},
+  on:function(f){if(typeof f==="function")subs.push(f)},
+  set:function(n){if(n==="auto"){pinned=false;return lvl}n=parseInt(n,10);if(n>=1&&n<=4){pinned=true;apply(n,"manual")}return lvl},   /* for the Settings screen later */
+  stats:function(){return{level:lvl,ema:Math.round(ema*10)/10,downs:downs,ups:ups,frames:frames,running:!!raf,pinned:pinned,longtask:hasLT,orbStopped:orbDone&&W.__orb3d===false,learned:seen}},
+  pressure:function(n){n=parseInt(n,10);if(!(n>=1))return lvl;if(pinned&&n<3)return lvl;                  /* v7.38: Android says RAM is short (1 light, 2 heavy, 3 critical) */
+    var to=n>=3?4:n===2?Math.max(lvl+1,3):lvl+1;skipSave=true;try{apply(to,"memory")}finally{skipSave=false}
+    changed=W.performance?performance.now():0;bad=0;good=0;return lvl},
+  forget:function(){try{localStorage.removeItem(KEY)}catch(e){}},
+  _step:step,_stall:stall,_halt:function(){halted=true;stop()}
+};
+apply(lvl,seen!==null?"learned":"init");
+begin()
+})();
+</script>
+<style id="native-v738">
+/* v7.38 PART 3 (add-only): while the app is in the background every CSS animation is paused (class nbg is set by MainActivity.onPause, removed in onResume). */
+html.nbg *,html.nbg *:before,html.nbg *:after{animation-play-state:paused!important}
+</style>
+<script id="nova-native-v738">
+/* v7.38 PART 3: the one door for native -> page smoothness messages. Kotlin calls it as window.novaNative&&novaNative(kind,value). 'bg' 1/0 = app hidden / visible. 'mem' 1..3 = Android memory pressure -> NovaPerf lowers the effects level. Reads and sets html classes only. */
+(function(){
+var h=document.documentElement,W=window;
+W.novaNative=function(kind,v){
+  try{
+    if(kind==="bg"){if(v)h.classList.add("nbg");else h.classList.remove("nbg");return}
+    if(kind==="mem"&&W.NovaPerf&&W.NovaPerf.pressure)W.NovaPerf.pressure(v)
+  }catch(e){}
+};
+})();
+</script>
+<script id="p4b_queue">
+/* v7.40 PART 4 step B: command queue strip (add-only). Kotlin sends role "queue" with a JSON list; this wrapper eats it before the older handlers. Uses only existing bridges (Android.sendText("stop") = CLEAR). */
+(function(){try{
+var d=document,hideT=0,box=null,rows=null,pill=null;
+function mk(){
+  if(box)return;
+  var st=d.createElement('style');
+  st.textContent='#nq_box{display:none;margin:6px 10px;padding:8px 10px;border:1px solid #00e5ff;border-radius:12px;background:rgba(0,229,255,.08);color:#dff;font:13px/1.35 system-ui,sans-serif}#nq_box.on{display:block}#nq_h{display:flex;align-items:center;justify-content:space-between;font-weight:700;letter-spacing:.08em;margin-bottom:4px}#nq_clear{border:1px solid #ff4d6d;background:transparent;color:#ff4d6d;border-radius:8px;padding:3px 10px;font-weight:700}.nq_r{display:flex;align-items:center;gap:6px;padding:2px 0}.nq_t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nq_c{font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;border:1px solid #00e5ff;color:#00e5ff}.nq_c.on{border-color:#ffd24d;color:#ffd24d}.nq_s{font-size:11px;opacity:.85;min-width:58px;text-align:right}.nq_r.run .nq_s{color:#39ff88;opacity:1}.nq_r.done{opacity:.5}#nq_pill{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);left:12px;z-index:60;display:none;padding:2px 9px;border-radius:12px;border:1px solid #00e5ff;background:rgba(0,20,30,.9);color:#00e5ff;font:700 11px system-ui,sans-serif;opacity:.92;letter-spacing:.06em}#nq_pill.on{display:block}';
+  d.head.appendChild(st);
+  box=d.createElement('div');box.id='nq_box';box.setAttribute('role','status');box.setAttribute('aria-live','polite');
+  var h=d.createElement('div');h.id='nq_h';var hb=d.createElement('span');hb.id='nq_hb';hb.textContent='KAAM KI LINE';
+  var cb=d.createElement('button');cb.id='nq_clear';cb.type='button';cb.textContent='CLEAR';
+  cb.onclick=function(){try{Android.sendText('stop')}catch(e){}};
+  h.appendChild(hb);h.appendChild(cb);rows=d.createElement('div');box.appendChild(h);box.appendChild(rows);
+  var clog=d.getElementById('clog');
+  if(clog&&clog.parentNode)clog.parentNode.insertBefore(box,clog);else d.body.appendChild(box);
+  pill=d.createElement('div');pill.id='nq_pill';pill.setAttribute('role','button');
+  pill.onclick=function(){try{var b=d.getElementById('chatb');if(b)b.click()}catch(e){}};
+  d.body.appendChild(pill)
+}
+function render(list){
+  mk();clearTimeout(hideT);
+  if(!list||!list.length){box.classList.remove('on');pill.classList.remove('on');return}
+  rows.textContent='';var live=0,tot=list.length;
+  list.forEach(function(it){
+    var r=d.createElement('div');r.className='nq_r '+(it.s==='running'?'run':it.s==='done'?'done':'');
+    var n=d.createElement('span');n.textContent=it.n+'.';
+    var t=d.createElement('span');t.className='nq_t';t.textContent=it.t;
+    var c=d.createElement('span');c.className='nq_c'+(it.r==='ONLINE'?' on':'');c.textContent=it.r;
+    var s=d.createElement('span');s.className='nq_s';s.textContent=it.s==='running'?'CHAL RAHA':it.s==='done'?'HO GAYA':'LINE MEIN';
+    if(it.s!=='done')live++;
+    r.appendChild(n);r.appendChild(t);r.appendChild(c);r.appendChild(s);rows.appendChild(r)
+  });
+  box.classList.add('on');
+  if(live>0){pill.textContent='QUEUE '+live;pill.classList.add('on')}
+  else{pill.classList.remove('on');hideT=setTimeout(function(){box.classList.remove('on');rows.textContent=''},6000)}
+}
+var prev=window.onNova;
+window.onNova=function(r,t){
+  if(r==='queue'){try{render(JSON.parse(t))}catch(e){}return}
+  if(prev)return prev(r,t)
+};
+}catch(e){}})();
+</script>
+<style id="p5_ds">
+/* v7.41 PART 5: ONE neon-glass design system for the whole app (add-only; later rules win, nothing old is removed). Heavy effects only when the phone is fast (html.lowfx removes them). */
+:root{--ds-neon:#00f0ff;--ds-neon2:#7a5cff;--ds-ok:#39ff88;--ds-warn:#ffd24d;--ds-bad:#ff4d6d;--ds-glass:rgba(10,24,48,.58);--ds-glass2:rgba(0,240,255,.07);--ds-line:rgba(0,240,255,.38);--ds-glow:0 0 14px rgba(0,240,255,.28);--ds-r:16px}
+button.sm,button.a,.icb{border:1px solid var(--ds-line)!important;background:linear-gradient(180deg,var(--ds-glass2),rgba(122,92,255,.06))!important;color:#dff8ff;box-shadow:var(--ds-glow)}
+button.sm:active,button.a:active,.icb:active{transform:scale(.96);border-color:var(--ds-neon)!important;box-shadow:0 0 22px rgba(0,240,255,.55)}
+.msg{border:1px solid var(--ds-line);background:var(--ds-glass)}
+.msg.me{border-color:rgba(122,92,255,.55);background:linear-gradient(135deg,rgba(122,92,255,.22),rgba(0,240,255,.08))}
+#chat .chh b,.top .logo{letter-spacing:.22em;text-shadow:0 0 12px rgba(0,240,255,.6)}
+input[type=text],input[type=search],input[type=password],textarea,select{border:1px solid var(--ds-line)!important;background:rgba(5,14,32,.7)!important;color:#eaffff;border-radius:12px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ds-neon)!important;box-shadow:0 0 0 2px rgba(0,240,255,.25)}
+html:not(.lowfx) #chat,html:not(.lowfx) .box{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+html:not(.lowfx) button.sm:not(:active){transition:box-shadow .3s,border-color .3s,transform .15s}
+#ds_boot{position:fixed;inset:0;z-index:9998;pointer-events:none;display:flex;align-items:center;justify-content:center;background:rgba(2,6,16,.0);color:var(--ds-neon);font:700 13px/1.6 ui-monospace,monospace;letter-spacing:.3em;text-shadow:0 0 12px var(--ds-neon);opacity:0}
+#ds_boot.on{animation:dsBoot 1.6s ease both}
+#ds_boot i{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--ds-ok),transparent);box-shadow:0 0 14px var(--ds-ok);animation:dsScan 1.6s linear both}
+@keyframes dsBoot{0%{opacity:0}15%{opacity:1;background:rgba(2,6,16,.55)}80%{opacity:1;background:rgba(2,6,16,.25)}100%{opacity:0;background:rgba(2,6,16,0)}}
+@keyframes dsScan{from{top:0}to{top:100%}}
+html.lowfx #ds_boot{display:none}
+@media (prefers-reduced-motion:reduce){#ds_boot{display:none}}
+</style>
+<style id="p5_ds2">
+/* v7.41 PART 5 (complete): the same neon-glass tokens on every remaining component: panels, sheets, tabs, rows, switches, status lines, cards, scrollbars. Add-only. */
+#panel .box,#sheet .box,.box{border:1px solid var(--ds-line);border-radius:var(--ds-r);background:var(--ds-glass);box-shadow:var(--ds-glow),inset 0 0 22px rgba(0,240,255,.05)}
+#panel,#sheet{color:#e6fbff}
+#panel h2,#panel h3,#sheet h2,#sheet h3,.hh b,.fh{letter-spacing:.16em;color:var(--ds-neon);text-shadow:0 0 10px rgba(0,240,255,.45)}
+#tabs .tb{border:1px solid transparent;border-radius:12px;color:#9fdcec;transition:color .2s,border-color .2s,background .2s}
+#tabs .tb.on,#tabs .tb.act,#tabs .tb[aria-selected="true"]{color:#fff;border-color:var(--ds-neon);background:var(--ds-glass2);box-shadow:var(--ds-glow)}
+.chk{border-radius:12px;padding:6px 8px;border:1px solid transparent}
+.chk:active{border-color:var(--ds-line);background:var(--ds-glass2)}
+.chk input[type=checkbox]{accent-color:var(--ds-neon)}
+.row{border-bottom:1px solid rgba(0,240,255,.12)}
+.status,.ctx,.hst{color:#a8e8f5;border-left:2px solid var(--ds-neon);padding-left:8px}
+.f,.vc{border:1px solid var(--ds-line);border-radius:var(--ds-r);background:var(--ds-glass)}
+.hh,.chh{border-bottom:1px solid var(--ds-line)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:rgba(0,240,255,.35);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+::selection{background:rgba(0,240,255,.35)}
+html:not(.lowfx) #panel,html:not(.lowfx) #sheet{-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+html:not(.lowfx) .f:active,html:not(.lowfx) .vc:active{box-shadow:0 0 22px rgba(0,240,255,.5)}
+@media (prefers-contrast:more){:root{--ds-line:#fff;--ds-glass:rgba(0,0,0,.85)}}
+</style>
+<script id="p5_ds_js">
+/* v7.41 PART 5: short boot sequence once per app start (skipped on low-effects phones and reduced motion). No storage used. */
+(function(){try{
+if(window.__dsBoot)return;window.__dsBoot=1;
+var d=document;if(d.documentElement.classList.contains('lowfx'))return;
+var b=d.createElement('div');b.id='ds_boot';b.setAttribute('aria-hidden','true');
+b.appendChild(d.createElement('i'));var t=d.createElement('span');t.textContent='NOVA ONLINE';b.appendChild(t);
+d.body.appendChild(b);
+setTimeout(function(){b.classList.add('on')},350);
+setTimeout(function(){try{b.remove()}catch(e){}},2400);
+}catch(e){}})();
+</script>
 <script id="p5_log">
 /* v7.34 PART 5: app log lines for the owner / NOVA (add-only). Reads the page, never changes it. Sends short lines through Android.uiLog (Kotlin caps 1 per tag per 10 s and masks text). No user sentence is ever sent. */
 (function(){try{
@@ -4107,10 +4321,10 @@ window.addEventListener('error',function(e){try{L('js_error',(e&&e.message?e.mes
    every JS function Kotlin calls exists, the key elements and the new scripts exist, and answers with Android.verifyPage(json). Read-only: it clicks nothing and reads no typed text. */
 (function(){try{
 var d=document;
-var BRIDGE=["actionUnseen", "addSchedule", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow"];
-var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup"];
-var IDS=['clog','c_in','c_send','c_thw','c_thumb','c_auto','p4_core','p4_stars','btn','autoT','c_imode','chatb','st'];
-var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify'];
+var BRIDGE=["actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow"];
+var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMediaIntake", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup", "onChatPhotoGo", "onChatPhotoNo"];
+var IDS=['clog','c_in','c_send','c_thw','c_thumb','c_auto','p4_core','p4_stars','btn','autoT','c_imode','chatb','st','p6_board','p6_dock'];
+var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify','p6_home','p7_motion','pt8_chat','pt9_persona','pt10_wire','pt11_media','pt12_frames','pt13_analyse','pt13d_chat','pt14_laser','pt17_switches','pt18_safe'];
 window.p6Verify=function(){try{
   var mb=[],mc=[],mi=[],ms=[];
   for(var i=0;i<BRIDGE.length;i++){var ok=false;try{ok=(typeof Android!=='undefined')&&typeof Android[BRIDGE[i]]==='function'}catch(e){}if(!ok)mb.push(BRIDGE[i])}
@@ -4138,5 +4352,847 @@ window.onFeatureVerify=function(sm,r){try{rep=String(r||'');var b=box();if(!b)re
   b.style.borderColor=/FAIL/.test(String(sm))&&!/koi FAIL nahi/.test(String(sm))?'#ff5a5a':'#50ffaa'}catch(e){}};
 }catch(e){}})();
 </script>
+<style id="p7_auto">/* wip15 add-only: NOVA starts by itself (autoActivate), so the ACTIVATE/STOP button is only hidden, never removed: every script still finds #btn */
+#btn{display:none!important}</style>
+<style id="p8_attach">/* wip15 add-only: ONE attach menu in the chat bar. The old buttons stay in the page (hidden) and the menu presses them, so all their old code still runs. */
+#c_photo,#c_smedia,#c_smx,#c3act,#c3hint{display:none!important}
+#p8_menu{position:fixed;left:10px;right:10px;z-index:9999;display:none;flex-direction:column;gap:6px;padding:10px;border-radius:12px;border:1px solid var(--line,#1c4a66);background:var(--pan,#07182a);box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#p8_menu.on{display:flex}
+#p8_menu button{min-height:46px;text-align:left;padding:8px 12px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:14px}
+#p8_menu small{display:block;opacity:.65;font-size:11.5px;margin-top:2px}
+</style>
+<script id="p8_attach">
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var chi=d.querySelector('.chi'),plus=g('c_plus');if(!chi||!plus||g('c_attach'))return;
+var b=d.createElement('button');b.className='icb';b.id='c_attach';b.type='button';b.setAttribute('aria-label','photo, video attach karo');b.setAttribute('aria-haspopup','menu');
+b.innerHTML='<svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.6 8.6a1.8 1.8 0 0 1-2.5-2.5l7.9-7.9"/></svg>';
+plus.parentNode.insertBefore(b,plus.nextSibling);
+var m=d.createElement('div');m.id='p8_menu';m.setAttribute('role','menu');d.body.appendChild(m);
+function item(t,sub,id){var x=d.createElement('button');x.type='button';x.setAttribute('role','menuitem');x.textContent=t;
+  if(sub){var s=d.createElement('small');s.textContent=sub;x.appendChild(s)}
+  x.onclick=function(){close();try{var o=g(id);if(o)o.click()}catch(e){}};return x}
+function close(){m.classList.remove('on')}
+function open(){
+  m.textContent='';
+  m.appendChild(item('Photo (edit karne ke liye)','Gallery se photo chuno, phir likho kya badalna hai','c_photo'));
+  var sm=g('c_smedia'),cnt=(sm&&/\((\d+)\)/.exec(sm.textContent))||null;
+  m.appendChild(item('Photo / Video (website ke liye)'+(cnt?' - '+cnt[1]+' lagi hain':''),'Ye website mein sach mein judengi','c_smedia'));
+  if(cnt)m.appendChild(item('Website ki photo/video hatao',null,'c_smx'));
+  var r=chi.getBoundingClientRect();m.style.bottom=Math.max(8,(window.innerHeight-r.top)+8)+'px';
+  m.classList.add('on')}
+b.addEventListener('click',function(e){e.stopPropagation();if(m.classList.contains('on'))close();else open()});
+d.addEventListener('click',function(e){if(m.classList.contains('on')&&!(e.target.closest&&e.target.closest('#p8_menu,#c_attach')))close()});
+}catch(e){}})();
+</script>
+<style id="p5x_fix">
+/* v7.42 add-only: NOVA decides photo / website by itself, so the manual option rows are hidden (code and ids stay). High specificity so no later rule can show them again. */
+html body #chat #c_imode,html body #c_imode,html body #pp_row,html body #sm_places{display:none!important}
+html.p5x-att body #chat #c_photo,html.p5x-att body #chat #c_smedia,html.p5x-att body #chat #c_smx{display:none!important}
+#p5x_menu{position:fixed;left:10px;right:10px;z-index:9999;display:none;flex-direction:column;gap:6px;padding:10px;border-radius:12px;border:1px solid var(--line,#1c4a66);background:var(--pan,#07182a);box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#p5x_menu.on{display:flex}
+#p5x_menu button{min-height:46px;text-align:left;padding:8px 12px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:14px}
+#p5x_menu small{display:block;opacity:.65;font-size:11.5px;margin-top:2px}
+</style>
+<script id="p5x_fix_js">
+/* v7.42: (1) ONE attach button "Photo / Video" - NOVA itself decides if the photo is for an edit, a picture or a website. (2) With a photo attached, only a real picture / edit sentence stays in image mode; website and normal sentences go the normal way (the old bug: every sentence was sent as an image edit). */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var ci=g('c_in'),thw=g('c_thw'),imode=g('c_imode'),chi=d.querySelector('.chi'),plus=g('c_plus');
+if(!ci||!thw||!imode)return;
+function hasPhoto(){try{return getComputedStyle(thw).display!=='none'}catch(e){return false}}
+function say(t){try{var m=d.createElement('div');m.className='msg ai';m.textContent=t;g('clog').appendChild(m);g('clog').scrollTop=g('clog').scrollHeight}catch(e){}}
+/* ---- attach button (made here if the older script did not make it) ---- */
+var old=g('c_attach');
+if(chi&&plus){
+  var b=d.createElement('button');b.className='icb';b.id='c_attach';b.type='button';b.setAttribute('aria-label','photo ya video jodo');b.setAttribute('aria-haspopup','menu');
+  b.innerHTML='<svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.6 8.6a1.8 1.8 0 0 1-2.5-2.5l7.9-7.9"/></svg>';
+  if(old&&old.parentNode){old.parentNode.replaceChild(b,old)}else{plus.parentNode.insertBefore(b,plus.nextSibling)}
+  var o8=g('p8_menu');if(o8&&o8.parentNode)o8.parentNode.removeChild(o8);
+  var m=d.createElement('div');m.id='p5x_menu';m.setAttribute('role','menu');d.body.appendChild(m);
+  function close(){m.classList.remove('on')}
+  function item(t,sub,fn){var x=d.createElement('button');x.type='button';x.setAttribute('role','menuitem');x.textContent=t;if(sub){var s=d.createElement('small');s.textContent=sub;x.appendChild(s)}x.onclick=function(){close();try{fn()}catch(e){}};return x}
+  function open(){
+    m.textContent='';
+    m.appendChild(item('Photo / Video chuno','NOVA khud samjhega: photo edit, nayi photo ya website ke liye',function(){var o=g('c_photo');if(o)o.click()}));
+    var sm=g('c_smedia'),cnt=(sm&&/\((\d+)\)/.exec(sm.textContent))||null;
+    if(cnt)m.appendChild(item('Website ki '+cnt[1]+' photo/video hatao',null,function(){var o=g('c_smx');if(o)o.click()}));
+    var r=chi.getBoundingClientRect();m.style.bottom=Math.max(8,(window.innerHeight-r.top)+8)+'px';m.classList.add('on')}
+  b.addEventListener('click',function(e){e.stopPropagation();if(m.classList.contains('on'))close();else open()});
+  d.addEventListener('click',function(e){if(m.classList.contains('on')&&!(e.target.closest&&e.target.closest('#p5x_menu,#c_attach')))close()});
+  d.documentElement.classList.add('p5x-att')
+}
+/* ---- photo attached + a sentence that is not an edit / picture: normal route (website gets the photo too) ---- */
+function sendish(e){if(e.type==='click')return !!(e.target&&e.target.closest&&e.target.closest('#c_send'));return e.key==='Enter'&&e.target===ci}
+function route(e){try{
+  if(e.defaultPrevented||!sendish(e)||!hasPhoto())return;
+  var t=ci.value.trim();if(!t)return;
+  var r=null;try{r=JSON.parse(Android.detectIntent(t,true))}catch(x){r=null}
+  var k=r&&r.kind||'NONE';
+  if(k==='PHOTO_EDIT'||k==='IMAGE')return;
+  if(imode.classList.contains('imon'))imode.click();
+  if(k==='SITE'){try{var s=Android.photoToSite();if(s==='ok')say('Aapki photo website ki media me jod di.');else if(s&&s!=='nophoto')say(s)}catch(x){}}
+}catch(x){}}
+d.addEventListener('click',route,true);d.addEventListener('keydown',route,true);
+}catch(e){}})();
+</script>
+<style id="p6_home_css">
+/* v7.43 PART 6 HOME (add-only): fixed status board + dock under the orb. Old row (ACTIVATE / CHUP / SILENT) stays in the page, hidden; the dock presses it. */
+#app>.row{display:none!important}
+#p6_board{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:4px 8px 0;max-width:100%}
+.p6c{display:flex;align-items:center;gap:7px;min-height:40px;padding:6px 12px;border-radius:999px;border:1px solid var(--ds-line,rgba(47,200,255,.35));background:linear-gradient(180deg,var(--ds-glass2,rgba(47,200,255,.10)),rgba(122,92,255,.06));color:#dff8ff;font:600 11px/1.1 system-ui,sans-serif;letter-spacing:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.p6c i{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:#2fc8ff;box-shadow:0 0 8px #2fc8ff}
+.p6c.ok i{background:#4ff0a8;box-shadow:0 0 8px #4ff0a8}
+.p6c.warn i{background:#ffbe50;box-shadow:0 0 8px #ffbe50}
+.p6c.bad i{background:#ff5a6e;box-shadow:0 0 8px #ff5a6e}
+.p6c small{display:block;font-size:9px;opacity:.7;letter-spacing:1.4px;margin-bottom:2px}
+.p6c b{font-weight:700;font-size:11px}
+#p6_dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 8px 8px;width:calc(100% - 16px);max-width:460px;align-self:center}
+#p6_dock button{min-height:56px;padding:6px 4px;border-radius:16px;border:1px solid var(--ds-line,rgba(47,200,255,.35));background:linear-gradient(180deg,var(--ds-glass2,rgba(47,200,255,.10)),rgba(122,92,255,.06));color:#dff8ff;font:700 10px/1.15 system-ui,sans-serif;letter-spacing:1.2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#p6_dock button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#p6_dock button:active{transform:scale(.96)}
+#p6_dock button.on{border-color:#4ff0a8;color:#c9ffe6}
+#p6_dock button.stop{border-color:rgba(255,90,110,.6);color:#ffd0d6}
+html:not(.lowfx) .p6c.bad i{animation:p6blink 1.2s infinite}
+@keyframes p6blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.p6c.bad i{animation:none!important}}
+</style>
+<script id="p6_home">
+/* v7.43 PART 6: status board = AI / NET / PERMS / KAAM / MODE, read only (getStatus, getSettings, the queue strip). Dock = CHAT / CHUP / SILENT / STOP, each one only presses an old button or sends the old "stop" sentence. Refresh every 2.5 s, paused when the page is hidden or covered. */
+(function(){try{
+var d=document,app=d.getElementById('app'),box=d.querySelector('.orbbox');
+if(!app||!box||d.getElementById('p6_board'))return;
+function J(f){try{return JSON.parse(Android[f]())}catch(e){return {}}}
+var board=d.createElement('div');board.id='p6_board';board.setAttribute('role','status');board.setAttribute('aria-live','polite');
+var dock=d.createElement('div');dock.id='p6_dock';dock.setAttribute('role','group');dock.setAttribute('aria-label','NOVA quick actions');
+var C={};
+function chip(id,label,go){var c=d.createElement('div');c.className='p6c';c.setAttribute('role','button');c.tabIndex=0;
+  var i=d.createElement('i'),w=d.createElement('span'),sm=d.createElement('small'),b=d.createElement('b');sm.textContent=label;w.appendChild(sm);w.appendChild(b);c.appendChild(i);c.appendChild(w);
+  c.onclick=function(){try{go()}catch(e){}};c.onkeydown=function(e){if(e.key==='Enter'||e.key===' ')c.onclick()};board.appendChild(c);C[id]={el:c,b:b}}
+function press(id){return function(){var o=d.getElementById(id);if(o)o.click()}}
+chip('ai','AI',press('gear'));chip('net','INTERNET',function(){});chip('perm','PERMISSION',press('gear'));chip('q','KAAM',press('chatb'));chip('mode','AWAAZ',press('gear'));
+var ICON={chat:'<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',quiet:'<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4zM16 9l5 6M21 9l-5 6"/></svg>',silent:'<svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4M4 4l16 16"/></svg>',stop:'<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'};
+var D={};
+function dk(id,label,fn){var b=d.createElement('button');b.type='button';b.id='p6d_'+id;b.innerHTML=ICON[id];var t=d.createElement('span');t.textContent=label;b.appendChild(t);b.onclick=function(){try{fn()}catch(e){}};if(id==='stop')b.className='stop';dock.appendChild(b);D[id]={el:b,t:t}}
+dk('chat','CHAT',press('chatb'));dk('quiet','CHUP',press('quiet'));dk('silent','SILENT',press('silent'));dk('stop','STOP',function(){try{Android.sendText('stop')}catch(e){}});
+box.parentNode.insertBefore(board,box.nextSibling);board.parentNode.insertBefore(dock,board.nextSibling);
+function set(id,cls,txt){var c=C[id];if(!c)return;c.el.className='p6c '+cls;c.b.textContent=txt}
+function qCount(){var n=0;try{var r=d.querySelectorAll('#nq_box .nq_r');for(var i=0;i<r.length;i++)if(!/\bdone\b/.test(r[i].className))n++}catch(e){}return n}
+function btnOn(id,rx){var o=d.getElementById(id);return !!(o&&rx.test(o.textContent||''))}
+function refresh(){try{
+  if(d.hidden||window.__cover)return;
+  var st=J('getStatus'),se=J('getSettings');
+  var on=navigator.onLine!==false;app.classList.toggle('p6off',!on);
+  if(se.hasKey)set('ai','ok','GEMINI KEY ('+(se.keyCount||1)+')');else if(st.engine)set('ai','warn','OFFLINE BRAIN');else set('ai','bad','KEY NAHI');
+  set('net',on?'ok':'bad',on?'ONLINE':'OFFLINE');
+  var pm=[st.mic,st.notif,st.overlay,st.acc],n=0;for(var i=0;i<pm.length;i++)if(pm[i])n++;
+  set('perm',n===4?'ok':(st.mic?'warn':'bad'),n+' / 4');
+  var q=qCount();set('q',q>0?'warn':'ok',q>0?(q+' LINE MEIN'):'KHALI');
+  var sil=btnOn('silent',/ON/i),qb=d.getElementById('quiet'),qt=qb?(qb.textContent||'').trim():'CHUP',qu=!!qt&&!/^CHUP$/i.test(qt);
+  set('mode',sil?'warn':'ok',sil?'SILENT':(qu?'CHUP':'BOLTA HAI'));
+  D.silent.el.classList.toggle('on',sil);D.silent.t.textContent=sil?'SILENT ON':'SILENT';
+  D.quiet.t.textContent=qt||'CHUP';D.quiet.el.classList.toggle('on',qu)
+}catch(e){}}
+window.addEventListener('online',refresh);window.addEventListener('offline',refresh);
+refresh();setInterval(refresh,2500);
+}catch(e){}})();
+</script>
+<style id="p7_motion_css">
+/* v7.44 PART 7 MOTION (add-only): direction-aware screen slide, chat rise, number tickers, haptic button. Only transform/opacity animate. lowfx / reduced motion = all off. */
+:root{--p7-ease:cubic-bezier(.16,1,.3,1)}
+@keyframes p7vw{from{opacity:0;transform:translateX(calc(var(--p7d,0)*22px))}to{opacity:1;transform:none}}
+@keyframes p7chat{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+html:not(.lowfx) .vw.on{animation:p7vw .28s var(--p7-ease) both}
+html:not(.lowfx) #chat.on{animation:p7chat .3s var(--p7-ease) both}
+html:not(.lowfx) #tabs .tb:active{transform:scale(.94);transition:transform .08s}
+#p7_hap{min-width:0}
+/* v7.44: Part 6 status chips were 40px, touch targets must be 44px (found by tools/test_part5_ui_screens.py) */
+.p6c{min-height:44px}
+.p7tk{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.vw.on,#chat.on{animation:none!important}#tabs .tb:active{transform:none!important}}
+/* PART 7B intro restyle: neon-glass caption + soft vignette. Static (only opacity breathes); lowfx / reduced motion = still. */
+#intro::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 46%,rgba(0,240,255,.07),transparent 52%),linear-gradient(180deg,rgba(122,92,255,.10),transparent 22%,transparent 78%,rgba(0,240,255,.08))}
+html:not(.lowfx) #intro::after{animation:p7br 5s ease-in-out infinite}
+@keyframes p7br{0%,100%{opacity:.75}50%{opacity:1}}
+#cap{padding:9px 14px;border-radius:14px;background:var(--ds-glass,rgba(10,24,48,.58));border:1px solid rgba(0,240,255,.34);box-shadow:0 0 18px rgba(0,240,255,.12)}
+#hint{padding:5px 10px;border-radius:999px;background:var(--ds-glass,rgba(10,24,48,.58));border:1px solid rgba(0,240,255,.34)}
+@media (prefers-reduced-motion:reduce){#intro::after{animation:none!important}}
+</style>
+<script id="p7_motion">
+/* v7.44 PART 7: (1) tab slide direction, (2) short haptics via the old Android.vibrate bridge (setting HAPTIC ON/OFF in Settings, default ON), (3) number tickers for API limits + queue count. Touches no old id, bridge or setting; no network, no Kotlin. */
+(function(){try{
+var d=document,h=d.documentElement;
+if(window.__p7motion)return;window.__p7motion=1;
+function calm(){try{return h.classList.contains('lowfx')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches)}catch(e){return false}}
+/* ---- haptics ---- */
+function hapOn(){try{return localStorage.getItem('nova_hap')!=='0'}catch(e){return true}}
+var lastH=0;
+window.novaHaptic=function(ms){try{
+  if(!hapOn()||calm())return;
+  var n=Date.now();if(n-lastH<60)return;lastH=n;
+  try{Android.vibrate(ms||10)}catch(e){try{navigator.vibrate&&navigator.vibrate(ms||10)}catch(_){}}
+}catch(e){}};
+d.addEventListener('pointerdown',function(e){try{
+  var t=e.target&&e.target.closest?e.target.closest('#tabs .tb,#p6_dock button,.p6c,button.sm,button.tb2'):null;
+  if(!t)return;
+  window.novaHaptic(t.classList&&t.classList.contains('tb')?12:8)
+}catch(x){}},true);
+/* HAPTIC switch next to the old SAVE button */
+try{var sv=d.getElementById('s_save');
+if(sv&&sv.parentNode&&!d.getElementById('p7_hap')){
+  var hb=d.createElement('button');hb.type='button';hb.className='sm';hb.id='p7_hap';
+  var paint=function(){hb.textContent=hapOn()?'HAPTIC ON':'HAPTIC OFF'};paint();
+  hb.addEventListener('click',function(){var on=!hapOn();try{localStorage.setItem('nova_hap',on?'1':'0')}catch(e){}paint();if(on){lastH=0;window.novaHaptic(14)}});
+  sv.parentNode.insertBefore(hb,sv)
+}}catch(e){}
+/* ---- screen slide direction: new screen slides in from the side the tab is on ---- */
+var tabs=d.getElementById('tabs');
+if(tabs)tabs.addEventListener('click',function(e){try{
+  var b=e.target.closest&&e.target.closest('.tb');if(!b)return;
+  var all=[].slice.call(tabs.querySelectorAll('.tb')),to=all.indexOf(b),from=-1;
+  for(var i=0;i<all.length;i++)if(all[i].classList.contains('act')){from=i;break}
+  h.style.setProperty('--p7d',to>from&&from>=0?'1':(to<from?'-1':'0'))
+}catch(x){}},true);
+/* ---- number tickers ---- */
+var LAST={};
+function ease(t){return 1-Math.pow(1-t,3)}
+function tick(el,key){try{
+  if(!el||el.dataset.p7a==='1')return;
+  var tx=el.textContent||'',m=/^(\D*?)(\d{1,7})(\D*)$/.exec(tx);
+  if(!m)return;
+  if(el.dataset.p7v===tx)return;
+  var pre=m[1],to=parseInt(m[2],10),suf=m[3],from=LAST[key];
+  LAST[key]=to;
+  el.classList.add('p7tk');
+  if(from===undefined)from=0;
+  if(calm()||from===to||Math.abs(to-from)>100000){el.dataset.p7v=tx;return}
+  el.dataset.p7a='1';
+  var t0=performance.now(),dur=420;
+  (function f(now){
+    var p=Math.min(1,(now-t0)/dur);
+    if(d.hidden)p=1;
+    var v=p>=1?to:Math.round(from+(to-from)*ease(p));
+    var s=pre+v+suf;el.textContent=s;
+    if(p<1){requestAnimationFrame(f)}else{el.dataset.p7a='0';el.dataset.p7v=s}
+  })(t0)
+}catch(e){}}
+function scan(){try{
+  var a=d.getElementById('li_tot');if(a)tick(a,'li_tot');
+  var cs=d.querySelectorAll('#v_limits .vc');
+  for(var i=0;i<cs.length;i++){
+    var nm=(cs[i].querySelector('b')||{}).firstChild;nm=nm&&nm.textContent?nm.textContent:('c'+i);
+    var ss=cs[i].querySelectorAll('.nums strong');
+    for(var j=0;j<ss.length;j++)tick(ss[j],'lim:'+nm+':'+j)
+  }
+  var q=d.querySelector('#p6_board .p6c:nth-child(4) b');if(q)tick(q,'queue')
+}catch(e){}}
+var mo=null;try{mo=new MutationObserver(function(){if(!d.hidden)scan()})}catch(e){}
+function watch(){try{
+  if(!mo)return;
+  var v=d.getElementById('v_limits'),b=d.getElementById('p6_board');
+  if(v)mo.observe(v,{childList:true,subtree:true,characterData:true});
+  if(b)mo.observe(b,{childList:true,subtree:true,characterData:true})
+}catch(e){}}
+watch();scan();
+/* p6 board is built by a later script: look again once the page has loaded */
+window.addEventListener('load',function(){watch();scan()});
+}catch(e){}})();
+</script>
+<style id="pt8_chat_css">
+/* v7.47 PART 8 CHAT UI (add-only, CSS only part): neon-glass bubbles with a NOVA / TUM label + time, typing dots, voice waveform bar. Old classes and ids are untouched. */
+#clog .msg{position:relative;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#clog .msg.me{align-self:flex-end;background:linear-gradient(135deg,rgba(122,92,255,.30),rgba(111,123,255,.12));border:1px solid rgba(150,130,255,.62);border-radius:18px 18px 4px 18px;box-shadow:0 0 18px rgba(122,92,255,.18),inset 0 1px 0 rgba(255,255,255,.08)}
+#clog .msg.ai{align-self:flex-start;background:linear-gradient(135deg,rgba(47,216,255,.13),rgba(47,216,255,.04));border:1px solid rgba(47,216,255,.34);border-left:3px solid #2fd8ff;border-radius:18px 18px 18px 4px;box-shadow:0 0 18px rgba(47,216,255,.12),inset 0 1px 0 rgba(255,255,255,.06)}
+#clog .msg.me::before,#clog .msg.ai::before{display:block;font:700 9px/1 var(--mono,monospace);letter-spacing:3px;margin-bottom:6px;opacity:.9}
+#clog .msg.ai::before{content:"NOVA " attr(data-t);color:#2fd8ff}
+#clog .msg.me::before{content:attr(data-t) " TUM";color:#b4a9ff;text-align:right}
+#clog .msg.ai:last-child{box-shadow:0 0 26px rgba(47,216,255,.24),inset 0 1px 0 rgba(255,255,255,.08)}
+/* typing dots (the old .typing bubble, restyled) */
+#clog .msg.ai.typing{display:inline-flex;align-items:center;gap:6px;padding:12px 16px}
+#clog .msg.ai.typing::before{display:none}
+#clog .msg.ai.typing i{display:block;width:7px;height:7px;border-radius:50%;background:#2fd8ff;box-shadow:0 0 8px #2fd8ff;animation:pt8dot 1s infinite ease-in-out both}
+#clog .msg.ai.typing i:nth-child(2){animation-delay:.16s}#clog .msg.ai.typing i:nth-child(3){animation-delay:.32s}
+@keyframes pt8dot{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-6px);opacity:1}}
+@keyframes pt8cur{50%{opacity:0}}
+/* voice waveform: only while the chat is open AND NOVA is listening / speaking / thinking (read from html[data-fut]) */
+#pt8_wave{display:none;align-items:center;gap:10px;margin:2px 4px 6px;padding:7px 12px;border-radius:14px;border:1px solid rgba(47,216,255,.32);background:linear-gradient(135deg,rgba(47,216,255,.09),rgba(122,92,255,.07))}
+#chat.on #pt8_wave.on{display:flex}
+#pt8_wave b{flex:0 0 auto;font:700 10px/1 var(--mono,monospace);letter-spacing:2px;color:#2fd8ff;min-width:92px}
+#pt8_wave .bars{flex:1;display:flex;align-items:center;justify-content:space-between;height:26px;gap:2px}
+#pt8_wave .bars i{display:block;flex:1;max-width:5px;height:100%;border-radius:3px;background:linear-gradient(180deg,#2fd8ff,#7a5cff);transform-origin:50% 50%;transform:scaleY(.18);animation:pt8bar var(--d,.9s) ease-in-out var(--l,0s) infinite alternate}
+#pt8_wave[data-m="speak"] .bars i{background:linear-gradient(180deg,#b4a9ff,#ff6ad5)}
+#pt8_wave[data-m="think"] .bars i{animation-name:pt8th;background:#2fd8ff;opacity:.7}
+@keyframes pt8bar{0%{transform:scaleY(.14)}100%{transform:scaleY(var(--h,.8))}}
+@keyframes pt8th{0%,100%{transform:scaleY(.14)}50%{transform:scaleY(.4)}}
+html.lowfx #clog .msg{-webkit-backdrop-filter:none;backdrop-filter:none}
+html.lowfx #pt8_wave .bars i,html.lowfx #clog .msg.ai.typing i{animation:none!important}
+html.lowfx #pt8_wave .bars i{transform:scaleY(.5)}
+@media(prefers-reduced-motion:reduce){#pt8_wave .bars i,#clog .msg.ai.typing i{animation:none!important}#pt8_wave .bars i{transform:scaleY(.5)}}
+</style>
+<script id="pt8_chat">
+/* v7.47 PART 8: (1) time label on every bubble (typing reveal is the older p3_fx one), (2) voice waveform bar tied to the real state class (listen / speak / think). Reads no typed text, no network, no Kotlin, no old id touched. */
+(function(){try{
+var d=document,h=d.documentElement;
+if(window.__pt8chat)return;window.__pt8chat=1;
+var cl=d.getElementById('clog'),chat=d.getElementById('chat');
+if(!cl||!chat)return;
+function calm(){try{return h.classList.contains('lowfx')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches)}catch(e){return false}}
+function hhmm(){var t=new Date();return (t.getHours()<10?'0':'')+t.getHours()+':'+(t.getMinutes()<10?'0':'')+t.getMinutes()}
+/* ---- time label (typing reveal already exists since v7.32 in p3_fx; Part 8 does NOT add a second one) ---- */
+try{new MutationObserver(function(recs){try{
+  for(var i=0;i<recs.length;i++){for(var j=0;j<recs[i].addedNodes.length;j++){var a=recs[i].addedNodes[j];
+    if(a.nodeType===1&&a.classList&&a.classList.contains('msg')&&!a.getAttribute('data-t'))a.setAttribute('data-t',hhmm())}}
+}catch(e){}}).observe(cl,{childList:true})}catch(e){}
+try{var ex=cl.querySelectorAll('.msg');for(var e=0;e<ex.length;e++){if(ex[e].getAttribute('data-t')===null)ex[e].setAttribute('data-t','')}}catch(x){}   /* bubbles that already exist get the NOVA / TUM label without a time */
+/* ---- voice waveform ---- */
+var w=d.getElementById('pt8_wave');
+if(!w){
+  w=d.createElement('div');w.id='pt8_wave';w.setAttribute('aria-hidden','true');
+  var lab=d.createElement('b');lab.textContent='';w.appendChild(lab);
+  var bars=d.createElement('div');bars.className='bars';
+  for(var q=0;q<30;q++){var bi=d.createElement('i');bi.style.setProperty('--h',(0.35+Math.abs(Math.sin(q*1.7))*0.65).toFixed(2));bi.style.setProperty('--d',(0.55+((q*37)%50)/100).toFixed(2)+'s');bi.style.setProperty('--l',(-(q%7)*0.11).toFixed(2)+'s');bars.appendChild(bi)}
+  w.appendChild(bars);
+  var chi=chat.querySelector('.chi');
+  if(chi&&chi.parentNode)chi.parentNode.insertBefore(w,chi);else chat.appendChild(w);
+}
+var LAB={listen:'SUN RAHA HU',speak:'BOL RAHA HU',think:'SOCH RAHA HU'};
+function sync(){try{
+  var s=h.getAttribute('data-fut')||'idle',m=LAB[s]?s:'';
+  if(m){w.setAttribute('data-m',m);w.firstChild.textContent=LAB[m];w.classList.add('on')}else{w.classList.remove('on');w.removeAttribute('data-m')}
+}catch(e){}}
+try{new MutationObserver(sync).observe(h,{attributes:true,attributeFilter:['data-fut']})}catch(e){}
+sync();
+}catch(e){}})();
+</script>
+<script id="pt9_persona">
+/* v7.48 PART 9 JARVIS PERSONA: only a PERSONA ON / OFF button next to the old SAVE button. Uses the new bridge getPersona / setPersona; touches no old id, no network. The real switch screen comes in Part 17. */
+(function(){try{
+var d=document;
+function on(){try{return !!Android.getPersona()}catch(e){return true}}
+var sv=d.getElementById('s_save');
+if(!sv||!sv.parentNode||d.getElementById('pt9_pers'))return;
+var b=d.createElement('button');b.type='button';b.className='sm';b.id='pt9_pers';
+function paint(){b.textContent=on()?'PERSONA ON':'PERSONA OFF'}
+paint();
+b.addEventListener('click',function(){try{Android.setPersona(!on())}catch(e){}paint()});
+sv.parentNode.insertBefore(b,sv);
+}catch(e){}})();
+</script>
+<script id="pt17_switches">
+/* v7.69 PART 17 SETTINGS RESTYLE: one "SWITCHES" card in Settings with the three switches the plan promised: GRAPHICS QUALITY (same store as #s_quality: localStorage nova_q),
+   PERSONA (same bridge as the Part 9 button: getPersona / setPersona) and STOP BEHAVIOUR (new bridge getStopPowersOff / setStopPowersOff, default OFF = STOP only stops).
+   Add-only: no old id, label or handler is removed; old #s_quality and #pt9_pers stay and are kept in step. No network. */
+(function(){try{
+var d=document,sv=d.getElementById('s_save');
+if(!sv||!sv.parentNode||d.getElementById('pt17_card'))return;
+var st=d.createElement('style');
+st.textContent='#pt17_card{margin:14px 0 6px;padding:12px;border:1px solid var(--line,rgba(120,220,255,.35));border-radius:14px;background:rgba(10,24,40,.45)}'
++'#pt17_card h4{margin:0 0 8px;font-size:12px;letter-spacing:3px}'
++'#pt17_card .p17r{margin:10px 0 2px}#pt17_card .p17r>b{display:block;font-size:11px;letter-spacing:2px;margin-bottom:6px}'
++'#pt17_card .p17c{display:flex;flex-wrap:wrap;gap:8px}'
++'#pt17_card .p17c button{flex:1 1 auto;min-height:44px;min-width:88px;padding:8px 10px;font-size:11px;letter-spacing:1px;opacity:.7}'
++'#pt17_card .p17c button[aria-pressed="true"]{opacity:1;outline:2px solid currentColor}'
++'#pt17_card small{display:block;margin-top:6px;line-height:1.4}';
+d.head.appendChild(st);
+var card=d.createElement('div');card.id='pt17_card';
+card.innerHTML='<h4>SWITCHES</h4>'
++'<div class="p17r"><b>GRAPHICS QUALITY</b><div class="p17c" role="group" aria-label="Graphics quality" id="p17_q">'
++'<button type="button" class="sm" data-v="auto">AUTO</button><button type="button" class="sm" data-v="sharp">SHARP</button><button type="button" class="sm" data-v="smooth">SMOOTH</button></div>'
++'<small id="p17_qn"></small></div>'
++'<div class="p17r"><b>PERSONA (JARVIS ANDAAZ)</b><div class="p17c" role="group" aria-label="Persona" id="p17_p">'
++'<button type="button" class="sm" data-v="1">ON</button><button type="button" class="sm" data-v="0">OFF</button></div>'
++'<small id="p17_pn"></small></div>'
++'<div class="p17r"><b>STOP KAISE KAAM KARE</b><div class="p17c" role="group" aria-label="Stop behaviour" id="p17_s">'
++'<button type="button" class="sm" data-v="0">SIRF ROKE</button><button type="button" class="sm" data-v="1">ROKE + NOVA BAND</button></div>'
++'<small id="p17_sn"></small></div>';
+sv.parentNode.parentNode.insertBefore(card,sv.parentNode);
+function $(id){return d.getElementById(id)}
+function mark(box,val){var bs=box.querySelectorAll('button');for(var i=0;i<bs.length;i++)bs[i].setAttribute('aria-pressed',String(bs[i].getAttribute('data-v')===String(val)))}
+function wire(box,fn){box.addEventListener('click',function(e){var t=e.target;if(!t||t.tagName!=='BUTTON')return;fn(t.getAttribute('data-v'))})}
+/* QUALITY */
+function getQ(){var q='auto';try{q=localStorage.getItem('nova_q')||'auto'}catch(e){}return q}
+function paintQ(){var q=getQ();mark($('p17_q'),q);var o=$('s_quality');if(o)o.value=q;
+ $('p17_qn').textContent=q==='sharp'?'SHARP: zyada saaf, thoda bhaari.':q==='smooth'?'SMOOTH: halke effects, bina atke (atak raha ho to ye chuno).':'AUTO: phone ke hisab se khud chunta hai.'}
+wire($('p17_q'),function(v){try{localStorage.setItem('nova_q',v)}catch(e){}paintQ();$('p17_qn').textContent+=' Naya quality NOVA app band karke dobara kholne par lagega.'});
+var qs=$('s_quality');if(qs)qs.addEventListener('change',function(){setTimeout(paintQ,0)});
+/* PERSONA */
+function getP(){try{return !!Android.getPersona()}catch(e){return true}}
+function paintP(){var on=getP();mark($('p17_p'),on?'1':'0');var b=$('pt9_pers');if(b)b.textContent=on?'PERSONA ON':'PERSONA OFF';
+ $('p17_pn').textContent=on?'ON: chhote aam jawab me kabhi aapka naam ya ek halki witty line. Call, message, payment, confirmation, galti me kabhi nahi.':'OFF: seedhe, saade jawab. Koi mazaak ya naam nahi.'}
+wire($('p17_p'),function(v){try{Android.setPersona(v==='1')}catch(e){}paintP()});
+var pb=$('pt9_pers');if(pb)pb.addEventListener('click',function(){setTimeout(paintP,0)});
+/* STOP */
+function getS(){try{return !!Android.getStopPowersOff()}catch(e){return false}}
+function paintS(){var on=getS();mark($('p17_s'),on?'1':'0');
+ $('p17_sn').textContent=on?'ROKE + NOVA BAND: floating card ka STOP bolna / kaam rokta hai aur NOVA ko bhi band kar deta hai.':'SIRF ROKE (default): STOP sirf bolna, chalta kaam, confirmation aur aadhi suni baat rokta hai. NOVA chalu rehta hai; band karna ACTIVATE button se.'}
+wire($('p17_s'),function(v){try{Android.setStopPowersOff(v==='1')}catch(e){}paintS()});
+paintQ();paintP();paintS();
+}catch(e){}})();
+</script>
+<script id="pt18_safe">
+/* v7.69 PART 18 HANG PROTECTION: SAFE MODE banner. Kotlin CrashGuard turns safe mode on after 2 crashes in 10 minutes (30 min). Here: light effects at once + a banner with "SAFE MODE BAND KARO".
+   Add-only, no network, nothing removed. Outside the app (no bridge) it does nothing. */
+(function(){try{
+var d=document,W=window;
+function safe(){try{return Android.getSafeMode()===true}catch(e){return false}}
+if(!safe()||d.getElementById('pt18_bar'))return;
+W.__forceLow=true;d.documentElement.classList.add('lowfx');
+var b=d.createElement('div');b.id='pt18_bar';b.setAttribute('role','status');
+b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(60,30,0,.92);color:#ffd27a;font-size:12px;line-height:1.3;border-bottom:1px solid #ffb347';
+b.innerHTML='<span>SAFE MODE: NOVA kuch der pehle crash hua tha, isliye halke effects chal rahe hain. 30 minute me apne aap band.</span><button type="button" class="sm" id="pt18_exit" style="flex:0 0 auto;min-height:44px">SAFE MODE BAND KARO</button>';
+d.body.appendChild(b);
+d.getElementById('pt18_exit').addEventListener('click',function(){try{Android.exitSafeMode()}catch(e){}b.remove();var n=d.getElementById('smsg');if(n)n.textContent='Safe mode band. Effects ab quality setting ke hisab se (app dobara kholne par poore lagenge).'});
+}catch(e){}})();
+</script>
+<script id="pt10_wire">
+/* v7.50 PART 10 wiring: the Settings checkbox #nc_on ("Background noise cancellation") had no handler at all. It now uses the SAME bridge as the working switch #wb_nc
+   (getNoiseCancel / setNoiseCancel / noiseCancelStatus) and keeps both in step. No new bridge, no network, nothing removed. */
+(function(){try{
+var d=document,a=d.getElementById('nc_on'),b=d.getElementById('wb_nc'),st=d.getElementById('nc_state');
+if(!a||a.getAttribute('data-p10'))return;
+a.setAttribute('data-p10','1');
+function stat(){try{return Android.noiseCancelStatus()||''}catch(e){return ''}}
+function paint(){try{var on=!!Android.getNoiseCancel();a.checked=on;if(b)b.checked=on;if(st)st.textContent=stat()}catch(e){}}
+a.addEventListener('change',function(){try{Android.setNoiseCancel(a.checked)}catch(e){}paint()});
+if(b)b.addEventListener('change',function(){setTimeout(paint,50)});
+paint();
+}catch(e){}})();
+</script>
+<style id="pt11_media_css">
+/* v7.51 PART 11-C: MEDIA MILA card (Share -> NOVA / MEDIA CHUNO). Add-only. No animation, so lowfx / reduced-motion need nothing. */
+#m11_card{display:none;margin:6px 10px;padding:10px;border-radius:14px;border:1px solid var(--line,#1c4a66);background:var(--pan,#07182a);color:var(--ink,#e8f6ff);max-height:40vh;overflow:auto;box-shadow:0 0 0 1px rgba(80,255,200,.08) inset}
+#m11_card.on{display:block}
+#m11_head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#m11_head b{letter-spacing:.12em;font-size:13px;flex:1 1 auto;color:#7ff3ff}
+#m11_card button{min-height:44px;min-width:44px;padding:6px 12px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:12.5px;letter-spacing:.06em}
+#m11_card button.m11_bad{border-color:#ff5a7a;color:#ff9fb0}
+#m11_busy{display:none;margin-top:8px;font-size:12.5px}
+#m11_busy.on{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#m11_bar{flex:1 1 100%;height:6px;border-radius:4px;background:rgba(127,243,255,.15);overflow:hidden}
+#m11_bar i{display:block;height:100%;width:0;background:#50ffaa}
+#m11_msg{margin-top:8px;font-size:12.5px;opacity:.85;word-break:break-word}
+#m11_list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.m11_row{display:flex;gap:10px;align-items:flex-start;padding:8px;border-radius:12px;border:1px solid var(--line,#1c4a66)}
+.m11_th{flex:0 0 56px;width:56px;height:56px;border-radius:10px;background:rgba(127,243,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;letter-spacing:.08em;color:#7ff3ff}
+.m11_th img{width:100%;height:100%;object-fit:cover;display:block}
+.m11_info{flex:1 1 auto;min-width:0}
+.m11_nm{font-size:13.5px;word-break:break-word}
+.m11_tag{font-size:11.5px;opacity:.7;margin-top:2px}
+.m11_note{font-size:11.5px;opacity:.8;margin-top:4px;color:#ffd27f}
+.m11_act{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+#m11_foot{margin-top:8px;font-size:11px;opacity:.6}
+#m11_view{position:fixed;inset:0;z-index:10001;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(2,8,16,.94);padding:16px}
+#m11_view.on{display:flex}
+#m11_view img{max-width:100%;max-height:72vh;border-radius:10px;border:1px solid var(--line,#1c4a66)}
+#m11_view button{min-height:44px;min-width:88px;padding:6px 16px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff)}
+#m11_btn{font-size:10px;letter-spacing:.06em}
+@media (max-width:340px){.m11_row{flex-direction:column}.m11_th{flex-basis:auto}}
+/* 11-D fix: chat size stays as the owner approved; only the MEDIA button is made a compact 44px round button so the chat box keeps its width at 320px. */
+#m11_btn{width:44px;min-width:44px;padding:0;font-size:9px;letter-spacing:0}
+@media (max-width:340px){#m11_btn{display:none}}
+</style>
+<script id="pt11_media">
+/* v7.51 PART 11-C MEDIA MILA card. Bridge: mediaIntakeList / mediaIntakeThumb / mediaIntakeOpen / mediaIntakeRemove / mediaIntakeClear / mediaIntakeCancel / mediaIntakeAttach / mediaPick.
+   Names are shown with textContent only (a file name can never become HTML). Only the buttons that really work are shown: DEKHO, CHAT ME JODO, HATAO, MEDIA CHUNO, SAAF KARO. There is NO analyse button yet (Part 13). */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var chi=d.querySelector('.chi'),plus=g('c_plus');
+if(!chi||!chi.parentNode||g('m11_card'))return;
+function A(n,a,b){try{return Android[n](a,b)}catch(e){return null}}
+function mk(t,c,x){var e=d.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function chat(t){try{var m=mk('div','msg ai',t),l=g('clog');if(l){l.appendChild(m);l.scrollTop=l.scrollHeight}}catch(e){}}
+var card=mk('div');card.id='m11_card';card.setAttribute('role','region');card.setAttribute('aria-label','MEDIA MILA');
+var head=mk('div');head.id='m11_head';var ttl=mk('b',null,'MEDIA MILA');ttl.id='m11_ttl';head.appendChild(ttl);
+var bp=mk('button',null,'MEDIA CHUNO');bp.type='button';bp.id='m11_pick';
+var bc=mk('button','m11_bad','SAAF KARO');bc.type='button';bc.id='m11_clear';
+head.appendChild(bp);head.appendChild(bc);card.appendChild(head);
+var busy=mk('div');busy.id='m11_busy';busy.setAttribute('aria-live','polite');var bt=mk('span');var bx=mk('button',null,'ROKO');bx.type='button';bx.id='m11_stop';
+var bar=mk('div');bar.id='m11_bar';var bi=mk('i');bar.appendChild(bi);busy.appendChild(bt);busy.appendChild(bx);busy.appendChild(bar);card.appendChild(busy);
+var msg=mk('div');msg.id='m11_msg';msg.setAttribute('aria-live','polite');card.appendChild(msg);
+var list=mk('div');list.id='m11_list';card.appendChild(list);
+card.appendChild(mk('div',null,'Ye sirf phone mein rehta hai (internet par nahi jaata). 24 ghante baad apne aap saaf. Analyse dabane par hi photo / frames AI ko bheje jate hain: pehle Gemini, Gemini na chale to aapki free Groq / OpenRouter key. Web jaanch ke liye sirf chhoti text query jaati hai, photo nahi.')).id='m11_foot';
+chi.parentNode.insertBefore(card,chi);
+var vw=mk('div');vw.id='m11_view';vw.setAttribute('role','dialog');vw.setAttribute('aria-modal','true');var vi=mk('img');vi.alt='';var vc=mk('div');var vx=mk('button',null,'BAND KARO');vx.type='button';vx.id='m11_vx';
+vw.appendChild(vi);vw.appendChild(vc);vw.appendChild(vx);d.body.appendChild(vw);
+vx.onclick=function(){vw.classList.remove('on');vi.removeAttribute('src')};
+var tb=null;
+if(plus&&plus.parentNode){tb=mk('button','icb','MEDIA');tb.id='m11_btn';tb.type='button';tb.setAttribute('aria-label','photo ya video chuno (MEDIA CHUNO)');plus.parentNode.insertBefore(tb,(g('c_attach')||plus).nextSibling)}
+var thumbs={},timer=null;
+function thumb(id,box){
+  if(thumbs[id]){box.textContent='';var im=mk('img');im.alt='';im.src=thumbs[id];box.appendChild(im);return}
+  setTimeout(function(){var u=String(A('mediaIntakeThumb',id,false)||'');if(u.indexOf('data:image/jpeg;base64,')===0){thumbs[id]=u;box.textContent='';var im=mk('img');im.alt='';im.src=u;box.appendChild(im)}},30)}
+function kindName(k){return k==='image'?'PHOTO':(k==='video'?'VIDEO':(k==='link'?'LINK':'FILE'))}
+function row(it){
+  var r=mk('div','m11_row');r.setAttribute('data-id',it.id);
+  var th=mk('div','m11_th',kindName(it.kind));
+  if(it.kind==='image'||it.kind==='video')thumb(it.id,th);
+  var inf=mk('div','m11_info');inf.appendChild(mk('div','m11_nm',it.kind==='link'?String(it.link||it.name):String(it.name)));
+  inf.appendChild(mk('div','m11_tag',kindName(it.kind)+(it.kind==='link'?'':' · '+it.size)));
+  if(it.note)inf.appendChild(mk('div','m11_note',it.note));
+  var ac=mk('div','m11_act');
+  if(it.kind==='image'||it.kind==='video'){var bd=mk('button',null,'DEKHO');bd.type='button';bd.className='m11_see';
+    bd.onclick=function(){
+      if(it.kind==='image'){var u=String(A('mediaIntakeThumb',it.id,true)||'');
+        if(u.indexOf('data:image/jpeg;base64,')===0){vi.src=u;vc.textContent=it.name+' ('+it.size+')';vw.classList.add('on');return}}
+      var r2=String(A('mediaIntakeOpen',it.id)||'');if(r2!=='ok')chat(r2||'Dekh nahi paya.')};
+    ac.appendChild(bd)}
+  var bj=mk('button',null,'CHAT ME JODO');bj.type='button';bj.className='m11_add';
+  bj.onclick=function(){var l=String(A('mediaIntakeAttach',it.id)||'');if(l){chat('Media chat se jud gayi: '+l+'. Ab sawaal likho. (Analyse abhi nahi hai, wo Part 13 mein aayega.)');window.NOVA_MEDIA={id:it.id,label:l}}else chat('Ye media ab nahi mili.')};
+  var bh=mk('button','m11_bad','HATAO');bh.type='button';bh.className='m11_bad m11_del';
+  bh.onclick=function(){A('mediaIntakeRemove',it.id);delete thumbs[it.id];render()};
+  ac.appendChild(bj);ac.appendChild(bh);
+  r.appendChild(th);inf.appendChild(ac);r.appendChild(inf);return r}
+function render(){
+  var j=null;try{j=JSON.parse(String(Android.mediaIntakeList()||'{}'))}catch(e){j=null}
+  if(!j){card.classList.remove('on');return}
+  var items=j.items||[],bz=!!j.busy;
+  ttl.textContent='MEDIA MILA'+(items.length?' ('+items.length+')':'');
+  bc.style.display=items.length?'':'none';
+  if(bz){busy.classList.add('on');bt.textContent=(j.name||'File')+' copy ho rahi hai... '+(j.progress||0)+'%';bi.style.width=(j.progress||0)+'%'}else busy.classList.remove('on');
+  msg.textContent=bz?'':String(j.message||'');
+  list.textContent='';items.forEach(function(it){list.appendChild(row(it))});
+  card.classList.toggle('on',items.length>0||bz||!!j.message);
+  if(timer){clearTimeout(timer);timer=null}
+  if(bz)timer=setTimeout(render,600)}
+bp.onclick=function(){A('mediaPick')};
+if(tb)tb.onclick=function(e){e.stopPropagation();A('mediaPick')};
+bx.onclick=function(){A('mediaIntakeCancel');setTimeout(render,300)};
+bc.onclick=function(){A('mediaIntakeClear');thumbs={};msg.textContent='';render()};
+window.onMediaIntake=function(){try{render()}catch(e){}};
+d.addEventListener('visibilitychange',function(){if(!d.hidden)render()});
+setTimeout(render,900);
+}catch(e){}})();
+</script>
+<style id="pt11d_merge_css">
+/* v7.51 11-D (owner request): the three buttons beside the chat box (+, files, MEDIA) are ONE round button. The old buttons and their handlers stay (hidden), the new menu clicks them. */
+html body #chat #c_attach,html body #chat #m11_btn{display:none!important}
+#pt11d_menu{position:fixed;left:10px;right:10px;z-index:9999;display:none;flex-direction:column;gap:6px;padding:10px;border-radius:12px;border:1px solid var(--line,#1c4a66);background:var(--pan,#07182a);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#pt11d_menu.on{display:flex}
+#pt11d_menu button{min-height:46px;text-align:left;padding:8px 12px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:14px}
+#pt11d_menu small{display:block;opacity:.65;font-size:11.5px;margin-top:2px}
+</style>
+<script id="pt11d_merge">
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var plus=g('c_plus'),chi=d.querySelector('.chi');if(!plus||!chi)return;
+var bypass=false,m=d.createElement('div');m.id='pt11d_menu';m.setAttribute('role','menu');d.body.appendChild(m);
+function close(){m.classList.remove('on')}
+function clickId(id){try{var o=g(id);if(o)o.click()}catch(e){}}
+function item(t,sub,fn){var x=d.createElement('button');x.type='button';x.setAttribute('role','menuitem');x.textContent=t;
+  if(sub){var s=d.createElement('small');s.textContent=sub;x.appendChild(s)}
+  x.onclick=function(){close();try{fn()}catch(e){}};return x}
+function open(){
+  m.textContent='';
+  m.appendChild(item('Photo / Video chuno','NOVA khud samjhega: photo edit, nayi photo ya website ke liye',function(){clickId('c_photo')}));
+  m.appendChild(item('MEDIA chuno (kai file)','Photo / video NOVA ko do, MEDIA MILA card me dikhengi',function(){clickId('m11_btn')}));
+  var sm=g('c_smedia'),cnt=(sm&&/\((\d+)\)/.exec(sm.textContent))||null;
+  if(cnt)m.appendChild(item('Website ki '+cnt[1]+' photo/video hatao',null,function(){clickId('c_smx')}));
+  m.appendChild(item('Connectors aur options','Pehle wala + menu',function(){bypass=true;try{plus.click()}finally{bypass=false}}));
+  var r=chi.getBoundingClientRect();m.style.bottom=Math.max(8,(window.innerHeight-r.top)+8)+'px';m.classList.add('on')}
+d.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest?e.target.closest('#c_plus'):null;
+  if(t&&!bypass){e.stopPropagation();e.preventDefault();if(m.classList.contains('on'))close();else open();return}
+  if(m.classList.contains('on')&&!(e.target.closest&&e.target.closest('#pt11d_menu')))close()
+},true);
+plus.setAttribute('aria-label','jodo: photo, video, media, connectors');plus.setAttribute('aria-haspopup','menu');
+}catch(e){}})();
+</script>
+<style id="pt12_frames_css">
+/* v7.51 PART 12: FRAMES NIKALO inside the MEDIA MILA card. Add-only. No animation (lowfx / reduced-motion need nothing). */
+#m12_panel{display:none;margin-top:8px;padding:8px;border-radius:12px;border:1px solid var(--line,#1c4a66)}
+#m12_panel.on{display:block}
+#m12_txt{font-size:12.5px;word-break:break-word}
+#m12_txt.m12_err{color:#ff9fb0}
+#m12_bar{display:none;height:6px;margin-top:6px;border-radius:4px;background:rgba(127,243,255,.15);overflow:hidden}
+#m12_bar.on{display:block}
+#m12_bar i{display:block;height:100%;width:0;background:#50ffaa}
+#m12_stop{display:none;margin-top:6px;min-height:44px;min-width:44px;padding:6px 14px;border-radius:10px;border:1px solid #ff5a7a;background:transparent;color:#ff9fb0}
+#m12_stop.on{display:inline-block}
+#m12_strip{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:4px}
+.m12_f{flex:0 0 auto;text-align:center;font-size:10.5px;opacity:.9}
+.m12_f img{display:block;height:64px;width:auto;border-radius:8px;border:1px solid var(--line,#1c4a66)}
+#m11_card .m12_btn{min-height:44px;min-width:44px;padding:6px 12px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:12.5px}
+</style>
+<script id="pt12_frames">
+/* v7.51 PART 12 FRAMES NIKALO. Bridge: frameExtractStart / frameExtractCancel / frameExtractStatus / frameExtractThumb. The real work runs in Kotlin on a background thread.
+   The bar moves ONLY from the real done / total of the status (no timer fake). Texts are set with textContent only. */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var card=g('m11_card'),list=g('m11_list');if(!card||!list||g('m12_panel'))return;
+function mk(t,c,x){var e=d.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function st(){try{return JSON.parse(String(Android.frameExtractStatus()||'{}'))}catch(e){return null}}
+var pn=mk('div');pn.id='m12_panel';pn.setAttribute('role','region');pn.setAttribute('aria-label','FRAMES');
+var tx=mk('div');tx.id='m12_txt';tx.setAttribute('aria-live','polite');
+var bar=mk('div');bar.id='m12_bar';var bi=mk('i');bar.appendChild(bi);
+var sp=mk('button',null,'ROKO');sp.type='button';sp.id='m12_stop';
+var strip=mk('div');strip.id='m12_strip';
+pn.appendChild(tx);pn.appendChild(bar);pn.appendChild(sp);pn.appendChild(strip);
+var ft=g('m11_foot');if(ft&&ft.parentNode===card)card.insertBefore(pn,ft);else card.appendChild(pn);
+var timer=null,shown='';
+function stop(){if(timer){clearTimeout(timer);timer=null}}
+function strips(s){
+  strip.textContent='';var n=s.frames|0,secs=s.secs||[];
+  for(var i=1;i<=n;i++)(function(k){var b=mk('div','m12_f');var im=mk('img');im.alt='frame '+k;b.appendChild(im);
+    b.appendChild(mk('div',null,'#'+k+(secs[k-1]!=null?' · '+Math.round(secs[k-1])+'s':'')));strip.appendChild(b);
+    setTimeout(function(){var u='';try{u=String(Android.frameExtractThumb(k)||'')}catch(e){}if(u.indexOf('data:image/jpeg;base64,')===0)im.src=u},30*k)})(i)}
+function see(){try{if(pn.scrollIntoView)pn.scrollIntoView({block:'nearest'})}catch(e){}}
+function poll(){
+  stop();var s=st();if(!s){return}
+  var t=s.total|0,dn=s.done|0;
+  if(s.state==='running'){
+    pn.classList.add('on');tx.className='';tx.textContent='frames '+dn+'/'+t;bar.classList.add('on');bi.style.width=(t>0?Math.min(100,Math.round(dn*100/t)):0)+'%';sp.classList.add('on');
+    timer=setTimeout(poll,500);return}
+  bar.classList.remove('on');sp.classList.remove('on');
+  if(s.state==='done'){pn.classList.add('on');tx.className='';tx.textContent=String(s.message||'Frames taiyaar.');strips(s)}
+  else if(s.state==='error'){pn.classList.add('on');tx.className='m12_err';tx.textContent=String(s.error||'Frame nahi nikle.');strip.textContent=''}
+  else if(s.state==='cancelled'){pn.classList.add('on');tx.className='';tx.textContent='Roka gaya.';strip.textContent=''}
+  else{pn.classList.remove('on');strip.textContent=''}
+  if(pn.classList.contains('on'))see()}
+sp.onclick=function(){try{Android.frameExtractCancel()}catch(e){}setTimeout(poll,200)};
+function start(id){
+  var r='';try{r=String(Android.frameExtractStart(id)||'')}catch(e){r='Frame abhi nahi chala.'}
+  strip.textContent='';
+  if(r!=='ok'){pn.classList.add('on');tx.className='m12_err';tx.textContent=r;bar.classList.remove('on');sp.classList.remove('on');return}
+  pn.classList.add('on');tx.className='';tx.textContent='frames 0/0';poll()}
+function addBtns(){
+  [].slice.call(list.querySelectorAll('.m11_row')).forEach(function(r){
+    var a=r.querySelector('.m11_act');if(!a||a.querySelector('.m12_btn')||!r.querySelector('.m11_see'))return;
+    var id=r.getAttribute('data-id');var b=mk('button','m12_btn','FRAMES NIKALO');b.type='button';b.onclick=function(){start(id)};
+    a.insertBefore(b,a.firstChild.nextSibling||null)})}
+new MutationObserver(addBtns).observe(list,{childList:true});addBtns();
+d.addEventListener('visibilitychange',function(){if(!d.hidden)poll()});
+setTimeout(poll,1200);
+}catch(e){}})();
+</script>
+<style id="pt13_analyse_css">
+/* v7.53 PART 13B-1: ANALYSE inside the MEDIA MILA card. Add-only. No animation (lowfx / reduced-motion need nothing). */
+#m13_panel{margin-top:8px;padding:8px;border-radius:12px;border:1px solid var(--line,#1c4a66)}
+#m13_q{width:100%;box-sizing:border-box;min-height:44px;padding:6px 10px;border-radius:10px;border:1px solid var(--line,#1c4a66);background:transparent;color:var(--ink,#e8f6ff);font-size:13px}
+#m13_st{display:none;margin-top:6px}
+#m13_st.on{display:block}
+#m13_txt{font-size:12.5px;word-break:break-word}
+#m13_txt.m13_err{color:#ff9fb0}
+#m13_bar{display:none;height:6px;margin-top:6px;border-radius:4px;background:rgba(127,243,255,.15);overflow:hidden}
+#m13_bar.on{display:block}
+#m13_bar i{display:block;height:100%;width:0;background:#50ffaa}
+#m13_stop{display:none;margin-top:6px;min-height:44px;min-width:44px;padding:6px 14px;border-radius:10px;border:1px solid #ff5a7a;background:transparent;color:#ff9fb0}
+#m13_stop.on{display:inline-block}
+#m13_res{display:none;margin-top:8px;max-height:30vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.45}
+#m13_res.on{display:block}
+#m11_card .m13_btn{min-height:44px;min-width:44px;padding:6px 12px;border-radius:10px;border:1px solid #50ffaa;background:transparent;color:#50ffaa;font-size:12.5px}
+/* v7.55 PART 13B-2c: report in clear sections, scrolls when long, fits 320 px. Add-only. */
+#m13_panel{min-width:0;max-width:100%;overflow-x:hidden}
+#m13_res{max-height:50vh;overflow-y:auto;overflow-x:hidden;white-space:normal;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-right:2px}
+#m13_res .m13_sum{font-weight:600;font-size:13.5px;margin-bottom:6px}
+#m13_res .m13_p{margin:2px 0}
+#m13_res .m13_h{margin:10px 0 3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7ff3ff;border-bottom:1px solid var(--line,#1c4a66);padding-bottom:2px}
+#m13_res .m13_ul{margin:2px 0 0;padding-left:18px}
+#m13_res li{margin:2px 0;overflow-wrap:anywhere}
+#m13_res .m13_conf{margin-top:10px;padding:6px 8px;border-radius:8px;border:1px solid #50ffaa;color:#50ffaa}
+#m13_res .m13_src{margin:2px 0;opacity:.85;overflow-wrap:anywhere}
+@media (max-width:360px){#m13_q{font-size:12.5px;padding:6px 8px}#m13_res{font-size:12px}#m11_card .m13_btn{padding:6px 10px}#m13_stop{width:100%}}
+</style>
+<script id="pt13_analyse">
+/* v7.53 PART 13B-1 ANALYSE. Bridge: analysisStart / analysisStatus / analysisCancel / analysisResultText (+ analysisResult). The real work runs in Kotlin on a background thread.
+   The bar moves ONLY from the real percent (done / total of the stage) of the status (no timer fake). Texts are set with textContent only. Frames go to the AI only after ANALYSE is pressed. */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var card=g('m11_card'),list=g('m11_list');if(!card||!list||g('m13_panel'))return;
+function mk(t,c,x){var e=d.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function st(){try{return JSON.parse(String(Android.analysisStatus()||'{}'))}catch(e){return null}}
+var pn=mk('div');pn.id='m13_panel';pn.setAttribute('role','region');pn.setAttribute('aria-label','ANALYSE');
+var q=mk('input');q.id='m13_q';q.type='text';q.maxLength=400;q.setAttribute('aria-label','sawaal (zaroori nahi)');q.placeholder='Sawaal likho (zaroori nahi), phir ANALYSE dabao';
+var sw=mk('div');sw.id='m13_st';
+var tx=mk('div');tx.id='m13_txt';tx.setAttribute('aria-live','polite');
+var bar=mk('div');bar.id='m13_bar';var bi=mk('i');bar.appendChild(bi);
+var sp=mk('button',null,'ROKO');sp.type='button';sp.id='m13_stop';
+var res=mk('div');res.id='m13_res';res.tabIndex=0;res.setAttribute('aria-label','Report');
+sw.appendChild(tx);sw.appendChild(bar);sw.appendChild(sp);
+pn.appendChild(q);pn.appendChild(sw);pn.appendChild(res);
+var ft=g('m11_foot');if(ft&&ft.parentNode===card)card.insertBefore(pn,ft);else card.appendChild(pn);
+var HEAD={'Kya dikha:':1,'What I saw:':1,'Likha hua text:':1,'Written text:':1,'Sources se mila:':1,'Found in sources:':1,'Verify nahi hua:':1,'Not verified:':1,'Sources:':1,'Limits:':1};
+/* v7.55 13B-2c: the plain report text becomes sections (summary, headings, bullets, confidence). Elements + textContent only, never HTML; unknown shape = plain text. */
+function fill(t){
+  res.textContent='';var first=true,ul=null,any=false;
+  String(t||'').split('\n').forEach(function(l){
+    var k=l.trim();if(!k){ul=null;return}
+    if(HEAD[k]){res.appendChild(mk('div','m13_h',k.replace(/:$/,'')));ul=null;any=true;return}
+    if(l.slice(0,2)==='- '){if(!ul){ul=mk('ul','m13_ul');res.appendChild(ul)}ul.appendChild(mk('li',null,l.slice(2)));any=true;return}
+    ul=null;
+    if(/^(Bharosa|Confidence): /.test(k)){res.appendChild(mk('div','m13_conf',k));any=true;return}
+    if(/^\[\d+\] /.test(k)){res.appendChild(mk('div','m13_src',k));any=true;return}
+    res.appendChild(mk('div',first?'m13_sum':'m13_p',k));first=false;any=true});
+  if(!any)res.textContent=String(t||'')}
+var timer=null,cur='';
+function stop(){if(timer){clearTimeout(timer);timer=null}}
+function see(){try{if(pn.scrollIntoView)pn.scrollIntoView({block:'nearest'})}catch(e){}}
+function poll(){
+  stop();var s=st();if(!s){return}
+  if(s.state==='running'){
+    cur=cur||String(s.id||'');
+    sw.classList.add('on');tx.className='';tx.textContent=String(s.message||'');bar.classList.add('on');bi.style.width=Math.max(0,Math.min(100,s.percent|0))+'%';sp.classList.add('on');
+    timer=setTimeout(poll,500);return}
+  bar.classList.remove('on');sp.classList.remove('on');
+  if(!cur){sw.classList.remove('on');return}
+  if(s.state==='done'){
+    sw.classList.add('on');tx.className='';tx.textContent=String(s.message||'');
+    var t='';try{t=String(Android.analysisResultText(cur)||'')}catch(e){}
+    fill(t);if(t){res.classList.add('on');try{res.scrollTop=0}catch(e){}}cur=''}
+  else if(s.state==='error'){sw.classList.add('on');tx.className='m13_err';tx.textContent=String(s.error||'Analysis nahi hua.');res.classList.remove('on');cur=''}
+  else if(s.state==='cancelled'){sw.classList.add('on');tx.className='';tx.textContent=String(s.message||'Roka gaya.');res.classList.remove('on');cur=''}
+  else{sw.classList.remove('on')}
+  see()}
+sp.onclick=function(){try{Android.analysisCancel()}catch(e){}setTimeout(poll,200)};
+function start(id){
+  res.textContent='';res.classList.remove('on');
+  var r='';try{r=String(Android.analysisStart(id,String(q.value||''))||'')}catch(e){r='Analysis abhi nahi chala.'}
+  if(r!=='ok'){cur='';sw.classList.add('on');tx.className='m13_err';tx.textContent=r;bar.classList.remove('on');sp.classList.remove('on');see();return}
+  cur=id;sw.classList.add('on');tx.className='';tx.textContent='...';poll()}
+function addBtns(){
+  [].slice.call(list.querySelectorAll('.m11_row')).forEach(function(r){
+    var a=r.querySelector('.m11_act');if(!a||a.querySelector('.m13_btn')||!r.querySelector('.m11_see'))return;
+    var id=r.getAttribute('data-id');var b=mk('button','m13_btn','ANALYSE');b.type='button';b.onclick=function(){start(id)};
+    a.insertBefore(b,a.firstChild.nextSibling||null)})}
+new MutationObserver(addBtns).observe(list,{childList:true});addBtns();
+d.addEventListener('visibilitychange',function(){if(!d.hidden)poll()});
+setTimeout(poll,1300);
+}catch(e){}})();
+</script>
+<script id="pt13d_chat">
+/* v7.59 PART 13D (KNOWN BUG FIX): a photo is attached in the chat and the owner writes a QUESTION about it -> the photo is looked at by the vision pipeline (before this the photo was ignored and the AI answered blind).
+   Kotlin (Android.chatPhotoAsk) decides: not a question / no photo = the old chat route goes on unchanged; refused / busy / NOVA off = one honest line; else a native HAAN / NAHI box opens and NOTHING is sent before HAAN.
+   Edit / picture / website sentences are never touched here (AutoIntent says kind != NONE). The answer comes back as a normal chat line from Kotlin (kept as text only). Texts via textContent. */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var ci=g('c_in'),cl=g('clog'),thw=g('c_thw');if(!ci||!cl||!thw)return;
+function hasPhoto(){try{return getComputedStyle(thw).display!=='none'}catch(e){return false}}
+function bubble(t,c){var m=d.createElement('div');m.className='msg '+c;m.textContent=t;cl.appendChild(m);cl.scrollTop=cl.scrollHeight}
+function sendish(e){if(e.type==='click')return !!(e.target&&e.target.closest&&e.target.closest('#c_send'));return e.key==='Enter'&&e.target===ci}
+window.onChatPhotoGo=function(){try{ci.value=''}catch(e){}};
+window.onChatPhotoNo=function(){};
+function go(e){try{
+  if(e.defaultPrevented||!sendish(e)||!hasPhoto())return;
+  var t=ci.value.trim();if(!t)return;
+  var r=null;try{r=JSON.parse(Android.detectIntent(t,true))}catch(x){r=null}
+  var k=(r&&r.kind)||'NONE';
+  if(r&&r.blocked)return;
+  if(k!=='NONE')return;
+  var s='';try{s=String(Android.chatPhotoAsk(t)||'')}catch(x){s=''}
+  if(s===''||s==='notquestion'||s==='nophoto')return;
+  e.stopPropagation();e.preventDefault();
+  if(s!=='asking')bubble(s,'ai')
+}catch(x){}}
+d.addEventListener('click',go,true);d.addEventListener('keydown',go,true);
+}catch(e){}})();
+</script>
+<style id="pt14_laser_css">
+/* v7.62 PART 14 GREEN LASER SCAN: full-screen hacker scan while a REAL analysis runs. Add-only. Shown only for status.state==='running'; every number comes from the real status (percent, stage). */
+#p14_scan{position:fixed;inset:0;z-index:2147483000;display:none;pointer-events:none;overflow:hidden;background:rgba(0,10,4,.72);font-family:ui-monospace,Menlo,Consolas,monospace;color:#5dff9a}
+#p14_scan.on{display:block;animation:p14in .25s ease-out}
+@keyframes p14in{from{opacity:0}to{opacity:1}}
+#p14_scan .gr{position:absolute;inset:0;background-image:linear-gradient(rgba(60,255,140,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(60,255,140,.09) 1px,transparent 1px);background-size:28px 28px}
+#p14_scan canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.35}
+#p14_scan .vg{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.7) 100%)}
+#p14_scan .ln{position:absolute;left:0;right:0;top:0;height:3px;background:#9dffc4;box-shadow:0 0 14px 4px rgba(80,255,150,.9),0 0 46px 14px rgba(40,255,120,.45);animation:p14ln 2.6s linear infinite;will-change:transform}
+#p14_scan .tr{position:absolute;left:0;right:0;top:-120px;height:120px;background:linear-gradient(to top,rgba(60,255,140,.28),transparent);animation:p14ln 2.6s linear infinite;will-change:transform}
+@keyframes p14ln{from{transform:translateY(0)}to{transform:translateY(100vh)}}
+#p14_scan .cn{position:absolute;width:34px;height:34px;border:2px solid #5dff9a;opacity:.9}
+#p14_scan .c1{left:14px;top:calc(14px + env(safe-area-inset-top,0px));border-right:0;border-bottom:0}
+#p14_scan .c2{right:14px;top:calc(14px + env(safe-area-inset-top,0px));border-left:0;border-bottom:0}
+#p14_scan .c3{left:14px;bottom:14px;border-right:0;border-top:0}
+#p14_scan .c4{right:14px;bottom:14px;border-left:0;border-top:0}
+#p14_scan .hud{position:absolute;left:0;right:0;top:calc(64px + env(safe-area-inset-top,0px));text-align:center;padding:0 16px}
+#p14_scan .ti{font-size:13px;letter-spacing:.32em;text-shadow:0 0 10px rgba(80,255,150,.8)}
+#p14_scan .pc{font-size:44px;font-weight:700;margin-top:6px;text-shadow:0 0 18px rgba(80,255,150,.9);font-variant-numeric:tabular-nums}
+#p14_scan .sg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
+#p14_scan .sg b{font-weight:500;font-size:11px;letter-spacing:.12em;padding:4px 8px;border:1px solid rgba(93,255,154,.35);border-radius:4px;opacity:.55}
+#p14_scan .sg b.act{opacity:1;background:rgba(93,255,154,.2);border-color:#5dff9a;box-shadow:0 0 10px rgba(80,255,150,.6)}
+#p14_scan .sg b.dn{opacity:.85;border-style:dashed}
+#p14_scan .ms{margin-top:12px;font-size:13px;color:#c9ffe0;min-height:1.4em;word-break:break-word}
+#p14_scan .bt{position:absolute;left:0;right:0;bottom:calc(36px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+#p14_scan button{pointer-events:auto;min-width:140px;min-height:48px;background:rgba(255,60,80,.15);color:#ff8a98;border:1px solid #ff5d70;border-radius:10px;font:600 14px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2em}
+#p14_scan button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#p14_scan.done .ln,#p14_scan.done .tr{animation:none;opacity:0}
+#p14_scan.done .pc{color:#fff}
+html.lowfx #p14_scan .ln,html.lowfx #p14_scan .tr{animation-duration:4.5s}
+html.lowfx #p14_scan canvas{display:none}
+@media (prefers-reduced-motion:reduce){#p14_scan .ln,#p14_scan .tr{animation:none;top:50%}#p14_scan.on{animation:none}#p14_scan canvas{display:none}}
+</style>
+<script id="pt14_laser">
+/* v7.62 PART 14. Reads ONLY Android.analysisStatus (read-only) and calls Android.analysisCancel from the STOP button. No typed text read, no network, no timer-faked progress:
+   the number and the stage chip are the real status. textContent only. lowfx / reduced motion = no matrix canvas, slower or static laser. */
+(function(){try{
+var d=document;function mk(t,c,x){var e=d.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+if(d.getElementById('p14_scan'))return;
+var ST=['INTAKE','FRAMES','VISION','SEARCH','COMPOSE'];
+var root=mk('div');root.id='p14_scan';root.setAttribute('role','status');root.setAttribute('aria-live','polite');root.setAttribute('aria-label','Scan chal raha hai');
+root.appendChild(mk('div','gr'));
+var cv=mk('canvas');root.appendChild(cv);root.appendChild(mk('div','vg'));
+root.appendChild(mk('div','tr'));root.appendChild(mk('div','ln'));
+['c1','c2','c3','c4'].forEach(function(c){root.appendChild(mk('div','cn '+c))});
+var hud=mk('div','hud');var ti=mk('div','ti','NOVA SCAN');var pc=mk('div','pc','0%');var sg=mk('div','sg');var ms=mk('div','ms','');
+var chips={};ST.forEach(function(s){var b=mk('b',null,s);chips[s]=b;sg.appendChild(b)});
+hud.appendChild(ti);hud.appendChild(pc);hud.appendChild(sg);hud.appendChild(ms);root.appendChild(hud);
+var bt=mk('div','bt');var sp=mk('button',null,'ROKO');sp.type='button';sp.id='p14_stop';bt.appendChild(sp);root.appendChild(bt);
+(d.body||d.documentElement).appendChild(root);
+var timer=null,raf=null,on=false,lastPaint=0,cols=[],W=0,H=0,ctx=null;
+function low(){return d.documentElement.classList.contains('lowfx')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches)}
+function st(){try{return JSON.parse(String(Android.analysisStatus()||'{}'))}catch(e){return null}}
+var CH='01ABCDEF<>/\\{}#$%=+*';
+function size(){W=cv.width=Math.max(1,Math.floor(root.clientWidth/2));H=cv.height=Math.max(1,Math.floor(root.clientHeight/2));cols=[];for(var i=0;i<Math.floor(W/10);i++)cols.push(Math.random()*H)}
+function rain(t){raf=null;if(!on||low()||!ctx)return;
+  if(t-lastPaint>60){lastPaint=t;ctx.fillStyle='rgba(0,10,4,.18)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#5dff9a';ctx.font='10px monospace';
+    for(var i=0;i<cols.length;i++){ctx.fillText(CH.charAt((Math.random()*CH.length)|0),i*10,cols[i]);cols[i]=cols[i]>H&&Math.random()>.96?0:cols[i]+10}}
+  raf=requestAnimationFrame(rain)}
+function show(){if(on)return;on=true;root.classList.remove('done');root.classList.add('on');
+  if(!low()){try{ctx=cv.getContext('2d');size();if(!raf)raf=requestAnimationFrame(rain)}catch(e){ctx=null}}}
+function hide(){on=false;root.classList.remove('on');root.classList.remove('done');if(raf){cancelAnimationFrame(raf);raf=null}}
+function paint(s){
+  var k=String(s.stage||'');var i=ST.indexOf(k);
+  ST.forEach(function(n,j){var c=chips[n];c.className=(j<i)?'dn':(j===i?'act':'')});
+  pc.textContent=Math.max(0,Math.min(100,s.percent|0))+'%';ms.textContent=String(s.message||'')}
+function poll(){
+  timer=null;if(d.hidden){timer=setTimeout(poll,1500);return}
+  var s=st();
+  if(s&&s.state==='running'){show();paint(s);timer=setTimeout(poll,350);return}
+  if(on){root.classList.add('done');pc.textContent='100%';ms.textContent=(s&&s.state==='done')?'SCAN POORA':(s&&s.state==='cancelled'?'ROKA GAYA':'SCAN BAND');setTimeout(hide,s&&s.state==='done'?900:300)}
+  timer=setTimeout(poll,1200)}
+sp.onclick=function(){try{Android.analysisCancel()}catch(e){}if(timer)clearTimeout(timer);timer=setTimeout(poll,200)};
+d.addEventListener('keydown',function(e){if(on&&e.key==='Escape')sp.onclick()},true);
+d.addEventListener('click',function(e){var t=e.target;if(t&&t.closest&&t.closest('.m13_btn')){if(timer)clearTimeout(timer);timer=setTimeout(poll,250)}},true);
+window.addEventListener('resize',function(){if(on&&ctx)size()});
+d.addEventListener('visibilitychange',function(){if(!d.hidden){if(timer)clearTimeout(timer);poll()}});
+timer=setTimeout(poll,1600);
+}catch(e){}})();
+</script>
+<style id="p21_oneplus_css">
+/* v7.74 add-only: photo / video / file now live ONLY under the + button. The separate paperclip and MEDIA buttons are hidden (their ids and code stay; the + menu clicks them). */
+html body #c_attach,html body #m11_btn{display:none!important}
+#cn_strip button.p21{border-color:rgba(47,216,255,.7);background:rgba(47,216,255,.12)}
+</style>
+<script id="p21_oneplus">
+/* v7.74: ONE place for photo / video / file = the + menu (#cn_strip). Items are added at the TOP every time the menu is drawn. */
+(function(){try{
+var d=document;function g(i){return d.getElementById(i)}
+var strip=null,busy=false;
+function click(id){try{var o=g(id);if(o)o.click()}catch(e){}}
+function mk(t,fn){var b=d.createElement('button');b.type='button';b.className='p21';b.setAttribute('role','menuitem');b.textContent=t;
+  b.onclick=function(e){try{e.stopPropagation()}catch(x){}try{strip.classList.remove('on')}catch(x){}fn()};return b}
+function fill(){
+  strip=g('cn_strip');if(!strip||busy||strip.querySelector('.p21'))return;
+  busy=true;
+  try{
+    var first=strip.firstChild;
+    var items=[mk('PHOTO / VIDEO CHUNO',function(){click('c_photo')}),mk('FILE / MEDIA CHUNO',function(){click('m11_pick')})];
+    var sx=g('c_smx');if(sx&&sx.style.display!=='none')items.push(mk('WEBSITE KI PHOTO/VIDEO HATAO',function(){click('c_smx')}));
+    items.forEach(function(b){strip.insertBefore(b,first)});
+  }catch(e){}
+  busy=false}
+function watch(){
+  var c=g('chat');if(!c)return;
+  try{new MutationObserver(function(){fill()}).observe(c,{childList:true,subtree:true})}catch(e){}
+  var p=g('c_plus');if(p)p.addEventListener('click',function(){setTimeout(fill,0)},true)}
+if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watch);else watch();
+}catch(e){}})();
+</script>
 </body></html>
-

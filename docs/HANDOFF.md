@@ -57,3 +57,7 @@ Speaker check hi hata diya (v6.51), isliye "sirf owner ki baat sunta hu" wala bu
 - Hinglish, chhota jawab. Har step ke baad ZIP (`NOVA-Voice-Assistant.zip`) + direct upload/build links.
 - Build/test ka sach: **RUN / NOT RUN** saaf likho. "Kaam karta hai" tabhi jab CI green aur phone par dekha ho.
 - Owner jo maange wahi karo, scope se bahar mat jao; do raaste ho to ek chhota sawal pucho.
+
+## v7.72 (Part 20 FINAL) - add-only note
+Read first: `PART20_STATUS_v7_72.md`, `NEXT_ACCOUNT_PROMPT_v7_72_AFTER_PART20.md`, `OWNER_PHONE_TEST_LIST_v7_72.md`. All 20 parts are written. Do not add features without the owner's yes; fix only from his phone / Actions results. Two owner decisions are still pending (voice queue while NOVA is busy; wb_ll wake word on a locked phone) - ask before changing. Honest state: Actions build NOT RUN, phone NOT TESTED.
+

@@ -4,7 +4,7 @@
 # Usage (project root):  ./tools/run_all_checks.sh
 cd "$(dirname "$0")/.." || exit 2
 pass=0; fail=0; stale=0; newfail=""
-for t in tools/test_*.py; do
+for t in tools/test_*.py tools/check_p[0-9]_*.py; do
   if python3 "$t" >/tmp/nova_check.$$ 2>&1; then pass=$((pass+1)); echo "PASS $t"
   else fail=$((fail+1)); echo "FAIL $t"; tail -5 /tmp/nova_check.$$
     if grep -qx "$(basename "$t")" tools/KNOWN_STALE_GUARDS.txt 2>/dev/null; then stale=$((stale+1)); echo "  ^ known stale guard of the other code line (see tools/KNOWN_STALE_GUARDS.txt)"

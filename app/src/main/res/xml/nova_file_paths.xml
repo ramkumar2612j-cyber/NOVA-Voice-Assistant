@@ -3,4 +3,5 @@
     <external-files-path name="nova_recorded_audio" path="Music/rec/" />
     <external-files-path name="nova_recorded_video" path="Movies/rec/" />
     <files-path name="nova_internal_files" path="rec/" />
+    <cache-path name="nova_media_intake" path="media_intake/" />
 </paths>

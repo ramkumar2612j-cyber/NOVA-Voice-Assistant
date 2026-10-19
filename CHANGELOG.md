@@ -1,3 +1,238 @@
+## v7.74 - ONE + MENU for photo / video / file (add-only), versionName 7.74
+- Owner screenshots (19 Oct 2026): chat me photo / video / file alag-alag jagah the. Ab SAB + button ke menu me ek jagah: PHOTO / VIDEO CHUNO, FILE / MEDIA CHUNO (aur website media laga ho to HATAO). Alag paperclip aur MEDIA button chhupa diye (ids / code nahi hata, add-only).
+- Auto reply ka "Main abhi busy hoon..." wala prefilled box v7.72 / v7.73 me pehle se nahi hai (sirf AI baat karta hai). Screenshot wali APK purani build thi. Naya APK install karke Setup me dekho: purana box aur "AI SMART" checkbox nahi dikhna chahiye.
+- NEW tools/test_oneplus_contract.py. Version-pinned guards accept 7.74.
+- NOT RUN: Kotlin compile / JUnit (kotlinc nahi), GitHub Actions. NOT TESTED: phone (+ menu).
+
+## v7.73 - VOICE WHILE BUSY (add-only), versionName 7.73
+- Owner decision 19 Oct 2026: busy NOVA par bola hua command ab queue me jaata hai (HAAN). Locked phone par wake word / command sunna = NAHI (Lock Guard bilkul nahi chheda).
+- NEW BusyListenRules.kt (pure): mayListen (busy + NOVA bol nahi raha + phone unlocked + koi yes/no jawab ka wait nahi) aur decide (QUEUE / STOP / EMPTY / NONE). NEW ExtCfg.busyListen (default ON, prefs key busy_listen).
+- NovaService mic loop: busy ho par bhi (jab NOVA khud nahi bol raha) wake word sunta hai; command khatam hone par offline (Vosk) text cmdQ me voice=true ke saath jaata hai, "Yaad rakh liya" sys line aati hai. "ruko / stop" bolo to softStop (queue bhi saaf). NOVA jab bol raha ho tab ab bhi audio fenka jaata hai (apni awaaz ka echo na sune).
+- Honest limit: busy ke dauran sirf offline (Vosk) text queue hota hai, cloud transcribe nahi; Vosk ne kuch na suna to "dobara bolo" aata hai.
+- Tests: BusyListenRulesTest (6 JUnit), tools/test_busy_listen_contract.py. Version-pinned guards (4 tools/*.py + test_part20_contract.py) ab 7.73 bhi accept karte hain.
+- NOT RUN: Kotlin compile + JUnit (sandbox me kotlinc / internet nahi) -> GitHub Actions chalayega. NOT TESTED: phone.
+
+## v7.72 - PART 20: FINAL (add-only), versionName 7.72
+- NO Kotlin / ui.html code changed. Only: versionName 7.71 -> 7.72, docs, one new Python test, final zip.
+- NEW OWNER_PHONE_TEST_LIST_v7_72.md (CHECKPOINT 4): numbered PASS / FAIL list for Parts 5-18 checkpoints + Parts 16 / 17 / 18 + final long-use test; both pending owner decisions listed at the end.
+- NEW NEXT_ACCOUNT_PROMPT_v7_72_AFTER_PART20.md (handover: fix-from-owner-results only, ask owner before touching the 2 pending decisions, honest limits).
+- NEW PART20_STATUS_v7_72.md (what was RUN here, what is NOT RUN / NOT TESTED).
+- README: pointer on top + "FINAL v7.72" section (old lines untouched). OWNER_SETUP_AND_APK_STEPS.md: new section G / G2 (repo upload, Actions run, APK install, red-build help). NOVA_20_PARTS_PLAN.md and docs/HANDOFF.md: Part 20 status lines.
+- NEW tools/test_part20_contract.py (docs exist, add-only, phone list coverage, honesty words, secret scan with the known fake-redaction test file allowed).
+- Version-pinned guards (4 tools/*.py) now also accept 7.72.
+- Secret scan: no keystore / .ppn / local.properties; no real-looking key outside MemoryScreenOpsTest.kt (redaction test with fake strings; not proven fake, see PART20_STATUS).
+- NOT RUN: Kotlin compile + JUnit for v7.72 (sandbox had no kotlinc / internet; Kotlin unchanged since v7.71 where 1352 / 1352 PASS), GitHub Actions. NOT TESTED: phone.
+
+## v7.71 - PART 19: FULL REGRESSION (add-only), versionName 7.71
+- The 29 "old org.json-stub" JUnit failures were a HARNESS gap, not app bugs: android.jar only has throwing org.json stubs. tools/local_compile_check.sh now builds the REAL org.json 20240303 from GitHub source when JSON_JAR is not given (Maven Central is blocked in the sandbox). Result: JUnit 1352 run / 1352 PASS / 0 fail.
+- FeatureStatus: new row "safemode" (warn only while Part 18 safe mode is ON); callanswer row (Part 16) checked.
+- NEW tools/test_part19_contract.py (rows + harness + Part 16 / 17 / 18 contracts).
+- REAL RESULTS: Kotlin main + test compile 0 errors; JUnit 1352 / 1352 PASS; run_all_checks 136 scripts, 136 pass, 0 fail. NOT RUN: GitHub Actions. NOT TESTED: phone.
+- Version-pinned guards accept 7.71.
+
+## v7.70 - PART 18: HANG PROTECTION = SAFE MODE (add-only), versionName 7.70
+- ALREADY THERE (checked, unchanged): per-job watchdogs (turn 120 s, analysis 120 s, frames 60 s, TTS deadline, Auto-Heal 25 s), CrashNote black box, memory pressure -> page lighter (NativeSmooth) + LocalBrains.release().
+- NEW CrashGuard.kt: 2 crashes inside 10 minutes => SAFE MODE for 30 minutes (pure rules CrashGuard + prefs store CrashGuardStore, crash time written with commit() from the CrashNote handler BEFORE the normal crash handling).
+- Safe mode effects: page forced to light effects, cosmetic laser overlay skipped (NovaService.startLaser), banner "SAFE MODE ... SAFE MODE BAND KARO" (ui.html pt18_safe). Calls, messages, data untouched. Auto ends after 30 min; the button ends it earlier and forgets old crash times.
+- Bridge getSafeMode / exitSafeMode; MADAD topic "safemode" (49 topics) + SKILLS entry.
+- Tests: CrashGuardTest (5 JUnit), tools/test_part18_contract.py (static + headless 320 px; mutation check: removing the crash hook = FAIL).
+- Version-pinned guards accept 7.70. NOT TESTED: phone (force 2 crashes to see the banner).
+
+## v7.69 - PART 17: SETTINGS RESTYLE (add-only), versionName 7.69
+- NEW Settings "SWITCHES" card (ui.html script pt17_switches, placed above the SAVE row): GRAPHICS QUALITY (AUTO / SHARP / SMOOTH, same store as the old #s_quality select), PERSONA (ON / OFF, same bridge as the Part 9 button) and STOP KAISE KAAM KARE (SIRF ROKE default / ROKE + NOVA BAND). Old #s_quality and the PERSONA button stay and are kept in step (nothing removed).
+- STOP switch: new bridge getStopPowersOff / setStopPowersOff in MainActivity (backed by the existing ExtCfg.stopPowersOff, default OFF = SafeStop SOFT). Listed in BRIDGE.
+- MADAD topic "switches" (Kotlin HelpGuide + ui.html CAPS, 48 topics, equal). 
+- Tests: tools/test_part17_contract.py (static + headless chromium at 320 px with a fake Android bridge; mutation check: removing the STOP handler gave 3 FAIL), HelpGuidePart17Test.kt (3 JUnit).
+- Version-pinned guards (4 tools/*.py) now also accept 7.69.
+- NOT CHANGED ON PURPOSE (owner decision still pending): voice while NOVA is busy is not queued; wb_ll wake word on a locked phone.
+- Kotlin compile / JUnit / phone: see PART17_STATUS_v7_69.md.
+
+## v7.68 - PART 16: MISSING WIRES (add-only), versionName 7.68
+- REAL GAP FIXED: ANSWER_PHONE_CALLS (needed by "call uthao" via PhoneActions.answerCall) was in the manifest and checked, but NEVER asked at runtime. MainActivity permission round now asks it (API 26+, minSdk is 26); SetupChainRules.VERSION 1 -> 2 so phones that already finished the old round get one more.
+- FeatureStatus: new row "callanswer" (Call uthana / kaatna) reads that permission.
+- HelpGuide + ui.html CAPS: 2 new MADAD topics "callanswer" and "calendar" (both existed as features, no help text); both added to PRIORITY so the older "call" topic cannot shadow them. 47 topics, Kotlin == ui.html.
+- NEW tools/audit_dead_ui.py (dead input/button ids, unused bridge methods, help topics vs ui.html, retired SocialReplyRules / PaymentReplyRules leftovers): 0 real gaps; mutation check (fake dead checkbox) is caught. NEW tools/test_part16_contract.py (mutation check PASS). NEW HelpGuidePart16Test.kt (written, NOT RUN).
+- CHECKED, no change needed: nc_on (wired in v7.50), SocialReplyRules leftovers (none in Kotlin or ui.html), docs/pending_G (both files byte-identical to the live MediaPlace.kt / SiteMediaStore.kt), OTP / password / PIN / CVV hold-back (SmartReplyRules), overlay nudge repeat (OverlayNudgeRules.RENUDGE_MS), recording writer error (RecordSession.Saved.writerError). docs/retired_guards re-run: remaining FAILs are string checks for the other code line, the features themselves exist.
+- NOT CHANGED ON PURPOSE: (a) voice said while NOVA is busy is still not queued (mic loop drops audio while busy / speaking = echo protection; needs compile + phone test); (b) wb_ll wake word on a locked phone (owner decision, clashes with Lock Guard).
+- tools/test_android_runtime_contract.py now accepts versionName 7.67 or 7.68.
+- NOT RUN: Kotlin compile, JUnit, phone / GitHub Actions.
+
+## v7.67 - PART 15: RESULT CARDS (CHECKPOINT 3), versionName 7.67
+- NEW ResultCardRules.kt (pure): card() = headline + confidence + verified / not-verified counts + up to 3 source domains; historyLine() (counts only); isReadAll() "poora padho / read the full report"; speakable() + chunks() for the voice.
+- AnalysisPipeline hands over the card (takeCard); NovaService.deliverAnalysis: card + full text in chat, History "NOVA ANALYSIS" (text only), card on the HUD. "poora padho" reads the last full report (analysis or movie scan), silent mode stays silent. Route runs before the movie route.
+- Tests: ResultCardRulesTest (6 JUnit), tools/test_result_card_contract.py. REAL: Kotlin main compile 0 errors; JUnit LaserMathTest 9 + MovieCardTest 3 + ResultCardRulesTest 6 = 18 pass / 0 fail. Phone NOT TESTED.
+
+## v7.66 (cont.) - PART 14B-5: RESULT CARD + HISTORY (PART 14 COMPLETE in code)
+- MovieGuessRules.card (name, confidence, up to 3 source domains) + historyLine; NovaService.deliverMovie: card + full text in chat, History entry "NOVA MOVIE" (text only), card on the HUD, laser overlay shows RESULT 100 for 0.9 s then closes.
+- REAL RESULTS: Kotlin main compile (all of app/src/main incl. NovaService + LaserOverlay) = 0 errors. JUnit LaserMathTest 9 + MovieCardTest 3 = 12 pass / 0 fail. Old test files fail to compile only because the harness junit stub lacks assertNotEquals / assertArrayEquals(IntArray) (not a code error). Phone NOT TESTED.
+
+## v7.66 - PART 14B-4: FULL-SCREEN LASER OVERLAY (add-only; compile / JUnit / phone: see PART14B1_STATUS_v7_63.md UPDATE v7.66), versionName 7.66
+- NEW LaserOverlay.kt: LaserMath (pure: stage parse, sweep, simple mode, glyphs, glitch, labels) + LaserOverlay (system overlay, whole screen) + LaserView (dark scrim, grid, green laser sweeping top to bottom like a printer, falling matrix text, real stage list + percent, progress bar, STOP / ROKO button).
+- Stages are the real ones: CAPTURE 0..9, READ TEXT 10, VISION 25, SEARCH 55..90, RESULT 100 (NovaService.movieStage).
+- NOT touch-through (all touches taken, only STOP works). STOP button or the voice / card STOP ends the scan and the overlay within 120 ms.
+- The overlay is hidden around every screenshot (hideForShot / showAfterShot), so the laser never appears in the frames. No FLAG_SECURE (it would blank them).
+- Simple mode (animations off in Android, or low-RAM phone): no motion, laser sits at the real percent.
+- No overlay permission: the scan still runs; the existing one-time tap-to-fix notice (overlayNudge) asks for it.
+- NovaService: startLaser / stopLaser / laserTick, wired in startMovieScan; closed on finish, cancel and onDestroy. Tests: LaserMathTest (9 JUnit), tools/test_laser_overlay_contract.py.
+
+## v7.65 - PART 14B-3: MOVIE GUESS PIPELINE (add-only; Kotlin compile / JUnit / phone NOT RUN), versionName 7.65
+- NEW MovieGuessRules.kt + MovieGuessPipeline.kt (pure): the captured frames + the screen text go to the vision AI (Gemini, then the free chain, same keys / cooldowns as the analysis), the best title is checked by a web search (grounded Gemini, else key-less Wikipedia / News), the answer is a NAME + confidence + sources.
+- Title only from visible evidence (screen text, scene). NEVER a person from a face: the prompt forbids it, a title / evidence line that names a person is dropped (AnalysisRules.identityClaim). Confidence is earned by sources: HIGH = name written on screen + >= 2 web results; MEDIUM = 2 results or 1 + written; LOW = "verify nahi hua" (no search / no source can never be better than LOW).
+- Privacy: protected screen re-checked right before anything leaves the phone; the search sends only short title queries (no picture, no screen text); frames are cleared as soon as the guess ends; nothing is saved. A private screen answer from the AI (safety private) stops the run.
+- NovaService.startMovieScan: after the 14B-2 capture it reads the screen text, runs the guess, and delivers the result as chat text + a short spoken line (deliverMovie). movieStage (READ TEXT / VISION / SEARCH / RESULT + percent) is kept for the laser overlay (14B-4). Honest endings: no AI key, limit, offline, unreadable answer, nothing found.
+- NEW MovieGuessRulesTest (10) + MovieGuessPipelineTest (10), NOT RUN. tools/test_movie_guess_contract.py PASS (3 mutations caught). Nothing removed.
+
+## v7.64 - PART 14B-2: LIVE SCREEN CAPTURE for the movie scan (add-only; Kotlin compile / JUnit / phone NOT RUN), versionName 7.64
+- NEW MovieFrameRules.kt + MovieScanCapture.kt (pure): 2-4 small frames, 1.5 s apart, memory only (never saved, never sent). Protected screen (AnalysisRules.gateSource) checked BEFORE every frame and again AFTER every shot; if it shows up, all frames are thrown away. Identical frames (paused video) kept once.
+- NovaAccessibilityService: movieProtected() (fails closed, skips NOVA's own window) and movieShot() (refuses protected screens). NovaService: "nova ye kon si movie hai" now starts a real background capture (STOP cancels it) and says honestly how many frames were taken; the movie NAME guess is still 14B-3 (no name, no face / actor).
+- NEW MovieScanCaptureTest (9 JUnit, NOT RUN), tools/test_movie_capture_contract.py PASS (mutation-checked). 14B-1 contract widened: route may be notYetText (14B-1) or startMovieScan (14B-2).
+
+## v7.63 - PART 14B-1: "nova ye kon si movie hai" samajhna (add-only; Kotlin compile / JUnit / phone NOT RUN), versionName 7.63
+- NEW MovieScanRules.kt (pure Kotlin): parse(text) -> MOVIE / NONE. Insaan / actor / cast / "kaun hai", shared file, play / download / recommend sentences NONE. Face gate (13A) untouched: "ye reel kon si movie hai" refuse nahi hota, "ye kaun hai" abhi bhi refuse.
+- NovaService: naya local route AnalysisVoiceRules.parse se PEHLE (no AI, no persona). Jawab abhi honest "live screen scan abhi ban raha hai (Part 14B)"; koi capture nahi, koi naam nahi.
+- NEW MovieScanRulesTest (6 JUnit, NOT RUN: sandbox me kotlinc / internet nahi). tools/test_movie_scan_contract.py PASS (static).
+- Version list tests me 7.63 add (analysis_rules, analysis_voice, search_compose, android_runtime).
+
+## v7.62 - PART 14 GREEN LASER SCAN (add-only, ui.html only; phone NOT TESTED), versionName 7.62
+- NEW pt14_laser_css + pt14_laser: full-screen hacker scan (green laser line + printer trail, grid, matrix rain, corner brackets) shown ONLY while a real analysis runs (analysisStatus state running). Percent and stage chips (INTAKE, FRAMES, VISION, SEARCH, COMPOSE) come from the real status, no timer fake. Touch-through except ROKO (analysisCancel) and Escape. lowfx / reduced motion: no canvas, slower or static laser. After done: "SCAN POORA" ~1 s then hides.
+- No new Kotlin, no new bridge call, no network, no typed text read. NEW tools/test_p14_laser_contract.py (static + headless 320/360/412, mutation-checked).
+- Part 14B (live screen movie scan) is still to do: see NOVA_20_PARTS_PLAN.md.
+
+## v7.61 - Part 13 COMPLETE (code + sandbox checks; phone NOT TESTED), versionName 7.61
+- Kotlin COMPILE PASS (main + test, kotlinc 1.9.24). JUnit: Analysis* / FreeVision koi fail nahi; 29 purane org.json-stub fail alag.
+- Tests: AnalysisVoiceRulesTest.faceGateCatchesImageWhoQuestions; test_p13_ui_runtime D2 (mutation-proof: guard hatane par FAIL); test_part6_contract (CB list quotes); check_p7_motion (scope sirf p7 block).
+- FeatureVerify (FeatureCheck.understanding): "Samajh: video analyse karo (chehra pehchan mana)".
+- docs/PART13_TRACE_v7_52.md: v7.61 section me rows 15-17, 20-24, 27-28.
+
+## v7.60 (13D acceptance ~60%, early pack on owner's order; versionName still 7.59)
+- AnalysisRules.FACE_PHRASES: add-only phrases. test_free_vision_contract accepts the 13D finishMetadata signature. test_p13_ui_runtime: chat photo flow (headless PASS).
+- NOT RUN: Kotlin compile, JUnit, full run_all_checks, phone. See PART13D_STATUS_v7_60.md.
+
+## v7.59 - Part 13D (adhura, code only): voice + chat photo analysis
+- "nova ye video analyse karo" / "is photo me kya hai" / "isko check karo..." asli analysis chalate hain (sabse naya shared file, background, STOP se ruke). Chat me photo + sawaal ab photo dekhkar jawab deta hai (HAAN box ke baad). Compile / JUnit / phone NOT RUN; baki kaam PART13D_STATUS_v7_59.md me.
+
+## v7.58 - Part 13C: SEARCH + COMPOSE (sourced report)
+- Analysis ab ANALYSE ke baad web par dawon ki jaanch karti hai (Gemini Google Search grounding, warna key-less Wikipedia / News); sirf chhoti text query jaati hai. COMPOSE dawon ko asli source numbers se bandhta hai, baaki 'verify nahi hua'. Search me kuch nahi mila to saaf line. Code only: compile / JUnit / phone NOT RUN.
+
+# CHANGELOG
+
+## v7.57 (Part 13B-2d, add-only): 13B CLOSED
+- FeatureStatus: new home row "analyse" (ok with a Gemini key or free chain + Groq / OpenRouter key, else warn with the honest "only file size / length" reason). FeatureCheck.readiness: one "Photo / video ANALYSE" readiness line. Both only READ saved state.
+- docs/PART13_TRACE_v7_52.md: rows 12-14, 17-19, 22, 27 marked DONE in code (phone NOT TESTED). Version 7.57.
+- NOT RUN (owner order: only after Part 13 / 13D): Kotlin compile, JUnit, run_all_checks, headless render, GitHub Actions, phone. Phone-test fixes (old 13B-2 item 3) wait for the owner's end-of-Part-13 result.
+
+## v7.56 (Part 13B-2c, add-only): REPORT UI POLISH
+- ui.html pt13_analyse: the plain report text is shown in clear sections (summary, headings Kya dikha / Likha hua text / Verify nahi hua / Limits ..., bullet lists, confidence box, source lines). Built with createElement + textContent only (no innerHTML); unknown shape falls back to plain text. Kotlin reportText unchanged (chat / voice keep using it).
+- Long report scrolls inside its own box (max 50vh, contained overscroll, focusable); 320 px rules (@media max-width:360px: smaller input / report font, ROKO full width). No new button, no chat-bar change, SCR unchanged. Version 7.56.
+- Tests: tools/test_report_polish_contract.py (static). NOT RUN (owner order, only after Part 13): Kotlin compile, JUnit, run_all_checks, headless render (test_p13_ui_runtime), phone.
+
+## v7.55 (Part 13B-2b, add-only): STUCK CALL AFTER CANCEL
+- AnalysisPipeline: after ROKO / STOP (cancel) or the 120 s watchdog the stuck worker is abandoned (shutdownNow) and a NEW single worker is made (replaceWorker), so a new ANALYSE never waits up to 35 s behind an old network call. Old late results are still dropped by the generation number. Still one worker at a time, never the main thread.
+- Tests: tools/test_cancel_worker_contract.py (static). versionName 7.55 (3 pins). No UI / bridge / permission change.
+- NOT RUN (owner order: only after Part 13 is complete): Kotlin compile, JUnit, run_all_checks, phone.
+
+## v7.54 (Part 13B-2a, add-only): FREE-PROVIDER VISION FALLBACK
+- NEW FreeVision.kt (pure): vision providers = Groq `qwen/qwen3.8-27b` (id groqqwen, same key / cooldown / ApiUsage as the text Qwen row) + OpenRouter `openrouter/free` (id openrouter). Z.ai (China server), Pollinations (anonymous) and text-only models (gpt-oss, llama-3.3) never get a picture. OpenAI-style `image_url` data URL body, max 3 frames per call (Groq limit), JSON mode only for Groq, own run() chain (key needed, free-chain switch, shared cooldown, cancel check, 35 s rule, 598 ends at once).
+- AnalysisPipeline: Gemini first; only when Gemini is NOKEY / LIMIT / OTHER (not OFFLINE) and a free key is ready the frames go to the free chain; report gets an honest limit line (freeUsedNote). Brain got freeVisionReady() / callFree() (defaults = off, old methods untouched). NovaService.analysisBrain implements them with FreeHttp (no new HTTP client).
+- MADAD analysis topic + CAPS + media-card consent line now say frames may go to Groq / OpenRouter (only on ANALYSE). Version 7.54. No new permission (30).
+- Tests: FreeVisionTest (18 JUnit), tools/test_free_vision_contract.py. Owner order: tests / compile run only when Part 13 is complete.
+- RUN: Kotlin compile 0 error + JUnit once (1 own test typo found and fixed, NOT re-run); test_free_vision_contract, help, android_runtime, analysis_pipeline contracts PASS. run_all_checks NOT RUN. NOT TESTED: phone, real Groq / OpenRouter, GitHub Actions.
+
+## v7.53 (Part 13B-1, add-only): ANALYSE BUTTON + ANALYSIS ENGINE (13B split in 2 by owner)
+- NEW AnalysisPipelineRules.kt (pure): request JSON (inlineData, strict JSON), batches, call outcome, honest fallback / error texts, intake gate, status JSON (percent only from real counts).
+- NEW AnalysisPipeline.kt (Android): single background thread, 120 s watchdog, cancel, INTAKE (question gated before any network) -> FRAMES (reuse / start FrameExtractor) -> VISION (batches, parseVision, one retry, safety flag refusal) -> vision_only report (no search yet, every claim unverified) -> DONE; no key / offline / limit = metadata-only report. Result in RAM only.
+- NovaService.analysisBrain (same key / models / ApiUsage / cooldown via postFallback; no new HTTP client); STOP (softStop + HUD) cancels the analysis. FrameExtractor add-only: lastDurationMs, keptFiles, keptSecs.
+- Bridge (new): analysisStart / analysisStatus / analysisCancel / analysisResult / analysisResultText. mediaIntakeRemove / Clear also forget reports.
+- ui.html: pt13_analyse (ANALYSE per photo / video row, question box, ROKO, real-percent bar, report text via textContent), SCR + BRIDGE list, MADAD topic `analysis` (HelpGuide + CAPS), SKILLS entry, media / frames wording made true, consent line in the media card.
+- Tests: AnalysisPipelineRulesTest (14), test_analysis_pipeline_contract.py, test_p13_ui_runtime.py (headless, fake bridge). Retired: old "no ANALYSE button" check in test_p11_ui_runtime. versionName 7.53.
+- RUN here: full Kotlin compile 0 error; JUnit 29 fail = old org.json-stub tests only (none Analysis*); run_all_checks 0 fail. NOT TESTED: phone, GitHub Actions.
+
+## v7.52 (Part 13A, add-only): ANALYSIS RULES
+- AnalysisRules.kt (pure, MiniJson only): safety gate, vision / compose prompts, strict JSON parsers, URL / source validation, claims bound to real result numbers or unverified, confidence, honest metadata-only report, JSON + text renderers, stage lines.
+- AnalysisRulesTest.kt (45 tests), tools/test_analysis_rules_contract.py, docs/PART13_TRACE_v7_52.md. versionName 7.52. No UI, bridge, permission or network change.
+- NOT RUN: Kotlin compile, JUnit, phone.
+
+## v7.51 - PART 12 FRAME EXTRACTION (add-only; Part 12 = 100%)
+- NEW AnalysisStage.kt (pure): INTAKE / FRAMES / VISION / SEARCH / COMPOSE / DONE / FAILED event with real done / total (shared by Part 13 / 14 / 15).
+- NEW FrameRules.kt (pure): frame count (default 6, max 12, short clip fewer, low memory fewer / 0), time points (start .. just before end, equal steps), max side 768, 32x32 grayscale duplicate drop, honest error texts, 60 s watchdog constant.
+- NEW FrameExtractor.kt (Android): single background thread, getFrameAtTime(OPTION_CLOSEST_SYNC), every bitmap recycled, OOM + Throwable caught, cancel (generation number), 60 s watchdog, JPEG q80 in cacheDir/media_frames/<id>, cleanStale (orphan / 24 h). STOP (NovaService.softStop + HUD onStop) also cancels.
+- Bridge (MainActivity, new): frameExtractStart / Cancel / Status / Thumb. mediaIntakeRemove / Clear also clean frame folders.
+- ui.html block pt12_frames (+ css): FRAMES NIKALO button on photo / video rows, status line, real-count bar, ROKO, thumbnail strip, error text. SCR + MADAD "frames" + CAPS + SKILLS "Video se frames nikalna".
+- Tests: FrameRulesTest (11), test_frame_extract_contract.py, test_p12_ui_runtime.py (headless, fake bridge). Bug fixed by JUnit: unknown duration 0 gave 1 frame.
+- NOT TESTED: real phone decode, Actions build.
+
+## v7.51 - PART 11-D COMPLETE (voice + MADAD + SKILLS + one chat-bar button; Part 11 = 100%)
+- MediaIntake.voiceIntent (pure): "kya mila" -> MediaIntakeStore.statusText; video / reel / media + analyse -> honest "analysis abhi nahi". Screen analyse untouched. NovaService.handle block (lastKind "media", no persona kind).
+- HelpGuide Topic("media") + ui.html CAPS same id / title / example; SKILLS "Media: Share karke bhejna"; SCR already had pt11_media.
+- Owner request: +, files (c_attach) and MEDIA (m11_btn) beside the chat box are ONE round button (ui.html pt11d_merge). Old buttons / handlers kept (hidden), the new menu clicks them. Fixes the 41px chat box at 320px found by test_part5_ui_screens.
+- Tests: MediaVoiceTest (5), test_media_voice_contract.py, test_merged_plus_runtime.py. Compile 0 error; JUnit 1167 run, 29 fail (org.json stubs only, none from Part 11).
+
+## v7.51c - PART 11-C MEDIA MILA CARD + BRIDGE (add-only; Part 11 = 75% done)
+- Bridge (MainActivity, all new): mediaIntakeList, mediaIntakeThumb (small / big JPEG data URL, inSampleSize, recycled), mediaIntakeOpen (system viewer via FileProvider), mediaIntakeRemove, mediaIntakeClear, mediaIntakeCancel, mediaIntakeAttach (id only; label = name + size), mediaPick (system picker, several photos / videos). Nothing returns a path or uri.
+- ui.html block pt11_media (+ pt11_media_css): "MEDIA MILA (n)" card in chat: thumbnail, name, type / size, DEKHO, CHAT ME JODO, HATAO, MEDIA CHUNO, SAAF KARO, ROKO + progress bar; link rows show the honest note. Names via textContent only. NO analyse button (Part 13). New chat-bar button MEDIA. Lists updated: BRIDGE (+8), CB (+onMediaIntake), SCR (+pt11_media).
+- MediaIntakeStore: thumbDataUrl, attach / attachedId. nova_file_paths.xml: cache-path media_intake. Share and picker both refresh the page (mediaChanged).
+- Tests RUN: test_media_card_contract.py PASS, test_media_store_contract.py PASS, test_p11_ui_runtime.py PASS (headless 320 / 360 / 412), whole project COMPILES (kotlinc 1.9.24, 0 errors), JUnit 1162 run / 29 fail = org.json-stub tests only (none Part 10 / 11).
+- NOT RUN after 11-C: tools/run_all_checks.sh as a whole (last full run was at 11-B: 111 pass, 0 fail), real phone, GitHub Actions. Next account runs everything first.
+- Still for 11-D: MADAD (HelpGuide) topic, SKILLS entry, voice "kya mila", final status.
+
+## v7.51b - PART 11-B MEDIA INTAKE STORE + SHARE FILTER (add-only; Part 11 = 50% done)
+- NEW MediaIntakeStore.kt (Android): Share / picker uris copied as a 64 KB STREAM on one background thread into the private cache (cacheDir/media_intake), size re-checked while copying (MediaIntake.streamOk), cancel flag, half-written file deleted, OOM caught, index.json, cleanExpired (24 h + vanished files), remove / clear / fileOf / listJson (no path, no uri). Links are stored as link entries only (no download).
+- Manifest: ACTION_SEND (image/*, video/*, text/plain) + ACTION_SEND_MULTIPLE (image/*, video/*) on MainActivity. NO new permission (30 before and after).
+- MainActivity.handleIntent: old line kept, store hook added (clean on open, share -> Toast with the honest result line).
+- MediaIntake.kt: + Entry, expiredIds, safeExt, cacheFileName, isValidId, room. JUnit +1 test (16 total, PASS).
+- FIX (Part 10 bug found by the first full JUnit run): RoundaboutRules.repeat accepted "usi ko dobara call karo kal" as a repeat; now only polite filler (please / na / yaar ...) may sit beside the phrase.
+- Tests: tools/test_media_store_contract.py PASS; whole project COMPILES on kotlinc 1.9.24 (0 errors); JUnit 1162 run, 29 fail (all org.json-stub tests of Connector / Web / Vercel / Music etc., sandbox has no real org.json; NOT Part 10 / 11).
+- NOT in 11-B: bridge + MEDIA MILA card (11-C), MADAD / SKILLS / voice (11-D). Real phone copy NOT TESTED.
+
+## v7.51 - PART 11-A MEDIA INTAKE RULES (add-only; Part 11 = 25% done)
+- NEW MediaIntake.kt (pure Kotlin): classify image / video / link (mime first, extension second), size limits (photo 25 MB, video 300 MB, empty refused, unknown size allowed + stream check), max 6 files per share, https-only links (no user:pass@, localhost, *.local, raw IP; tracking params untouched), content:// uris only, clean names (<= 60 chars, never a path), chat label = name + size only, duplicates dropped (same uri / same name + size), 24 h cache rule, honest link note ("video file nahi mili, sirf link ki jankari").
+- Tests: MediaIntakeTest.kt (15 tests, RUN on real kotlinc 1.9.24 + JUnit 4.13.2: 15/15 PASS), tools/test_media_intake_contract.py (PASS). versionName 7.51 (guard updated).
+- NOT in 11-A (on purpose): Manifest share filter, file copy (MediaIntakeStore), bridge, card, MADAD / SKILLS = 11-B / 11-C / 11-D.
+
+## v7.50 - PART 10 ROUNDABOUT COMMANDS (add-only; compile / JUnit / phone NOT TESTED)
+- FIX known bug: "ha kr do" / "haan karo" / "kar do" / "theek hai" / "bilkul" were read as unclear and CANCELLED the confirmation. NEW RoundaboutRules.affirmative, called by Logic.parseAnswer AFTER the NO check (a NO word still wins). "yes please", "sabko bhej do abhi", lone "do" / "karo" stay unclear.
+- NEW follow-ups for harmless kinds only (ContextMemory): "wahi kar do", "usi ko dobara", "ulta kar do" / "undo" (torch, volume, media, quiet, silent, rotation). NEVER_REPEAT (call, sms, whatsapp, delete, pay, publish, record ...) unchanged.
+- NEW indirect cues (no AI, offline): "andhera hai" -> torch on, volume / brightness cues, <= 8 words, whole sentence only (NovaService, kind "hint").
+- NEW safety: a risky order aimed at someone only by a hint ("wo jo kal wale ko bhej do", "usi ko call karo", "call him") is never guessed: NOVA asks who (kind "clarify"). Reply-mode commands untouched. Persona never decorates hint / clarify.
+- UI wiring: HelpGuide + MADAD topics persona (Part 9, was missing) + roundabout; two SKILLS entries; new ui.html block pt10_wire (also wires the dead Settings checkbox #nc_on to the same bridge as #wb_nc; added to the page self-check list).
+- Guard tools/test_part6_skills_contract.py: topic map now knows persona + roundabout.
+- Tests: RoundaboutRulesTest.kt (NOT RUN), tools/test_roundabout_contract.py (PASS, includes a Python mirror), tools/test_p10_ui_runtime.py (PASS, headless). versionName 7.50 (guard test updated). Docs: PART10_STATUS_v7_50.md, NEXT_ACCOUNT_PROMPT_v7_50_PART11.md (Parts 11-20 in full detail).
+
+## v7.49 - PARTS 1-9 REVIEW (add-only; compile / phone NOT TESTED)
+- Checked: 613 files, 103 contract scripts, bridge (185 UI calls, 0 missing in Kotlin), ui ids, manifest services, per-part files (NativeSmooth, SafeStop, PersonaRules, ui.html blocks p6_home / p7_motion / pt8_chat / pt9_persona), headless renders of every screen.
+- FIX tools/check_p8_chat.py: it scanned the whole page tail, so the Part 9 persona block (valid bridge call) made it FAIL. Now it checks only the Part 8 blocks. PASS.
+- FIX tools/run_all_checks.sh now also runs tools/check_p5..p8 scripts (they were never in the all-checks run).
+- FIX versionName 6.97 -> 7.49 (app showed an old number); guard test.
+- Nothing removed. Details: docs/PARTS_1_TO_9_REVIEW_v7_49.md
+
+## v7.48 PART 9 - JARVIS PERSONA (add-only)
+- NEW PersonaRules.kt (pure Kotlin): owner name line, short witty tail, time-of-day feeling tail. Only on short harmless replies (kinds: chat / answers / app_control / music_play), 45 s gap, never on questions, confirmations, errors, silent turns, calls, messages, recording, agent, publish, Gmail, connectors, images. Auto-reply path untouched (owner rule v7.46).
+- NovaService.process(): one call `personaTouch` before withNudge. ExtCfg.persona (default ON), bridge getPersona / setPersona, Settings button PERSONA ON/OFF (ui.html block pt9_persona; full switch screen in Part 17).
+- Restored v7.47 files that were dropped by mistake: 5 ic_launcher_foreground.png + assets/orb_poster.png (launcher XML, ui.html and SelfTest still need them).
+- Tests: tools/test_persona_contract.py (RUN, PASS), PersonaRulesTest.kt (NOT RUN). All 103 contract scripts PASS. NOT RUN: Kotlin compile, JUnit, phone.
+
+## v7.47 - PART 8 CHAT UI (add-only, ui.html only; compile / phone NOT TESTED)
+- NEW pt8_chat_css + pt8_chat: neon-glass bubbles (NOVA cyan left, TUM violet right) with a small label + time, restyled typing dots, voice waveform bar above the input (SUN / BOL / SOCH RAHA HU, read from html[data-fut]; animation only, not the real mic level). lowfx / reduced-motion = static.
+- Typing reveal was NOT duplicated: it already exists since v7.32 (p3_fx). Page self-check lists pt8_chat. NEW tools/check_p8_chat.py (PASS).
+- Docs: PART8_STATUS_v7_47.md, NEXT_ACCOUNT_PROMPT_v7_47_PART9.md; old status / prompt moved to docs/.
+
+## v7.46 - AI-ONLY AUTO REPLY (owner rule: no fixed message, ever; compile / phone NOT TESTED)
+- Auto reply is always the AI's own answer, for every message (OTP / payment / insult / wish too). No AI answer, or a secret in the AI text = NOTHING is sent and the owner is told (history + phone notification + voice).
+- REMOVED: fixed "Jawab ka text" box and AI SMART switch from Settings; PaymentReplyRules, SocialReplyRules (+tests); HOLD_LINE send; plain fixed-text path in NovaNotificationService; v7.45 safetyReply.
+- Rule card #ar_safe now says what the AI does. Voice "smart reply off" now explains auto reply is always AI. Guards: new tools/test_ai_only_reply_contract.py; payment / social / payment_ai guards retired to docs/retired_guards/.
+
+## v7.45 - 12 stale guards resolved + AUTO-REPLY SAFETY wired (compile / phone NOT TESTED)
+- FIX NovaNotificationService.autoReply: new safetyReply() runs for BOTH auto-reply modes BEFORE the per-person gate: OTP/PIN/password/KYC = no reply + note; money talk = ONE fixed safe line (plain mode; AI SMART already had it); insult = no reply, owner told (NovaService.onSocialInsult), Instagram marked "to report"; wish / nice comment = fixed Thank you. Before this, plain auto-reply would have sent the owner's text to an OTP message and SocialReplyRules was never called.
+- UI: Settings > AUTO REPLY now shows a SAFETY card (#ar_safe, add-only).
+- Guards: payment / social / photo_publish contracts adapted to this tree; 5 old autopsy guards merged into tools/test_adapted_autopsy_contract.py; 4 retired to docs/retired_guards/ (features of the other code line). KNOWN_STALE_GUARDS.txt is now empty.
+- NOT added (open): wake word while the phone is locked (old wb_ll switch) - conflicts with Lock Guard, owner decision.
+
+## v7.44 - PART 7 MOTION (add-only, ui.html only; compile / phone NOT TESTED)
+- NEW p7_motion: tab slide direction, chat rise, HAPTIC ON/OFF button in Settings (nova_hap), number tickers (API limits, KAAM chip); lowfx / reduced motion = off.
+- Removed from the zip (owner request, unused): docs/ui_shots, docs/archive, docs/archive_old. Old status / prompt files moved to docs/.
+- PART 7B: HUD chat card glass gradient (NovaHud.kt, 1 line), intro caption / hint glass chips + soft vignette (CSS only). PART 7 COMPLETE (compile / phone NOT TESTED).
+- FIX (Parts 1-7 review): Part 6 status chips 40 -> 44px; test_screen_session_contract slice 500 -> 2500 (v7.40 queue block moved the line). NEW docs/PARTS_1_TO_7_MAP.md.
+
 ## v6.97-wip9 - screen se pehchano + baat-cheet (compile / phone par NOT RUN)
 - "ye kaun si movie hai" / "is gaane ka naam batao" / "who is this actor": NOVA screenshot leta hai aur Google Search se naam batata hai (ScreenSession.Intent.IDENTIFY, sirf isi sawal par search). "screen analyse karo aur batao ye kaun si movie hai" bhi isi raste par jaata hai. Protected screen par kabhi nahi. Popup mein koi button nahi chahiye.
 - Baat-cheet mode (jawab ke baad dobara sunna) default ON, 6 follow-up tak (pehle OFF aur 3). Settings mein BAAT-CHEET switch se band hota hai.
@@ -441,3 +676,15 @@ AutoTrace.kt + AutoTraceTest.kt, NovaService auto log (History "NOVA AUTO") + "a
 ## v7.35 AUTO VERIFY (add-only)
 FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all understood features (old FeatureCheck + Parts 1-5 + commands + state + page wiring); ui.html p6_verify + p6_box; bridges verifyPage / verifyNow; HealthCheck "AUTO VERIFY" line; NovaService route "auto verify status"; History "NOVA VERIFY"; tools/test_part6_contract.py + test_part6_render.py. See NEXT_ACCOUNT_PROMPT_FULL_v7_35_PART5_VERIFY.md.
 (v7.35 evidence) Real kotlinc 1.9.24 compile of main + test = 0 errors; JUnit 1117 run, only the 3 known stale fail. Gradle APK build still only in GitHub Actions.
+
+## v7.42 (Part 1-5 jaanch + fixes, add-only)
+- ui.html: `p5x_fix` style + script: photo attached bug fix (har sentence image-edit banta tha), ek "Photo / Video chuno" clip button, manual IMAGE / PHOTO / WEBSITE MEDIA / edit-row / places-row chhipaye (code maujood).
+- MainActivity.kt: bridge `photoToSite()` (attached photo -> website media).
+- SiteSummary.kt: `shortSubject()`; NovaService.kt website start line ab poora sentence echo nahi karti.
+- Purani handover / status / autopsy files -> docs/archive_old/ (delete nahi).
+- NOT TESTED: compile, JUnit, phone.
+
+## v7.43 (Part 6 HOME REDESIGN, add-only)
+- ui.html: `p6_home_css` + `p6_home`: status board (AI / INTERNET / PERMISSION / KAAM / AWAAZ), dock (CHAT / CHUP / SILENT / STOP), orb state NO INTERNET. Old row hidden, ids kept. No new Kotlin.
+- tools/check_p6_home.py (static check, PASS).
+- NOT TESTED: compile, JUnit, phone.

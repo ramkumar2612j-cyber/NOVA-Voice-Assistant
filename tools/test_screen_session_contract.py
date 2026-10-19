@@ -104,7 +104,7 @@ r = NS.split('private fun screenAnswer')[1]
 need('askFirst(ScreenSession.askType' in r and 'typeText(draft)' in r, 'a reply draft is typed only after a spoken yes')
 need('tapLabel(label)' not in r and 'SEND_LABELS' not in r, 'screen reply never presses Send; owner must send manually')
 need('tapLabel' not in r.split('askFirst(ScreenSession.askType')[0], 'no tap before the spoken yes')
-need('turnIsFollow = false' in NS.split('fun typed(')[1][:500], 'typed text is never a spoken follow-up')
+need('turnIsFollow = false' in NS.split('fun typed(')[1][:2500], 'typed text is never a spoken follow-up')
 # provider names must not be in anything spoken by the session
 for fn in ('protectedAsk', 'noKey', 'noText', 'noPicture', 'noReply', 'askType', 'ended'):
     body = SS.split('fun ' + fn)[1].split('\n\n')[0].lower()

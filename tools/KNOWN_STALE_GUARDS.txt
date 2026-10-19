@@ -1,12 +1,1 @@
-# Guards written for the OTHER code line (features absent in this tree). Kept, never deleted. Runner only labels them. Owner decision pending: retire or adapt by ADDING.
-test_auto_media_contract.py
-test_autopsy_part2_contract.py
-test_autopsy_part6_contract.py
-test_autopsy_part7_contract.py
-test_autopsy_part8_contract.py
-test_autopsy_part9_contract.py
-test_no_feature_loss_contract.py
-test_part4_part5_contract.py
-test_payment_reply_contract.py
-test_site_media_contract.py
-test_social_reply_contract.py
+# Guards written for the OTHER code line. All 12 old stale guards were resolved in v7.45: 3 fixed+kept (payment, social, photo_publish), 5 merged into tools/test_adapted_autopsy_contract.py, 4 retired to docs/retired_guards/.

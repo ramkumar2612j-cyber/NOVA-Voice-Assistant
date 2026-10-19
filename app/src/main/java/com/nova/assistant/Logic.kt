@@ -129,7 +129,7 @@ object Logic {
         if (w.isEmpty()) return null
         if (w.any { it in NO }) return false
         if (w.size <= 3 && w.all { it in YES }) return true
-        return null
+        return RoundaboutRules.affirmative(w)   // v7.50 Part 10: "ha kr do", "haan karo", "theek hai", "bilkul" (a NO word was already checked above)
     }
 
     // ---------------------------------------------------------------- noise guard / quiet replies

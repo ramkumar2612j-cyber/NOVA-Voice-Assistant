@@ -30,3 +30,21 @@ Pehle ye 6 chhote test karo: 1) nova torch jala do 2) nova volume mute 3) nova s
 
 ## F. Agar APK build red ho
 Red step ka naam + laal lines bhejo. Aam wajah: Vosk model download (internet), ya Gradle compile line. Local compile pehle hi PASS hai (kotlinc 1.9.24), isliye zyada chance Gradle/SDK setting ka hai.
+
+---
+# G. v7.72 (Part 20 FINAL) - sabse naye steps (sirf phone se)
+NOTE: upar section A me ek purana repo naam likha hai. Naye prompts me repo **https://github.com/skfashion142/NOVA-Voice-Assistant** hai. Jis account me aapka repo asli me hai, wahi use karo. Actions page: https://github.com/skfashion142/NOVA-Voice-Assistant/actions
+
+1. Phone Chrome me repo kholo (upar wala link). Zip (`NOVA-v7_72-PART20-FINAL.zip`) ko phone ki Files app me **Extract** karo. Zip ke andar `nova` folder hai; uske andar ki files/folders hi upload hongi.
+2. Repo > **Add file > Upload files** > extract hui saari files aur folders chuno > neeche **Commit changes** (branch: main).
+   - `.github/workflows/build.yml` ko mat badalna. Agar Chrome hidden folder `.github` na dikhaye to Files app me "Show hidden files" ON karo.
+3. Repo > **Actions** > "NOVA Android CI" > **Run workflow** > branch main > **Run workflow**.
+4. 10-20 minute ruko. **Green tick** = APK ready. **Red cross** = us step ka sirf laal (red) text mujhe bhejo.
+5. Green run kholo > neeche **Artifacts** > `nova-apk` download > extract > `app-debug.apk` > tap > "Is source se allow" > Install. (Purani NOVA ke upar install na ho to pehle purani uninstall karo.)
+6. App kholo. Permissions ALLOW karo (Microphone, Notifications, Accessibility, Write settings, alarm, aur **naya: Phone calls answer**). ACTIVATE dabao.
+7. `OWNER_PHONE_TEST_LIST_v7_72.md` kholo aur item 0.1 se shuru karo (ek item ek baar). Result sirf "PASS / FAIL" me bhejo.
+
+## G2. Agar APK build RED ho
+- Red step ka naam + sirf laal lines bhejo (puri log nahi).
+- Ye ab tak NOT RUN tha (sandbox me Gradle/AGP nahi chalta), isliye pehli bar red aana possible hai. Ye normal hai, ek-do round me theek hota hai.
+

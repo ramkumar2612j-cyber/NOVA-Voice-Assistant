@@ -427,6 +427,9 @@ class NovaService : Service() {
             it.silentOn = cfg.silentMode
             it.onSilentToggle = { cfg.silentMode = !cfg.silentMode; cfg.silentMode }
             it.onStop = {
+                try { FrameExtractor.cancel() } catch (e: Throwable) { }   // v7.51 PART 12: STOP also ends a frame extraction
+                try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1: STOP also ends a running analysis
+                if (SafeStop.hudStop(ExtCfg.stopPowersOff(this)) == SafeStop.HudStop.SOFT) { softStop() } else {   // v7.39 PART 4: STOP only stops; the old power-off path below runs only when the owner asked for it
                 // A deliberate STOP never confirms a pending call/message. Destroying the service
                 // cancels the agent token and releases speech + microphone through onDestroy().
                 agentCancel = true
@@ -434,6 +437,7 @@ class NovaService : Service() {
                 answerWindow = false; followWindow = false
                 stopSpeaking()
                 stopSelf()
+                }   // v7.39 PART 4 end of the power-off branch
             }
         }
         // Android Keystore work (slow on many phones) and the task-ledger repair are not needed to show the screen: background thread.
@@ -542,6 +546,7 @@ class NovaService : Service() {
         recWake = null
         alive = false
         LocalBrains.release()
+        cmdQ.clear()   // v7.40: queue dies with the service
         Driving.enabled = false
         Driving.inbox.clear()
         MessageMode.inbox.clear() // message text remains memory-only across a service restart
@@ -557,6 +562,7 @@ class NovaService : Service() {
         h.removeCallbacksAndMessages(null)
         try { hud?.destroy() } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
         hud = null
+        try { stopLaser() } catch (e: Throwable) { }   // v7.66 14B-4
         pending = null
         dictatePending = null
         dictTarget = null
@@ -637,6 +643,21 @@ class NovaService : Service() {
             return false
         }
         return true
+    }
+
+    // ---- v7.39 PART 4 SAFE STOP ----
+    @Volatile private var dropHeard = false
+
+    /** STOP that only stops: talking, the running job, waiting confirmations, the follow-up listen window and a half-heard command. Service, microphone and wake word stay ON. Any thread. */
+    fun softStop() {
+        try { FrameExtractor.cancel() } catch (e: Throwable) { }   // v7.51 PART 12
+        try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1
+        stopSpeaking()
+        dropHeard = true
+        followWindow = false
+        cmdQ.clear(); queueEmit()   // v7.40
+        answerWindow = false
+        Thread { try { runCommand(Logic.Cmd("stop")) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }.start()
     }
 
     fun stopSpeaking() { try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
@@ -741,6 +762,15 @@ class NovaService : Service() {
 
     fun typed(text: String): String {
         if (!alive) return "off"
+        if (StopRules.isStop(text)) { cmdQ.clear(); queueEmit(); softStop(); emit("ai", tr("Theek hai", "Okay")); return "sent" }   // v7.40: STOP always works, even while busy
+        val qItems = CmdQueue.split(text)
+        if (qItems.isNotEmpty() && (busy || cmdQ.hasWaiting() || qItems.size > 1)) {   // v7.40: wait for the running command, then do the next
+            val dropped = cmdQ.addAll(qItems, { isLocalCmd(it) }, false) + CmdQueue.splitDropped(text)
+            queueEmit()
+            if (dropped > 0) sys(tr("Queue full: " + dropped + " command chhoot gaye (max 10)", "Queue full: " + dropped + " command(s) dropped (max 10)"))
+            if (!busy) h.post { drainQueue(0L) }
+            return "sent"   // v7.40: the page treats it like a sent message (bubble, input cleared); the queue strip comes from the "queue" events
+        }
         if (busy) return "busy"
         typedTurn = true
         richTurn = true
@@ -759,6 +789,47 @@ class NovaService : Service() {
         return "sent"
     }
     @Volatile private var busyStamp = 0L
+
+    // ---- v7.40 PART 4 step B: COMMAND QUEUE (typed commands + multi-command text; voice said WHILE busy is still not heard) ----
+    private val cmdQ = CmdQueue.Queue()
+    private fun queueEmit() { try { emit("queue", cmdQ.json()) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
+    private fun isLocalCmd(s: String): Boolean = try { Logic.classify(s) != null } catch (e: Exception) { false }
+
+    /** One turn from text (typed, or a queued item). Same steps as typed(): 120 s watchdog; a voice item keeps spoken replies. */
+    private fun startQueuedTurn(text: String, voice: Boolean) {
+        typedTurn = !voice
+        richTurn = !voice
+        busy = true
+        turnIsFollow = false
+        val stamp = System.currentTimeMillis()
+        busyStamp = stamp
+        Thread { process(ByteArray(0), text, 0) }.start()
+        h.postDelayed({
+            if (alive && busy && busyStamp == stamp && !agentRunning && !siteRunning) {
+                busy = false
+                emit("ai", tr("Jawab mein bahut der lag gayi. Dobara try karo.", "That took too long. Please try again."))
+                queueAfterTurn()
+            }
+        }, 120_000L)
+    }
+
+    /** Runs the next waiting command once NOVA is free and has finished talking (waits at most about 25 s for the voice). */
+    private fun drainQueue(waited: Long) {
+        if (!alive || busy) return
+        if (!cmdQ.hasWaiting()) return
+        if (ttsActive && waited < 25_000L) { h.postDelayed({ drainQueue(waited + 500L) }, 500L); return }
+        val item = cmdQ.next() ?: return
+        queueEmit()
+        sys(tr("Command " + item.n + "/" + cmdQ.total() + ": " + item.text, "Command " + item.n + "/" + cmdQ.total() + ": " + item.text))
+        startQueuedTurn(item.text, item.voice)
+    }
+
+    /** Called when a turn ends (finishTurn finally / watchdog): start the next waiting command, or mark the list finished. */
+    private fun queueAfterTurn() {
+        if (!alive) return
+        if (cmdQ.hasWaiting()) h.postDelayed({ drainQueue(0L) }, 300L)
+        else if (cmdQ.total() > 0) { cmdQ.finishRunning(); queueEmit() }
+    }
     fun announce(text: String) { h.post { if (alive) say(text) } }
     fun reloadVoice() { cfg.applyVoice(tts) }
     fun speakTest(text: String) { cfg.applyVoice(tts); speak(text, false, false) }
@@ -878,7 +949,8 @@ class NovaService : Service() {
     }
 
     private fun fatal(msg: String) {
-        lastFatal = msg   // v6.74: kept for the status row (it is shown while the service is not running)
+        lastFatal = msg
+        try { ErrLog.add("NovaService", "service stopped: " + msg) } catch (e: Throwable) { }   // wip15: the reason shows in the self-test "RECENT ERRORS"   // v6.74: kept for the status row (it is shown while the service is not running)
         emit("ai", msg)
         cfg.active = false
     }
@@ -958,7 +1030,9 @@ class NovaService : Service() {
             var noise = 300.0
             var lastSpeechBytes = 0           // PART 4: pcm size right after the last loud chunk (trailing silence is cut before the cloud hears it)
             var wasBlocked = false
+            var wasBusyQueued = false   // v7.73: this capture was handled by the busy-voice queue
             var readErrors = 0
+            var micRecoverTries = 0   // wip15
             var peak = 0.0                    // loudest recent chunk: a wake word must be spoken, not just a faint sound
             var wakeHits = 0                  // consecutive recognizer results that contained the wake word
             var wakeMiss = 0                  // v6.56: false wakes in a row (self-tuning, see WakeAdapt)
@@ -1028,6 +1102,14 @@ class NovaService : Service() {
                 val n = rc.read(buf, 0, buf.size)
                 if (n < 0) {
                     if (++readErrors >= MAX_READ_ERRORS) {
+                        // wip15: another app took the mic (music app, call, camera): re-open it again and again for about a minute before NOVA gives up
+                        if (++micRecoverTries <= 40) {
+                            try { rc.stop() } catch (ignored: Exception) { }
+                            try { Thread.sleep(1000L) } catch (interrupted: InterruptedException) { if (!alive) break }
+                            try { rc.startRecording(); wk.reset(); cm.reset(); pre.clear(); wakeHits = 0; skip = 2; wasBlocked = true } catch (ignored: Exception) { }
+                            readErrors = 0
+                            continue
+                        }
                         fatal(tr("Mic se awaaz nahi aa rahi (error $n). NOVA band ho gaya, dobara ACTIVATE karo.",
                             "The microphone stopped delivering audio (error $n). NOVA stopped; press ACTIVATE again."))
                         return
@@ -1037,15 +1119,35 @@ class NovaService : Service() {
                 }
                 if (n == 0) { Thread.sleep(20); continue }
                 readErrors = 0
+                micRecoverTries = 0   // wip15
                 lastAudioAt = System.currentTimeMillis()
+                if (dropHeard) {   // v7.39 PART 4: STOP arrived: the half-heard command is thrown away, nothing of it is ever executed
+                    dropHeard = false
+                    if (SafeStop.dropsHeard(capturing, cmdText.isNotEmpty())) {
+                        capturing = false; listening = false; answerCapture = false; dictCapture = false; followCap = false
+                        cmdText.setLength(0); pcm = ByteArrayOutputStream(); heard = false; silentMs = 0; totalMs = 0; lastSpeechBytes = 0
+                        lastCaptureEnd = System.currentTimeMillis()
+                        wasBlocked = true   // the reset block below clears both recognizers, like after our own voice
+                        h.post { hud?.setReply("") }
+                        mode("sleep")
+                        armSleep(800L)
+                    }
+                }
                 if (RecordSession.active) RecordSession.feed(buf, n)   // PART 6A: background recording takes every chunk, even while NOVA is busy or speaking
 
                 if (ttsActive && System.currentTimeMillis() > ttsDeadline) ttsActive = false // lost callback
+                // v7.73: busy but NOT speaking = keep listening, a spoken command waits in the queue. Speaking / locked / waiting for a yes-no = dropped as before.
+                val busyListenOk = BusyListenRules.mayListen(
+                    ExtCfg.busyListen(this), busy, ttsActive, lockQuiet(),
+                    pending != null || answerWindow || followWindow || dictatePending != null || agentAnsPending != null
+                )
                 if (busy || ttsActive) {
-                    capturing = false
-                    listening = false
-                    wasBlocked = true
-                    continue
+                    if (!busyListenOk) {
+                        capturing = false
+                        listening = false
+                        wasBlocked = true
+                        continue
+                    }
                 }
                 if (lockQuiet()) {           // v6.97-wip9 LOCK GUARD: locked phone = no wake word, no command, nothing is listened to
                     capturing = false
@@ -1188,6 +1290,26 @@ class NovaService : Service() {
                         val dur = totalMs
                         cm.reset()
                         wk.reset()
+                        run {   // v7.73: command said while NOVA is busy: STOP works, anything else waits in the queue (offline text only, no cloud turn is started)
+                            val act = BusyListenRules.decide(busy, isAnswer || wasDict, text, StopRules.isStop(text))
+                            if (act == BusyListenRules.Action.NONE) return@run
+                            when (act) {
+                                BusyListenRules.Action.STOP -> { softStop(); emit("ai", tr("Theek hai", "Okay")) }
+                                BusyListenRules.Action.QUEUE -> {
+                                    val items = CmdQueue.split(text)
+                                    val dropped = cmdQ.addAll(items, { isLocalCmd(it) }, true) + CmdQueue.splitDropped(text)
+                                    queueEmit()
+                                    sys(tr("Yaad rakh liya, abhi wale ke baad karunga: " + text.trim(), "Got it, I will do it after the current one: " + text.trim()))
+                                    if (dropped > 0) sys(tr("Queue full: " + dropped + " command chhoot gaye (max 10)", "Queue full: " + dropped + " command(s) dropped (max 10)"))
+                                    if (!busy) h.post { drainQueue(0L) }
+                                }
+                                else -> sys(tr("Busy tha, command suna nahi, dobara bolo", "I was busy and did not hear the command, say it again"))
+                            }
+                            h.post { hud?.setReply("") }
+                            if (busy) mode("think")
+                            wasBusyQueued = true
+                        }
+                        if (wasBusyQueued) { wasBusyQueued = false; continue }
                         if (Logic.isFalseWake(heard, text, isAnswer || wasDict, SecureStore.hasGroq(this) || SecureStore.hasKeys(this))) {   // v32: Gemini can hear it too
                             h.post { hud?.setReply("") }
                             if (isAnswer || wasDict) mode("on") else mode("sleep")   // a false wake leaves quietly: no speech, no card
@@ -1288,6 +1410,7 @@ class NovaService : Service() {
             ErrLog.add("finishTurn", t.javaClass.simpleName)
           } finally {
             busy = false
+            queueAfterTurn()   // v7.40: next queued command
           }
         }
     }
@@ -1332,6 +1455,12 @@ class NovaService : Service() {
         if (pcm.isNotEmpty()) typedTurn = false   // a real microphone turn is never a chat turn
         beginTurn(false)
         var text = text0
+        run {   // v7.40: "torch jala do aur uske baad volume badha do" -> first now, the rest wait in the queue (spoken replies)
+            if (text0.isNotBlank() && !SilentRules.extract(text0).silent) {
+                val vq = CmdQueue.split(text0)
+                if (vq.size > 1) { cmdQ.addAll(vq.drop(1), { isLocalCmd(it) }, true); text = vq[0]; queueEmit() }
+            }
+        }
         val sx = SilentRules.extract(text0)
         var fillerOnly = false
         if (sx.silent && silentAllowed(sx.text)) {   // PART 3: "... chup rehna" in the offline text
@@ -1348,7 +1477,29 @@ class NovaService : Service() {
             turnFailed = true
             tr("Kuch gadbad ho gayi, dobara try karo", "Something went wrong, please try again")
         }
-        finishTurn(withNudge(reply), lastKind)
+        finishTurn(withNudge(personaTouch(reply)), lastKind)
+    }
+
+    // ---- v7.48 PART 9 JARVIS PERSONA: speaking style only (PersonaRules decides; never on confirmations, errors, calls, messages, recording, agent) ----
+    @Volatile private var personaLastAt = 0L
+    @Volatile private var personaTurn = 0
+
+    private fun personaTouch(reply: String): String {
+        var out = reply
+        try {
+            if (ExtCfg.persona(this)) {
+                val now = System.currentTimeMillis()
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                personaTurn += 1
+                val gap = if (personaLastAt == 0L) Long.MAX_VALUE else now - personaLastAt
+                out = PersonaRules.decorate(
+                    reply, lastKind, ActionLog.ownerName(this), cfg.lang == "en", hour, personaTurn, gap,
+                    pending != null, turnFailed, silentTurn, true
+                )
+                if (out != reply) personaLastAt = now
+            }
+        } catch (e: Exception) { ErrLog.add("Persona", e.toString()); out = reply }
+        return out
     }
 
     // ------------------------------------------------------------------ Layer 1 brain: shortcuts
@@ -1599,7 +1750,7 @@ class NovaService : Service() {
         val res = SmartReplyRules.parse(r.text) ?: return null
         var out = res
         if (!res.skip) {
-            if (SmartReplyRules.unsafeReason(res.text) != null) out = SmartReplyRules.Result(SmartReplyRules.HOLD_LINE, true, false)
+            if (SmartReplyRules.unsafeReason(res.text) != null) out = SmartReplyRules.Result("", true, false)   // v7.46: a secret in the AI text = send NOTHING, owner is told
             else if (!res.needOwner && SmartReplyRules.ownerMust(incoming)) out = SmartReplyRules.Result(res.text, true, false)
         }
         SmartReplyRules.convo.add(sender, "user", incoming)
@@ -1612,21 +1763,13 @@ class NovaService : Service() {
      * explicit "no risky confirmation" setting can skip it; turning OFF asks like any ordinary task). Nothing else about the rules changes.
      */
     private fun smartReplyVoice(on: Boolean): String {
-        if (ActionLog.smartReplyOn(this) == on) return if (on) tr("AI smart reply pehle se ON hai.", "AI smart reply is already on.") else tr("AI smart reply pehle se band hai.", "AI smart reply is already off.")
-        val q = if (on) tr("AI smart reply ON karun? NOVA aapke assistant ke taur par WhatsApp jaise chat mein khud baat karega, jo use pata nahi wo aapse puchega, aur har baat aapko batayega. Haan ya nahi bolo.",
-            "Turn AI smart reply on? NOVA will chat as your assistant by itself, ask you about anything it does not know, and tell you about every chat. Say yes or no.")
-        else tr("AI smart reply band karun? Phir sirf aapka fixed text jayega. Haan ya nahi bolo.", "Turn AI smart reply off? Only your fixed text will be sent. Say yes or no.")
-        return askFirst(q, on) {
-            ActionLog.setSmartReply(this, on)
-            if (!on) tr("AI smart reply band. Ab sirf fixed text jayega.", "AI smart reply is off. Only your fixed text is sent.")
-            else {
-                val notes = ArrayList<String>()
-                if (!DrivingBridge.listenerEnabled(this)) notes.add(tr("Notification access abhi OFF hai, Android Settings mein NOVA ke liye ON karo, warna jawab nahi jayega.", "Notification access is still off; turn it on for NOVA in Android Settings or no reply goes out."))
-                if (!ActionLog.autoReplyOn(this)) notes.add(tr("Auto reply abhi band hai, wo bhi ON karna padega.", "Auto reply is off; it must be on too."))
-                if (!ExtCfg.freeChain(this)) notes.add(tr("AI chain ON nahi hai, isliye abhi fixed text jayega.", "The AI chain is not on, so the fixed text is sent for now."))
-                tr("AI smart reply ON.", "AI smart reply is on.") + (if (notes.isEmpty()) "" else " " + notes.joinToString(" "))
-            }
-        }
+        // v7.46: auto reply is ALWAYS the AI talking (no fixed text exists any more). "Off" = switch auto reply itself off in Settings.
+        if (!on) return tr("Auto reply me ab hamesha AI baat karta hai. Band karna ho to Settings me AUTO REPLY OFF karo.", "Auto reply is now always the AI talking. To stop it, turn AUTO REPLY off in Settings.")
+        val notes = ArrayList<String>()
+        if (!DrivingBridge.listenerEnabled(this)) notes.add(tr("Notification access abhi OFF hai, Android Settings mein NOVA ke liye ON karo, warna jawab nahi jayega.", "Notification access is still off; turn it on for NOVA in Android Settings or no reply goes out."))
+        if (!ActionLog.autoReplyOn(this)) notes.add(tr("Auto reply abhi band hai, wo ON karna padega.", "Auto reply is off; it must be turned on."))
+        if (!ExtCfg.freeChain(this)) notes.add(tr("AI chain ON nahi hai, isliye abhi koi jawab nahi jayega, sirf aapko bata dunga.", "The AI chain is not on, so no reply is sent for now; you are only told."))
+        return tr("AI jawab ON hai.", "AI reply is on.") + (if (notes.isEmpty()) "" else " " + notes.joinToString(" "))
     }
 
     /** Part 8: Auto-reply on/off by voice, same rule: always asks first. The saved reply text is kept as it is. */
@@ -2083,6 +2226,40 @@ class NovaService : Service() {
             lastKind = "rec"
             return runRecording(recReq)
         }
+        // v7.51 PART 11-D: "nova kya mila" = honest status of shared media; "ye video analyse karo" = honest "analysis abhi nahi". Local only, no AI, no persona kind.
+        // v7.59 PART 13D: "nova ye video analyse karo" / "is photo me kya hai" / "isko check karo ki sach hai ya nahi" = the REAL analysis of the newest shared photo / video (background job, STOP ends it).
+        // Local rule, no persona (lastKind "media"). A sentence that is not about shared media falls through to the normal chain.
+        // v7.63 PART 14B-1: "nova ye kon si movie hai" = the SCREEN movie scan sentence. Understood here; the real scan comes in 14B-2..5. Runs BEFORE the 13D analysis route
+        // (a media word + "ye" + "kon" would otherwise analyse a shared file). Local rule, no AI, no persona (lastKind "media"). Face / actor questions are NOT matched (13A).
+        if (text.isNotBlank() && ResultCardRules.isReadAll(text)) {   // v7.67 PART 15
+            lastTurnLocal = true; lastKind = "media"
+            return readFullReport()
+        }
+        if (text.isNotBlank() && MovieScanRules.parse(text) == MovieScanRules.Ask.MOVIE) {
+            lastTurnLocal = true; lastKind = "media"
+            return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
+        }
+        if (text.isNotBlank()) {
+            val askA = AnalysisVoiceRules.parse(text)
+            if (askA != AnalysisVoiceRules.Ask.NONE) {
+                val ra = analyseByVoice(text, askA)
+                if (ra != null) { lastTurnLocal = true; lastKind = "media"; return ra }
+            }
+        }
+        if (text.isNotBlank()) {
+            when (MediaIntake.voiceIntent(text)) {
+                MediaIntake.Voice.STATUS -> {
+                    lastTurnLocal = true; lastKind = "media"
+                    return MediaIntakeStore.statusText(this)
+                }
+                MediaIntake.Voice.ANALYSE_NOT_YET -> {
+                    lastTurnLocal = true; lastKind = "media"
+                    val l = MediaIntakeStore.list(this)
+                    return MediaIntake.analyseNotYetReply(l.count { it.kind != MediaIntake.Kind.LINK }, l.count { it.kind == MediaIntake.Kind.LINK }, cfg.lang == "en")
+                }
+                MediaIntake.Voice.NONE -> {}
+            }
+        }
         // Resume is a local-only explicit command; NEVER auto-replay an interrupted UI task.
         if (text.isNotBlank() && AgentTaskRules.isResumeQuery(text)) {
             lastTurnLocal = true
@@ -2230,7 +2407,7 @@ class NovaService : Service() {
             return imageBegin(ImageIntent.Parsed(autoReq.subject, autoReq.blocked))
         }
         // v6.60: "<music app> kholo aur <song> play karo" plays for real without any AI call (free AI limits cannot block it).
-        val musicReq = if (text.isBlank()) null else MusicPlayRules.parse(text)
+        val musicReq = if (text.isBlank()) null else MusicPlayRulesPlus.parseBest(text)
         if (musicReq != null) {
             lastTurnLocal = true
             lastKind = "music_play"
@@ -2274,6 +2451,16 @@ class NovaService : Service() {
             lastKind = "agent"
             return agentBegin(text)
         }
+        // v7.50 PART 10: a risky order that points at someone only by a hint ("wo jo kal wale ko bhej do", "usi ko call karo") is never guessed: ask who.
+        if (text.isNotBlank()) {
+            val nt0 = Logic.norm(text)
+            val k0 = Logic.classify(text)?.kind
+            if (RoundaboutRules.needsWho(nt0) && (k0 == null || k0 == "call")) {
+                lastTurnLocal = true; lastKind = "clarify"
+                ContextMemory.clear()
+                return RoundaboutRules.whoQuestion(cfg.lang == "en")
+            }
+        }
         val contextCmd = if (text.isBlank()) null else ContextMemory.resolve(text, System.currentTimeMillis())
         if (contextCmd != null) {
             lastTurnLocal = true; lastKind = "context"
@@ -2281,6 +2468,17 @@ class NovaService : Service() {
             if (pending != null || answer.startsWith("FAILED", true)) ContextMemory.clear()
             else ContextMemory.remember(contextCmd, System.currentTimeMillis())
             return answer
+        }
+        // v7.50 PART 10: a short indirect cue ("andhera hai") -> one harmless, reversible action, same path as a normal command (no AI call, works offline)
+        if (text.isNotBlank() && Logic.classify(text) == null) {
+            val hintCmd = RoundaboutRules.hint(Logic.norm(text))
+            if (hintCmd != null) {
+                lastTurnLocal = true; lastKind = "hint"
+                val answer = runCommand(hintCmd)
+                if (pending != null || answer.startsWith("FAILED", true)) ContextMemory.clear()
+                else ContextMemory.remember(hintCmd, System.currentTimeMillis())
+                return answer
+            }
         }
         // PART 3: centralized, side-effect-free intent/routing preflight. Existing specialist handlers
         // below remain authoritative for execution (contact resolution, permissions, confirmation and result).
@@ -2391,7 +2589,7 @@ class NovaService : Service() {
             val gi = ImageIntent.parse(groqText)
             if (gi != null) { lastTurnLocal = false; lastKind = "image"; return imageBegin(gi) }
         }
-        val musicReq2 = if (c == null && groqText.isNotBlank()) MusicPlayRules.parse(groqText) else null
+        val musicReq2 = if (c == null && groqText.isNotBlank()) MusicPlayRulesPlus.parseBest(groqText) else null
         if (musicReq2 != null) {   // v6.60: same no-AI music play for text heard by the cloud listener
             lastTurnLocal = true
             lastKind = "music_play"
@@ -3043,6 +3241,7 @@ class NovaService : Service() {
             stopEpoch++
             agentCancel = true
             connQueue.clear()
+            cmdQ.clear(); queueEmit()   // v7.40: STOP also empties the command queue
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "Owner said stop") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
             agentOutcome = AgentTaskRules.State.CANCELLED
             try { tts?.stop() } catch (e: Exception) { }
@@ -3050,6 +3249,7 @@ class NovaService : Service() {
             pending = null
             dictatePending = null
             dictTarget = null
+            followWindow = false; answerWindow = false   // v7.39 PART 4: STOP also cancels the "listen again" window
             tr("Theek hai", "Okay")
         }
         "battery" -> batteryReply()
@@ -4208,8 +4408,8 @@ class NovaService : Service() {
         }, "nova-site").start()
         val understood = SiteSummary.samjha(subject, rawSaid, baseHtml != null, cfg.lang == "en")   // v7.3: say first what was understood
         return understood + " " + tr(
-            if (baseHtml != null) "Theek hai, $subject ki website ko sudhar raha hu. Isme ek-do minute lag sakte hain" else "Theek hai, $subject ki website bana raha hu. Isme ek-do minute lag sakte hain",
-            if (baseHtml != null) "Okay, improving the $subject website. It can take a minute or two" else "Okay, building a website for $subject. It can take a minute or two"
+            if (baseHtml != null) "Theek hai, ${SiteSummary.shortSubject(subject)} ki website ko sudhar raha hu. Isme ek-do minute lag sakte hain" else "Theek hai, ${SiteSummary.shortSubject(subject)} ki website bana raha hu. Isme ek-do minute lag sakte hain",
+            if (baseHtml != null) "Okay, improving the ${SiteSummary.shortSubject(subject)} website. It can take a minute or two" else "Okay, building a website for ${SiteSummary.shortSubject(subject)}. It can take a minute or two"
         )
     }
 
@@ -6052,6 +6252,211 @@ class NovaService : Service() {
             }
         }
         return last
+    }
+
+    /**
+     * v7.53 PART 13B-1: the analysis pipeline's only way to Gemini. Same key list, models, deadline and ApiUsage counting as every other call
+     * (postFallback -> postOnce); no new HTTP client. A failure puts Gemini on the same cooldown as elsewhere. Worker thread only.
+     */
+    /** v7.59 13D: voice / typed analysis request. null = not for us (CHECK with nothing shared): the normal chain answers. Else the spoken / shown reply (job started, refusal, or "share first"). */
+    // ---- v7.64 PART 14B-2: LIVE SCREEN CAPTURE for the movie scan. Frames live ONLY in this field (memory): never written to disk, never sent anywhere here. 14B-3 reads them.
+    @Volatile private var movieScanRunning = false
+    @Volatile private var movieScanCancel = false
+    @Volatile private var movieFrames: List<ByteArray> = emptyList()
+    @Volatile private var movieStage: String = ""   // v7.65 14B-3: real stage + percent of the running movie scan (READ TEXT / VISION / SEARCH / RESULT); the laser overlay (14B-4) reads it
+
+    // ---- v7.67 PART 15: "poora padho" = the voice reads the FULL last report (analysis or movie scan). Text is already in the chat; silent mode keeps it silent.
+    @Volatile private var lastFullReport: String = ""
+
+    private fun readFullReport(): String {
+        val en = cfg.lang == "en"
+        val part = ResultCardRules.chunks(lastFullReport, 3800).firstOrNull() ?: return ResultCardRules.nothingToReadText(en)
+        if (!cfg.silentMode) h.postDelayed({ try { speak(part, false, false) } catch (e: Throwable) { } }, 700)
+        return ResultCardRules.readingText(en)
+    }
+
+    // ---- v7.66 PART 14B-4: full-screen laser overlay of the movie scan. Shown only while a REAL scan runs; stages = real movieStage; hidden for every screenshot; STOP / ROKO ends it at once.
+    private var laser: LaserOverlay? = null
+    private val laserTick = object : Runnable {
+        override fun run() {
+            val l = laser ?: return
+            if (movieScanCancel) { stopLaser(); return }
+            if (!movieScanRunning) return   // v7.66 14B-5: the finish shows RESULT 100 for a moment, then closes the overlay
+            l.setStage(movieStage)
+            h.postDelayed(this, 120)
+        }
+    }
+
+    /** Main thread. Overlay permission missing: the scan still runs, and the usual one-time tap-to-fix notice is shown. */
+    private fun startLaser() {
+        try {
+            if (laser != null) return
+            if (CrashGuardStore.isSafe(this)) return   // v7.69 PART 18: safe mode skips the cosmetic overlay
+            if (!LaserOverlay.canShow(this)) { overlayNudge(); return }
+            val l = LaserOverlay(this)
+            l.onStop = {
+                movieScanCancel = true; movieFrames = emptyList(); movieStage = ""
+                try { AnalysisPipeline.cancel() } catch (e: Throwable) { }
+                stopSpeaking()
+                stopLaser()
+            }
+            if (l.show(cfg.lang == "en")) { laser = l; h.post(laserTick) }
+        } catch (e: Throwable) { ErrLog.add("laser", "start") }
+    }
+
+    private fun stopLaser() {
+        h.removeCallbacks(laserTick)
+        val l = laser ?: return
+        laser = null
+        try { l.destroy() } catch (e: Throwable) { }
+    }
+
+    /** v7.65 14B-3: the end of a movie scan: the full text (name, confidence, evidence, sources) goes to the chat as text only, the voice reads the short [speech] line (silent mode: nothing is spoken). No persona. Any thread. */
+    private fun deliverMovie(text: String, speech: String, card: String = "", hist: String = "") {
+        try {
+            if (card.isNotBlank()) lastFullReport = text   // v7.67 PART 15: "poora padho" reads it
+            emit("ai", ChatText.clean(if (card.isNotBlank()) card + "\n\n" + text else text))   // v7.66 14B-5: small card first, then the full text
+            if (hist.isNotBlank()) { try { ActionLog.add(this, "NOVA MOVIE", "NOVA", "", "sent", hist) } catch (e: Throwable) { } }   // History: text only
+            h.post { hud?.setReply(if (card.isNotBlank()) card else speech) }
+            if (speech.isNotBlank()) speak(speech, false, false)
+        } catch (e: Throwable) { ErrLog.add("movieScan", "deliver") }
+    }
+
+    private fun startMovieScan(): String {
+        val en = cfg.lang == "en"
+        if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
+        movieScanRunning = true; movieScanCancel = false; movieFrames = emptyList(); movieStage = "CAPTURE 0"
+        h.post { startLaser() }
+        Thread {
+            try {
+                val src = object : MovieScanCapture.Source {
+                    override fun foregroundProtected(): Boolean? = NovaAccessibilityService.movieProtected()
+                    private var taken = 0
+                    override fun shot(): ByteArray? {
+                        val l = laser
+                        try { l?.hideForShot() } catch (e: Throwable) { }   // v7.66 14B-4: no laser in the frames
+                        try { return NovaAccessibilityService.movieShot() }
+                        finally {
+                            try { l?.showAfterShot() } catch (e: Throwable) { }
+                            taken++; movieStage = "CAPTURE " + minOf(9, taken * 3)
+                        }
+                    }
+                    override fun cancelled(): Boolean = movieScanCancel
+                    override fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (e: InterruptedException) { movieScanCancel = true } }
+                    override fun supported(): Boolean = android.os.Build.VERSION.SDK_INT >= 30
+                }
+                val r = MovieScanCapture.run(src, MovieFrameRules.MAX_FRAMES)
+                movieFrames = if (movieScanCancel) emptyList() else r.frames
+                if (r.stop != MovieFrameRules.Stop.OK) {
+                    if (r.stop != MovieFrameRules.Stop.CANCELLED) {
+                        val line = MovieFrameRules.statusText(r.stop, r.frames.size, en)
+                        deliverAnalysis(false, line, line, true)
+                    }
+                } else {
+                    // v7.65 PART 14B-3: frames + screen text -> vision AI -> web search -> name + confidence + sources. A protected screen is checked once more before anything leaves the phone.
+                    val fr = movieFrames
+                    if (NovaAccessibilityService.movieProtected() != false) {
+                        movieFrames = emptyList()
+                        val line = MovieFrameRules.statusText(MovieFrameRules.Stop.PROTECTED, 0, en)
+                        deliverAnalysis(false, line, line, true)
+                    } else {
+                        val txt = try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" }
+                        val d = MovieGuessPipeline.run(fr, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> movieStage = "$st $pct" })
+                        movieFrames = emptyList()   // frames are gone as soon as the guess ends
+                        movieStage = ""
+                        if (d.kind != "CANCELLED" && !movieScanCancel) {
+                            val line = when (d.kind) {
+                                "OK" -> MovieGuessRules.resultText(d.outcome, en)
+                                "REFUSED" -> MovieGuessRules.privateText(en)
+                                "NO_AI" -> MovieGuessRules.noAiText(en)
+                                "UNREADABLE" -> MovieGuessRules.unreadableText(en)
+                                else -> MovieGuessRules.failedText(d.kind, en)
+                            }
+                            val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en) else line
+                            val ok = d.kind == "OK"
+                            deliverMovie(line, said, if (ok) MovieGuessRules.card(d.outcome, en) else "", if (ok) MovieGuessRules.historyLine(d.outcome) else "")
+                        }
+                    }
+                }
+            } catch (e: Throwable) { ErrLog.add("movieScan", "capture") }
+            finally { movieScanRunning = false; movieStage = ""; h.post { laser?.setStage("RESULT 100") }; h.postDelayed({ stopLaser() }, 900) }
+        }.start()
+        return MovieFrameRules.startedText(en)
+    }
+
+    private fun analyseByVoice(text: String, ask: AnalysisVoiceRules.Ask): String? {
+        val en = cfg.lang == "en"
+        val target = AnalysisVoiceRules.pickTarget(MediaIntakeStore.list(this))
+            ?: return if (ask == AnalysisVoiceRules.Ask.CHECK) null else AnalysisVoiceRules.noMediaText(en)
+        val q = AnalysisVoiceRules.question(text, ask, en)
+        val r = AnalysisPipeline.start(this, target.id, q, analysisBrain(), AnalysisPipeline.Notify { ok, out, speech -> deliverAnalysis(ok, out, speech, true) })
+        return if (r == "ok") AnalysisVoiceRules.startedText(target, en) else r
+    }
+
+    /**
+     * v7.59 13D: the end of a voice / chat-photo analysis: the full report text goes to the chat (kept in the chat session as TEXT only, no path, no media),
+     * the voice only reads the short summary (silent mode: nothing is spoken). No persona is applied to it. Any thread.
+     */
+    fun deliverAnalysis(ok: Boolean, text: String, speech: String, speakIt: Boolean) {
+        try {
+            val en = cfg.lang == "en"
+            val card = if (ok) AnalysisPipeline.takeCard() else null   // v7.67 PART 15: result card + History line
+            val shown = if (ok) AnalysisVoiceRules.doneLine(en) + "\n" + (if (card != null) card.first + "\n\n" else "") + text else text
+            emit("ai", ChatText.clean(shown))
+            if (ok) lastFullReport = text
+            if (card != null) { try { ActionLog.add(this, "NOVA ANALYSIS", "NOVA", "", "sent", card.second) } catch (e: Throwable) { } }
+            val said = if (ok) speech else text
+            h.post { hud?.setReply(if (card != null) card.first else said) }
+            if (speakIt && said.isNotBlank()) speak(said, false, false)
+        } catch (e: Throwable) { ErrLog.add("analysis", "deliver") }
+    }
+
+    /** v7.59 13D: one chat line from the chat-photo flow (role "me" / "ai"), kept in the current chat session and shown. */
+    fun analysisChatLine(role: String, text: String) { if (role == "me" || role == "ai") emit(role, text) }
+
+    fun analysisBrain(): AnalysisPipeline.Brain = object : AnalysisPipeline.Brain {
+        override fun en(): Boolean = cfg.lang == "en"
+        override fun blocked(): String =
+            if (!SecureStore.hasKeys(this@NovaService)) "NOKEY" else if (System.currentTimeMillis() < geminiCoolUntil) "LIMIT" else ""
+        override fun call(json: String): Pair<Int, String> {
+            val (code, resp) = postFallback(json, AnalysisPipelineRules.CALL_READ_MS, AnalysisPipelineRules.CALL_DEADLINE_MS)
+            if (code in 200..299) return Pair(code, candidateText(resp))
+            val cd = AiRouter.cooldownMs(Logic.failureKind(code))
+            if (cd > 0L) geminiCoolUntil = System.currentTimeMillis() + cd
+            return Pair(code, "")
+        }
+        // v7.58 PART 13C: SEARCH + COMPOSE. Same key list / models / ApiUsage / cooldown path as call(); only the read / deadline budget differs. A failure cools Gemini down exactly like call().
+        private fun budgeted(json: String, readMs: Long, deadlineMs: Long): Pair<Int, String> {
+            val (code, resp) = postFallback(json, readMs, deadlineMs)
+            if (code !in 200..299) {
+                val cd = AiRouter.cooldownMs(Logic.failureKind(code))
+                if (cd > 0L) geminiCoolUntil = System.currentTimeMillis() + cd
+            }
+            return Pair(code, resp)
+        }
+        override fun callRaw(json: String, readMs: Long, deadlineMs: Long): Pair<Int, String> = budgeted(json, readMs, deadlineMs)
+        override fun callTextWith(json: String, readMs: Long, deadlineMs: Long): Pair<Int, String> {
+            val (code, resp) = budgeted(json, readMs, deadlineMs)
+            return if (code in 200..299) Pair(code, candidateText(resp)) else Pair(code, "")
+        }
+        override fun webGet(url: String, ms: Int): String? = try { WebBrowsers.httpGet(url, ms) } catch (e: Throwable) { null }
+        // v7.54 PART 13B-2a: free vision fallback. Same switch (ExtCfg.freeChain), same keys, same cooldowns (freeCooldowns) and ApiUsage counting (FreeHttp) as the text chain.
+        private fun freeKey(name: String): String = when (name) {
+            "groq" -> SecureStore.getGroq(this@NovaService)
+            "openrouter" -> SecureStore.getSlot(this@NovaService, "openrouter")
+            else -> ""
+        }
+        override fun freeVisionReady(): Boolean = try {
+            FreeVision.ready(ExtCfg.freeChain(this@NovaService), { freeKey(it) }, freeCooldowns, System.currentTimeMillis())
+        } catch (e: Throwable) { false }
+        override fun callFree(system: String, userText: String, framesB64: List<String>, stop: () -> Boolean): Pair<Int, String> {
+            val r = FreeVision.run(
+                system, userText, framesB64, { freeKey(it) }, ExtCfg.freeChain(this@NovaService), freeCooldowns,
+                { System.currentTimeMillis() }, AnalysisPipelineRules.CALL_DEADLINE_MS,
+                stop
+            ) { p, _, body, key -> FreeHttp.post(p, body, key, 6000, AnalysisPipelineRules.CALL_READ_MS.toInt()) }
+            return if (r.text != null) Pair(200, r.text) else Pair(FreeVision.codeFor(r.failKind), "")
+        }
     }
 
     private fun msg(role: String, text: String): JSONObject =

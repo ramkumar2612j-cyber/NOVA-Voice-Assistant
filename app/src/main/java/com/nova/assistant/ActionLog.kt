@@ -23,7 +23,7 @@ object ActionLog {
     fun autoReplyOn(ctx: Context): Boolean = p(ctx).getBoolean(KEY_AR_ON, true)
 
     /** Part 7: AI smart reply (talks by itself). OFF unless the owner switches it on. */
-    fun smartReplyOn(ctx: Context): Boolean = p(ctx).getBoolean(KEY_AR_SMART, false)
+    fun smartReplyOn(ctx: Context): Boolean = true   // v7.46: auto-reply is always the AI talking (no fixed text); the old switch is gone
 
     fun setSmartReply(ctx: Context, on: Boolean) { p(ctx).edit().putBoolean(KEY_AR_SMART, on).apply() }
 
