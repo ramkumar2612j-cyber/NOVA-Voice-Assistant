@@ -5202,4 +5202,8 @@ function watch(){
 if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watch);else watch();
 }catch(e){}})();
 </script>
+<style id="v77_chat_perf">
+/* v7.77 chat speed (add-only): no blur on every chat bubble, GPU layer hints off. Delete this one block to undo. */
+#clog .msg,html:not(.lowfx) #clog .msg{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;will-change:auto!important}
+</style>
 </body></html>
