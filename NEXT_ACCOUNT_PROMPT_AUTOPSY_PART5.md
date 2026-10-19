@@ -1,4 +1,0 @@
-# NOVA AUTOPSY - start PART 2 of 5 remaining (file name PART5 = old numbering). Paste first + attach NOVA-Voice-Assistant.zip
-Owner: not a programmer, Android phone only. Hinglish, SHORT, ONE step at a time. PASS / FAIL / NOT TESTED. NEVER remove a feature. Zip name exactly NOVA-Voice-Assistant.zip. After EVERY part give the zip (compulsory).
-Remaining plan: R1 connectors/web/learning DONE (docs/AUTOPSY_PART4.md); R2 open website / download / teach + photo; R3 video + recordings; R4 routines / scheduled tasks / settings; R5 self test + final report + final zip.
-Job R2: trace RUN path of OpenWebRules/openWeb/downloadApp/openUrl, TeachRules/TeachStore apply, ImageGen/FreeImage/imageRun. Find silent stops (missing key, permission, early return, swallowed exception). Fix only proven bugs, one test per fix in tools/test_autopsy_part5_contract.py.

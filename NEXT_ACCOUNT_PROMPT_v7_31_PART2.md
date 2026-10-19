@@ -1,4 +1,0 @@
-# NOVA - NEXT ACCOUNT PROMPT (v7.31 after PART 2 of 5). Paste FIRST + attach NOVA-Voice-Assistant-v7_31-PART2.zip. FULL detail: NEXT_ACCOUNT_PROMPT_FULL_v7_31_PART2.md (read it all).
-Rules: owner NOT a programmer, Android phone only, Hinglish, SHORT, one step at a time, ADD-ONLY, PASS/FAIL/NOT TESTED with evidence, never touch .github/workflows/build.yml, do NOT push until owner says so.
-STATE: Parts 1-2 done statically (AutoIntent picture/website/photo-edit/write detection, bridge detectIntent, hidden IMAGE switch, live chip, photo-attached edit auto-starts). Guards exit 0 (91 PASS / 11 known stale), render tests PASS. NOT RUN: Kotlin compile, JUnit, APK, phone.
-YOUR JOB: PART 3 (chat animation effects) -> PART 4 (home live futuristic NOVA icon + 4K touch starfield) -> PART 5 (integration, final zip, owner steps). After EACH part: zip + refreshed FULL prompt + short Hinglish status.

@@ -1,4 +1,0 @@
-#!/bin/sh
-# usage: kc.sh out.jar files...
-OUT=$1; shift
-java -Xmx1g -cp /opt/gradle-8.14.3/lib/kotlin-compiler-embeddable-2.0.21.jar:/opt/gradle-8.14.3/lib/kotlin-stdlib-2.0.21.jar:/opt/gradle-8.14.3/lib/kotlin-script-runtime-2.0.21.jar:/opt/gradle-8.14.3/lib/kotlin-reflect-2.0.21.jar:/opt/gradle-8.14.3/lib/trove4j-1.0.20200330.jar:/opt/gradle-8.14.3/lib/kotlin-daemon-embeddable-2.0.21.jar:/opt/gradle-8.14.3/lib/annotations-24.0.1.jar:/opt/gradle-8.14.3/lib/kotlinx-coroutines-core-jvm-1.6.4.jar org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -cp /opt/gradle-8.14.3/lib/kotlin-stdlib-2.0.21.jar -d $OUT "$@"
