@@ -8,7 +8,7 @@ service = (ROOT / "app/src/main/java/com/nova/assistant/NovaService.kt").read_te
 ui = (ROOT / "app/src/main/assets/ui.html").read_text()
 
 checks = {
-    "normal command silence is exactly 1800 ms (v6.36, was 3000)": "const val END_SILENCE_MS = 1800" in logic,
+    "normal command silence is exactly 1300 ms (v7.75, was 1800 / 3000)": "const val END_SILENCE_MS = 1300" in logic,
     "long commands have a bounded 60-second safety cap": "const val MAX_COMMAND_MS = 60000" in logic,
     "capture uses the fixed silence threshold": "adaptiveSilence(cmdText.toString(), Logic.END_SILENCE_MS)" in service,
     "normal command timeout no longer uses configurable wait slider": "else Logic.MAX_COMMAND_MS" in service and "else Logic.MAX_COMMAND_MS + ExtCfg.waitMs(this)" not in service,

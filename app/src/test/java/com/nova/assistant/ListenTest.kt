@@ -15,7 +15,7 @@ class ListenTest {
     // ------------------------------------------------------------ uniform command end-of-speech
 
     @Test fun spokenCommandsWaitForThreeSecondsOfSilence_andAllowLongCommands() {
-        assertEquals(1800, Logic.END_SILENCE_MS)
+        assertEquals(1300, Logic.END_SILENCE_MS)
         assertTrue("Long commands should not be cut off at the old 12-second limit", Logic.MAX_COMMAND_MS >= 60_000)
         assertTrue("No-speech guard must remain shorter than the normal command capture cap", Logic.MAX_COMMAND_MS > Logic.NO_SPEECH_COMMAND_MS)
     }

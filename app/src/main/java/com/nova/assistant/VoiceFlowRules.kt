@@ -6,7 +6,7 @@ package com.nova.assistant
  * 2) AlertGate: a spoken proactive alert (battery) must wait while a voice interaction is active.
  */
 object CaptureRules {
-    const val SILENCE_MS = 1800   // v6.36: same as Logic.END_SILENCE_MS (was 3000)
+    const val SILENCE_MS = 1300   // v7.75: same as Logic.END_SILENCE_MS (v6.36: 1800, was 3000)
     const val MAX_MS = 60000
 
     /** Silence counter after one chunk: speech resets it, silence adds to it, but only after speech was heard. */

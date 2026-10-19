@@ -1,3 +1,13 @@
+## v7.74 patch - false wake guard + self-test fix (add-only; versionName still 7.74)
+- FeatureVerify: KYA CHALTA HAI check now reads the {"items":[...]} object (was parsed as an array -> always "0 rows").
+- Logic.heardWake(json, wake, isFinal): the weak form "[unk] nova" counts only on a FINAL recognizer result. "nova ..." / "hey nova ..." unchanged. NovaService uses it. New JUnit unkNovaNeedsFinalResult.
+- RUN here: Kotlin compile + JUnit 1359 / 1359 PASS. NOT RUN: GitHub Actions. NOT TESTED: phone (watch false-wake count in wake info).
+- SPEED: GeminiSpeed.supportsLevel: Gemini 3.x Flash (not Lite / Pro) gets thinkingConfig.thinkingLevel = "minimal" (default was medium = slow). A 400 falls back to the old request, and the model is then remembered (fastRejected) so no extra round trip. Gemini 2.5 Flash unchanged (thinkingBudget 0).
+- LASER on "screen dekho": the laser overlay now also runs while the screen is read and the AI thinks (screenLaserBegin / End, hidden for the screenshot). Needs "display over other apps" (already ON); safe mode skips it as before. The spoken "madad karun?" line is unchanged.
+- RUN: Kotlin compile + JUnit 1360 / 1360 PASS, run_all_checks 139 / 139 PASS. NOT TESTED: phone.
+- MORE SPEED: command end-of-speech silence 1800 -> 1300 ms (Logic.END_SILENCE_MS + CaptureRules.SILENCE_MS; long / open-ended sentences still wait longer via adaptiveSilence); on-device AI waits max 3.5 s (was 9 s) while online before the cloud answers; a hung Gemini model is skipped after 15 s (voice / screen) or 10 s (transcribe) instead of 25 s. Pinned tests and scripts updated. To undo: set END_SILENCE_MS back to 1800 if sentences get cut.
+- RUN: Kotlin compile + JUnit 1360 PASS, run_all_checks all PASS. NOT TESTED: phone.
+
 ## v7.74 - ONE + MENU for photo / video / file (add-only), versionName 7.74
 - Owner screenshots (19 Oct 2026): chat me photo / video / file alag-alag jagah the. Ab SAB + button ke menu me ek jagah: PHOTO / VIDEO CHUNO, FILE / MEDIA CHUNO (aur website media laga ho to HATAO). Alag paperclip aur MEDIA button chhupa diye (ids / code nahi hata, add-only).
 - Auto reply ka "Main abhi busy hoon..." wala prefilled box v7.72 / v7.73 me pehle se nahi hai (sirf AI baat karta hai). Screenshot wali APK purani build thi. Naya APK install karke Setup me dekho: purana box aur "AI SMART" checkbox nahi dikhna chahiye.

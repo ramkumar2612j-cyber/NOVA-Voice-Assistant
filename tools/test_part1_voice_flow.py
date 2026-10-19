@@ -9,7 +9,7 @@ def check(name, cond):
     print(("PASS " if cond else "FAIL ") + name)
     if not cond: fails.append(name)
 
-check("END_SILENCE_MS == 1800 (v6.36)", re.search(r"END_SILENCE_MS\s*=\s*1800", logic) is not None)
+check("END_SILENCE_MS == 1300 (v7.75)", re.search(r"END_SILENCE_MS\s*=\s*1300", logic) is not None)
 check("MAX_COMMAND_MS == 60000", re.search(r"MAX_COMMAND_MS\s*=\s*60000", logic) is not None)
 check("command capture ends through CaptureRules.shouldEnd", "CaptureRules.shouldEnd(" in svc)
 cap = svc[svc.index("val maxMs ="):svc.index("val maxMs =") + 900]
@@ -30,7 +30,7 @@ check("publish stays confirmed", "true   // publishing is never skipped" in svc)
 check("no listener registered twice for battery", len(re.findall(r"registerSysReceiver\(batteryLowRx", svc)) == 1)
 
 # Python mirror of CaptureRules
-def run(p, chunk=100, silence=1800, mx=60000, nospeech=8000):
+def run(p, chunk=100, silence=1300, mx=60000, nospeech=8000):
     heard = False; s = 0; t = 0
     for c in p:
         t += chunk; sp = c == "s"
@@ -39,9 +39,9 @@ def run(p, chunk=100, silence=1800, mx=60000, nospeech=8000):
         if (heard and s >= silence) or t >= mx or (not heard and t >= nospeech): return t
     return -1
 check("sim: continuous speech never ends", run("s" * 300) == -1)
-check("sim: 1.7 s pause stays one command", run("s" * 10 + "." * 17 + "s" * 10) == -1)
-check("sim: resume resets timer", run("s" * 10 + "." * 15 + "s" + "." * 18) == (10 + 15 + 1 + 18) * 100)
-check("sim: exactly 1.8 s ends", run("s" * 10 + "." * 18) == 2800)
+check("sim: 1.2 s pause stays one command", run("s" * 10 + "." * 12 + "s" * 10) == -1)
+check("sim: resume resets timer", run("s" * 10 + "." * 11 + "s" + "." * 13) == (10 + 11 + 1 + 13) * 100)
+check("sim: exactly 1.3 s ends", run("s" * 10 + "." * 13) == 2300)
 check("sim: 60 s cap", run("s" * 700) == 60000)
 print("\nfailed:", len(fails))
 sys.exit(1 if fails else 0)

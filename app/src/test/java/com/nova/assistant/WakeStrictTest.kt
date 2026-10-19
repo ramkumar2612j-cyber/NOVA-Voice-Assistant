@@ -50,4 +50,22 @@ class WakeStrictTest {
         assertFalse(Logic.isFalseWake(true, "", false, true))     // Groq may still understand the audio
         assertFalse(Logic.isFalseWake(true, "the", true, false))  // a yes/no answer goes to the safe "unclear = no" path
     }
+
+    @Test fun unkNovaNeedsFinalResult() {
+        assertFalse(Logic.heardWake("""{"partial": "[unk] nova"}""", "nova", false))
+        assertTrue(Logic.heardWake("""{"text": "[unk] nova"}""", "nova", true))
+        assertTrue(Logic.heardWake("""{"partial": "nova"}""", "nova", false))
+        assertTrue(Logic.heardWake("""{"partial": "hey nova"}""", "nova", false))
+        assertFalse(Logic.heardWake("""{"text": "the show is nova"}""", "nova", true))
+    }
+
+    @Test fun gemini3FlashGetsMinimalThinkingLevel() {
+        assertTrue(GeminiSpeed.supportsLevel("gemini-3.5-flash"))
+        assertFalse(GeminiSpeed.supportsLevel("gemini-3.5-flash-lite"))
+        assertFalse(GeminiSpeed.supportsLevel("gemini-3.1-pro"))
+        assertFalse(GeminiSpeed.supportsLevel("gemini-2.5-flash"))
+        val out = GeminiSpeed.withFastThinking("gemini-3.5-flash", """{"contents":[]}""")
+        assertTrue(out.contains("thinkingLevel") && out.contains("minimal") && !out.contains("thinkingBudget"))
+        assertEquals("""{"contents":[]}""", GeminiSpeed.withFastThinking("gemini-3.5-flash-lite", """{"contents":[]}"""))
+    }
 }

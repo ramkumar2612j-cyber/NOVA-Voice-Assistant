@@ -85,7 +85,7 @@ object FeatureVerify {
 
     /** Real phone state. Never changes anything. */
     fun stateChecks(act: Activity, rec: (String, String, String) -> Unit) {
-        val fs = try { JSONArray(FeatureStatus.json(act)) } catch (e: Throwable) { null }
+        val fs = try { org.json.JSONObject(FeatureStatus.json(act)).optJSONArray("items") } catch (e: Throwable) { null }
         var rowsOk = fs != null && fs.length() > 0
         if (fs != null) for (i in 0 until fs.length()) { val o = fs.optJSONObject(i); if (o == null || o.optString("id").isEmpty() || o.optString("state").isEmpty()) rowsOk = false }
         chk(rec, rowsOk, "Home: KYA CHALTA HAI list (" + (fs?.length() ?: 0) + " rows) bani", "FeatureStatus.json")

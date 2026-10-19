@@ -11,7 +11,7 @@ object LocalChat {
     const val MAX_NEW_TOKENS = 120
     const val TIMEOUT_MS = 30000L
     /** v6.97: while ONLINE the on-device AI gets only this long, then the cloud answers (a slow phone must not make the user wait). */
-    const val ONLINE_TIMEOUT_MS = 9000L
+    const val ONLINE_TIMEOUT_MS = 3500L   // v7.75: was 9 s; the cloud (thinking minimal) answers faster than a slow on-device model
 
     private const val PERSONA =
         "You are NOVA, a friendly voice assistant on an Android phone. You are running OFFLINE on the phone: " +

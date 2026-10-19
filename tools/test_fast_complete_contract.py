@@ -15,7 +15,7 @@ check("every agentDo action that changes the screen settles", do.count("agentSet
 check("screenshot and explicit wait keep their own fixed wait", "agentSleep(1500)" in do and "agentSleep(a.sec * 1000L)" in do)
 check("postFallback has caps with the old values as defaults", "readCapMs: Long = 25000L, deadlineMs: Long = Logic.CLOUD_DEADLINE_MS" in NS and "minOf(readCapMs, remain)" in NS)
 check("plan, step and verify calls use shorter caps", "postFallback(body, 10000L, 16000L)" in NS and "postFallback(body, 16000L, 32000L)" in NS and "postFallback(body, 12000L, 20000L)" in NS)
-check("chat/other callers keep the default 45 s", "postFallback(body)" in NS and "postFallback(b)" in NS)
+check("voice / screen / transcribe callers use shorter caps (v7.75), web search keeps the default", "postFallback(body, 15000L, 30000L)" in NS and "postFallback(body, 10000L, 20000L)" in NS and "postFallback(b)" in NS)
 check("stall is retried with a hint before failing", "stuckHints < 4" in NS and "Do NOT repeat them" in NS)
 check("repair rounds raised to 3", "repairRounds < 3" in NS and "repairRounds < 2" not in NS)
 check("early stop reports progress", "private fun agentProgress(" in NS and NS.count("agentProgress(hist)") >= 3)

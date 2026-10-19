@@ -17,7 +17,7 @@ object Logic {
     )
 
     // ---- timing / bounds ----
-    const val END_SILENCE_MS = 1800          // v6.36 (owner asked for a faster flow): a spoken command ends after 1.8 s of continuous silence (was 3 s). Raise this one number if long sentences get cut off.
+    const val END_SILENCE_MS = 1300          // v6.36 (owner asked for a faster flow): a spoken command ends after 1.8 s of continuous silence (was 3 s). Raise this one number if long sentences get cut off.
     const val MAX_COMMAND_MS = 60000        // safety cap: keep listening through long commands, up to 60 seconds
     const val NO_SPEECH_COMMAND_MS = 3000   // give up if nothing is said after the wake word
     const val MAX_ANSWER_MS = 6000          // hard cap for a yes/no answer
@@ -90,6 +90,16 @@ object Logic {
         val i = t.indexOf(wake)
         if (i < 0 || i > 1) return false
         return i == 0 || t[0] == "hey" || t[0] == "[unk]"
+    }
+
+    /**
+     * v7.75 false-wake guard: same as heardWake, but the weak form "[unk] nova" (an unknown sound before "nova", the usual TV / room-talk
+     * guess) only counts on a FINAL recognizer result, never on a partial one. "nova ..." and "hey nova ..." stay as fast as before.
+     */
+    fun heardWake(json: String, wake: String, isFinal: Boolean): Boolean {
+        if (!heardWake(json, wake)) return false
+        val t = rawText(json).split(" ").filter { it.isNotBlank() }
+        return !(t.isNotEmpty() && t[0] == "[unk]") || isFinal
     }
 
     // ---------------------------------------------------------------- strict wake: only a real "nova" wakes NOVA

@@ -49,6 +49,6 @@ class LocalFirstRoutingTest {
 
     @Test fun onlineTimeoutIsShorterThanTheOfflineOne() {
         assertTrue(LocalChat.ONLINE_TIMEOUT_MS < LocalChat.TIMEOUT_MS)
-        assertEquals(9000L, LocalChat.ONLINE_TIMEOUT_MS)
+        assertEquals(3500L, LocalChat.ONLINE_TIMEOUT_MS)
     }
 }

@@ -56,7 +56,7 @@ class ListenGuardTest {
     }
 
     @Test fun commandAndDictationTimersAllowNaturalSpeech() {
-        assertEquals(1800, Logic.END_SILENCE_MS)
+        assertEquals(1300, Logic.END_SILENCE_MS)
         assertTrue(Logic.MAX_COMMAND_MS >= 60_000)
         assertTrue(Logic.DICTATION_SILENCE_MS >= 2500)
         assertTrue(Logic.DICTATION_SILENCE_MS < Logic.MAX_DICTATION_MS)

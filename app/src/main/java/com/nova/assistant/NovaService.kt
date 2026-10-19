@@ -1221,7 +1221,7 @@ class NovaService : Service() {
                     } else {
                         val done = wk.acceptWaveForm(buf, n)
                         val txt = if (done) wk.getResult() else wk.getPartialResult()
-                        val wakeNow = Logic.heardWake(txt, wakeWord)
+                        val wakeNow = Logic.heardWake(txt, wakeWord, done)   // v7.75: "[unk] nova" only on a final result
                         wakeHits = Logic.nextWakeHits(wakeHits, wakeNow)
                         if (wakeNow && (peak < maxOf(1100.0, noise * 3.5) * WakeAdapt.scale(wakeMiss, wakeMissAt, System.currentTimeMillis()) || System.currentTimeMillis() - lastCaptureEnd < Logic.WAKE_COOLDOWN_MS)) {
                             wk.reset()                 // too faint or too soon: a false wake (TV, room noise, echo of our voice)
@@ -3184,7 +3184,7 @@ class NovaService : Service() {
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
             .put("generationConfig", JSONObject().put("temperature", 0.0).put("maxOutputTokens", 1024))
             .toString()
-        val (code, resp) = postFallback(body)
+        val (code, resp) = postFallback(body, 10000L, 20000L)   // v7.75: a hung model is skipped after 10 s, not 25 s
         if (code !in 200..299) return ""
         val raw = ListenGuard.cleanCloudTranscript(candidateText(resp).trim().trim('"').trim())   // v6.63: "[silence]", "Transcript:" and echoed instructions are never commands
         if (raw.isBlank()) return ""
@@ -6178,13 +6178,16 @@ class NovaService : Service() {
     }
 
     // ---------------------------------------------------------------- cloud (only with a user supplied key)
+    private val fastRejected: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private fun postOnce(model: String, key: String, json: String, readMs: Int): Pair<Int, String> {
-        val fast = GeminiSpeed.withFastThinking(model, json)   // v7.3: 2.5 Flash answers without the hidden thinking pass
+        val fast = if (model in fastRejected) json else GeminiSpeed.withFastThinking(model, json)   // v7.3: 2.5 Flash answers without the hidden thinking pass; v7.75: 3.x Flash thinkingLevel minimal
         if (fast != json) {
             val r = postOnceRaw(model, key, fast, readMs)
             if (r.first != 400) return r
         }
-        return postOnceRaw(model, key, json, readMs)   // other models, or a 400 on the new field: the old request exactly as before
+        val plain = postOnceRaw(model, key, json, readMs)   // other models, or a 400 on the new field: the old request exactly as before
+        if (fast != json && plain.first in 200..299) fastRejected.add(model)   // the field itself was refused: do not try it again for this model
+        return plain
     }
 
     private fun postOnceRaw(model: String, key: String, json: String, readMs: Int): Pair<Int, String> {
@@ -6277,9 +6280,24 @@ class NovaService : Service() {
 
     // ---- v7.66 PART 14B-4: full-screen laser overlay of the movie scan. Shown only while a REAL scan runs; stages = real movieStage; hidden for every screenshot; STOP / ROKO ends it at once.
     private var laser: LaserOverlay? = null
+    @Volatile private var screenLaserOn = false
+    @Volatile private var screenStage = "READ TEXT 20"
+    /** v7.75 worker thread: laser overlay while "screen dekho" reads and thinks. Waits (max 0.7 s) until the overlay exists so the screenshot step can hide it. */
+    private fun screenLaserBegin() {
+        if (movieScanRunning || screenLaserOn) return
+        val latch = java.util.concurrent.CountDownLatch(1)
+        h.post { try { screenStage = "READ TEXT 20"; screenLaserOn = true; startLaser() } catch (e: Throwable) { } ; latch.countDown() }
+        try { latch.await(700, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: InterruptedException) { }
+    }
+    private fun screenLaserEnd() {
+        if (!screenLaserOn) return
+        screenStage = "RESULT 100"
+        h.postDelayed({ screenLaserOn = false; stopLaser() }, 900)
+    }
     private val laserTick = object : Runnable {
         override fun run() {
             val l = laser ?: return
+            if (screenLaserOn) { l.setStage(screenStage); h.postDelayed(this, 120); return }   // v7.75: laser while the screen is being read
             if (movieScanCancel) { stopLaser(); return }
             if (!movieScanRunning) return   // v7.66 14B-5: the finish shows RESULT 100 for a moment, then closes the overlay
             l.setStage(movieStage)
@@ -6295,6 +6313,7 @@ class NovaService : Service() {
             if (!LaserOverlay.canShow(this)) { overlayNudge(); return }
             val l = LaserOverlay(this)
             l.onStop = {
+                screenLaserOn = false
                 movieScanCancel = true; movieFrames = emptyList(); movieStage = ""
                 try { AnalysisPipeline.cancel() } catch (e: Throwable) { }
                 stopSpeaking()
@@ -6599,7 +6618,7 @@ class NovaService : Service() {
         val histUser = if (text.isBlank()) "(voice command)" else text
         var executed = 0
         for (step in 0 until Logic.MAX_TOOL_STEPS) {
-            val (code, resp) = postFallback(cloudBody(contents, true, FallbackContext.systemWith(systemPrompt(), fallbackTaskLine(cfg.lang == "en"))))   // v6.79: Gemini gets the same one safe task line as the backup AI
+            val (code, resp) = postFallback(cloudBody(contents, true, FallbackContext.systemWith(systemPrompt(), fallbackTaskLine(cfg.lang == "en"))), 15000L, 30000L)   // v7.75: a hung model is skipped after 15 s, not 25 s   // v6.79: Gemini gets the same one safe task line as the backup AI
             if (code !in 200..299) return cloudFailure(code)
             val content = candidateContent(resp) ?: run { lastCloudFail = "other"; return tr("Jawab nahi mila", "No answer received") }
             val rparts = content.optJSONArray("parts") ?: run { lastCloudFail = "other"; return tr("Jawab nahi mila", "No answer received") }
@@ -6708,7 +6727,9 @@ class NovaService : Service() {
         if (Build.VERSION.SDK_INT < 30) return Pair(false, if (en)
             "I cannot verify FLAG_SECURE on this Android version, so I will not send screen text to an AI service."
             else "Is Android version par FLAG_SECURE verify nahi kar sakta, isliye screen ka text AI ko nahi bhejunga.")
-        val verifyShot = NovaAccessibilityService.agentScreenshot()
+        val lz = if (screenLaserOn) laser else null
+        try { lz?.hideForShot() } catch (e: Throwable) { }   // v7.75: no laser in the screenshot
+        val verifyShot = try { NovaAccessibilityService.agentScreenshot() } finally { screenStage = "VISION 60" }
         if (verifyShot == null) return Pair(false, if (en)
             "The screenshot was blocked or its security could not be verified. I will not send this screen to AI."
             else "Screenshot block hua ya screen ki security verify nahi hui. Main is screen ko AI ko nahi bhejunga.")
@@ -6719,6 +6740,7 @@ class NovaService : Service() {
             }
             shot = verifyShot
         }
+        try { lz?.showAfterShot() } catch (e: Throwable) { }   // v7.75: laser back after the screenshot and the second screen read
         val parts = JSONArray()
         if (shot != null) {
             parts.put(JSONObject().put("inlineData", JSONObject()
@@ -6736,7 +6758,7 @@ class NovaService : Service() {
             sys += "\nFor this one question you MAY use Google Search to identify what is visible (title, name, song, person). Say if you are not sure."
             body = JSONObject(cloudBody(contents, false, sys)).put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject()))).toString()
         }
-        val (code, resp) = postFallback(body)
+        val (code, resp) = postFallback(body, 15000L, 30000L)   // v7.75
         if (code !in 200..299) return Pair(false, cloudFailure(code))
         val out = candidateText(resp).trim()
         if (out.isEmpty()) return Pair(false, tr("Jawab nahi mila", "No answer received"))
@@ -6780,6 +6802,11 @@ class NovaService : Service() {
 
     /** Opens the session on an already read screen. Used by "screen dekho" and by a spoken yes to a screen alert. Worker thread. */
     private fun screenStartFrom(sn: NovaAccessibilityService.Snap, spoken: String = ""): String {
+        screenLaserBegin()
+        try { return screenStartFromInner(sn, spoken) } finally { screenLaserEnd() }
+    }
+
+    private fun screenStartFromInner(sn: NovaAccessibilityService.Snap, spoken: String = ""): String {
         lastTurnLocal = false
         lastKind = "screen"
         scrAdopt(sn)
