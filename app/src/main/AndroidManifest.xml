@@ -72,6 +72,13 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".CameraEyeActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"/>
+        <activity
             android:name=".WatchCommandActivity"
             android:exported="true"
             android:excludeFromRecents="true"

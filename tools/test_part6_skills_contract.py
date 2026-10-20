@@ -9,7 +9,7 @@ REG=U[a:b]
 topics=re.findall(r'Topic\("([a-z]+)"',H)
 MAP={'call':'Call karna','whatsapp':'WhatsApp / WhatsApp Business','alarm':'Alarm, timer','phone':'Torch','apps':'App kholna',
 'music':'Music control','camera':'Camera kholna','image':'Photo / image banana','chrome':'Website Chrome','download':'App download',
-'website':'Website banana','screen':'Screen padhna','scan':'Screen scan (laser)','memory':'Yaad rakhna','learn':'Naya topic','driving':'Driving mode',
+'website':'Website banana','screen':'Screen padhna','scan':'Screen scan (laser)','cameraeye':'Camera Eye (camera se dekhna)','profilesearch':'Profile search (naam / username)','memory':'Yaad rakhna','learn':'Naya topic','driving':'Driving mode',
 'recording':'Background audio recording','live':'Mausam','questions':'Sawal ka jawab','wabiz':'WhatsApp Business watch',
 'autoreply':'Auto reply','connectors':"CONN('github'",'routines':'Routines','lockguard':'Lock guard','teach':'Teach once',
 'powerguide':'Background me chalte rehna','gmail':'Gmail','agent':'Agent: doosre app me kaam','screenalert':'Screen alert',

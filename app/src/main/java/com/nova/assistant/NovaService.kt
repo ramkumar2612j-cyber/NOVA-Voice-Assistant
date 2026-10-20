@@ -2236,6 +2236,16 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "media"
             return readFullReport()
         }
+        val eyeReq = if (text.isBlank()) null else CameraEyeRules.parse(text)   // v7.88: "nova peeche wale camera se dekho, ye kya hai"
+        if (eyeReq != null) {
+            lastTurnLocal = true; lastKind = "camera_eye"
+            return runCameraEye(eyeReq)
+        }
+        val psReq = if (text.isBlank()) null else ProfileSearchRules.parse(text)   // v7.89: "nova instagram par rahul_sharma search karo" (name / username only, never a face)
+        if (psReq != null) {
+            lastTurnLocal = true; lastKind = "profile_search"
+            return runProfileSearch(psReq)
+        }
         if (text.isNotBlank() && MovieScanRules.parse(text) == MovieScanRules.Ask.MOVIE) {
             lastTurnLocal = true; lastKind = "media"
             return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
@@ -6503,6 +6513,54 @@ class NovaService : Service() {
             Logic.boundHistory(scrHist, ScreenSession.MAX_HIST)
         }
         return out
+    }
+
+    /**
+     * v7.88 CAMERA EYE, worker thread. One photo with the back / front camera (a visible screen opens for about 2 s), then the owner's own Gemini key describes it.
+     * The photo stays in memory only and is dropped at the end. Never identifies a person from a face (system prompt). Phone locked / no key / no permission = an honest line.
+     */
+    private fun runCameraEye(ask: CameraEyeRules.Ask): String {
+        val en = cfg.lang == "en"
+        if (lockQuiet()) return CameraEyeRules.lockedText(en)
+        if (!SecureStore.hasKeys(this)) return CameraEyeRules.noKeyText(en)
+        if (VideoRecordService.isBusy()) return tr("Video recording camera use kar rahi hai, pehle usse band karo.", "A video recording is using the camera, stop it first.")
+        videoQuietUntil = System.currentTimeMillis() + 20_000L   // the owner is moving the phone / talking: no hands-free listen for a moment
+        announce(CameraEyeRules.startedText(ask.facing, en))
+        CameraEyeActivity.begin()
+        try {
+            startActivity(Intent(this, CameraEyeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(CameraEyeActivity.EXTRA_FACING, ask.facing.name))
+        } catch (e: Throwable) { ErrLog.add("cameraEye", "start"); return CameraEyeRules.noScreenText(en) }
+        val got = CameraEyeActivity.await(CameraEyeRules.CAPTURE_WAIT_MS + 3000L)
+        val jpg = CameraEyeActivity.result
+        val st = CameraEyeActivity.status
+        CameraEyeActivity.result = null
+        if (!got || st.isEmpty()) return CameraEyeRules.noScreenText(en)
+        if (st == "perm") return CameraEyeRules.permissionText(en)
+        if (st == "cancel") return CameraEyeRules.cancelledText(en)
+        if (st != "ok" || jpg == null) return CameraEyeRules.failedText(en)
+        val parts = JSONArray()
+        parts.put(JSONObject().put("inlineData", JSONObject().put("mimeType", "image/jpeg").put("data", Base64.encodeToString(jpg, Base64.NO_WRAP))))
+        parts.put(JSONObject().put("text", CameraEyeRules.userPrompt(ask.question, ask.facing, en)))
+        val contents = JSONArray().put(JSONObject().put("role", "user").put("parts", parts))
+        val body = JSONObject(cloudBody(contents, false, CameraEyeRules.systemPrompt(en))).put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject()))).toString()   // objects only: the exact name and details come from Google Search
+        val (code, resp) = postFallback(body, 15000L, 30000L)
+        if (code !in 200..299) return cloudFailure(code)
+        val out = candidateText(resp).trim()
+        if (out.isEmpty()) return CameraEyeRules.emptyAnswerText(en)
+        return CameraEyeRules.resultText(out)
+    }
+
+    /**
+     * v7.89 PROFILE SEARCH, worker thread. Opens the public profile page (username) or the site's public people search (name). No AI, no key, no scraping,
+     * no background work. A face / photo / number / address / password request gets an honest refusal line instead.
+     */
+    private fun runProfileSearch(req: ProfileSearchRules.Req): String {
+        val en = cfg.lang == "en"
+        val why = req.refusal
+        if (why != null) return ProfileSearchRules.refusalText(why, en)
+        if (lockQuiet()) return ProfileSearchRules.lockedText(en)
+        val r = try { openUrl(ProfileSearchRules.url(req)) } catch (e: Throwable) { ErrLog.add("profileSearch", "open"); R(false, "") }
+        return if (r.ok) ProfileSearchRules.startedText(req, en) else ProfileSearchRules.failedText(en)
     }
 
     private fun startMovieScan(): String {

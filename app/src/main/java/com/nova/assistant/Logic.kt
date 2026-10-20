@@ -154,7 +154,7 @@ object Logic {
 
     /** Replies of these commands are always spoken: the user asked to HEAR something (driving messages, screen text, the mode switch). */
     val LOUD_KINDS: Set<String> = setOf(
-        "drive_on", "drive_off", "drive_read", "drive_clear", "drive_reply", "drive_dictate", "message_on", "message_off", "message_read", "message_reply", "message_dictate", "analyze", "screen", "screen_end", "quiet_on", "quiet_off",
+        "drive_on", "drive_off", "drive_read", "drive_clear", "drive_reply", "drive_dictate", "message_on", "message_off", "message_read", "message_reply", "message_dictate", "analyze", "camera_eye", "profile_search", "screen", "screen_end", "quiet_on", "quiet_off",
         "mem_save", "mem_list", "mem_forget", "mem_forget_all",
         "rec"   // PART 6A: starting / stopping a recording is always said aloud (unless the owner added "chup rehna")
     )
