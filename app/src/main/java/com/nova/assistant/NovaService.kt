@@ -112,8 +112,8 @@ class NovaService : Service() {
         h.post {
             val p = pendingRaw
             val yn = plainYesNo(p)
-            try { hud?.setAsk(yn) } catch (e: Throwable) { }
-            try { askListener?.invoke(if (yn) (p?.prompt ?: "") else "") } catch (e: Throwable) { }
+            try { hud?.setAsk(yn) } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
+            try { askListener?.invoke(if (yn) (p?.prompt ?: "") else "") } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
         }
     }
 
@@ -563,7 +563,7 @@ class NovaService : Service() {
         h.removeCallbacksAndMessages(null)
         try { hud?.destroy() } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
         hud = null
-        try { stopLaser() } catch (e: Throwable) { }   // v7.66 14B-4
+        try { stopLaser() } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }   // v7.66 14B-4
         pending = null
         dictatePending = null
         dictTarget = null
@@ -951,7 +951,7 @@ class NovaService : Service() {
 
     private fun fatal(msg: String) {
         lastFatal = msg
-        try { ErrLog.add("NovaService", "service stopped: " + msg) } catch (e: Throwable) { }   // wip15: the reason shows in the self-test "RECENT ERRORS"   // v6.74: kept for the status row (it is shown while the service is not running)
+        try { ErrLog.add("NovaService", "service stopped: " + msg) } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }   // wip15: the reason shows in the self-test "RECENT ERRORS"   // v6.74: kept for the status row (it is shown while the service is not running)
         emit("ai", msg)
         cfg.active = false
     }
@@ -1601,6 +1601,102 @@ class NovaService : Service() {
         }
     }
 
+    /**
+     * v7.90: "3:30 ka schedule banao rss meeting" -> the event is really created.
+     * 1) NOVA's own voice reminder (works without any calendar permission), 10 min before when possible.
+     * 2) Calendar event saved directly when the owner already allowed Calendar (WRITE_CALENDAR); otherwise the
+     *    calendar screen opens already filled in (title + time) and the answer says what is missing.
+     */
+    private fun calendarAdd(arg: String): String {
+        val spec = MeetingEventRules.decode(arg) ?: return tr("Event ka naam ya time samajh nahi aaya. Bolo: 3:30 baje RSS meeting ka schedule banao.", "I could not understand the event. Try: add an RSS meeting at 3:30.")
+        val whenTxt = MeetingEventRules.dayWord(spec.dayOffset) + " " + Timers.clock(spec.hour * 60 + spec.minute)
+        var reminderOk = false
+        try {
+            if (spec.dayOffset == 0) {
+                val remindMin = (spec.hour * 60 + spec.minute - 10).coerceAtLeast(0)
+                val nowMin = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
+                val useMin = if (remindMin > nowMin) remindMin else spec.hour * 60 + spec.minute
+                val rs = ScheduledTaskRules.Spec(useMin / 60, useMin % 60, false, ScheduledTaskRules.Kind.REMINDER, spec.title)
+                val st = ScheduledTaskStore.add(this, rs)
+                reminderOk = st == "exact" || st == "inexact"
+            }
+        } catch (e: Exception) { ErrLog.add("NovaService", "calendarAdd reminder " + e.toString()) }
+        val saved = try { insertCalendarEvent(spec) } catch (e: Exception) { ErrLog.add("NovaService", "calendarAdd insert " + e.toString()); false }
+        if (saved) {
+            try { CalendarRead.scheduleUpcoming(this) } catch (e: Exception) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
+            return tr("Ho gaya. ${spec.title}, $whenTxt par calendar me save kar diya." + (if (reminderOk) " Time se pehle main bol kar yaad dilaunga." else ""),
+                "Done. ${spec.title} is saved in your calendar for $whenTxt." + (if (reminderOk) " I will remind you out loud before it." else ""))
+        }
+        // no calendar permission: open the calendar screen already filled in, so only Save is left
+        val r = try {
+            launch(Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.Events.TITLE, spec.title)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, spec.startMillis)
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, spec.startMillis + 3600000L), null, "Calendar")
+        } catch (e: Exception) { null }
+        val reminderTxt = if (reminderOk) tr("NOVA ka apna reminder lag gaya hai, wo time par bolega.", "NOVA's own reminder is set and will speak at the time.") else ""
+        return if (r != null && r.ok)
+            tr("${spec.title}, $whenTxt: calendar me naam aur time bhar diya hai, bas Save dabao. $reminderTxt Agli baar seedha save ho, iske liye Setup me ALLOW CALENDAR dabao.",
+                "${spec.title}, $whenTxt: the calendar is filled in, just tap Save. $reminderTxt For one-step saving next time, tap ALLOW CALENDAR in Setup.")
+        else tr("${spec.title}, $whenTxt. $reminderTxt Calendar nahi khul paya.", "${spec.title}, $whenTxt. $reminderTxt The calendar could not be opened.")
+    }
+
+    /** v7.90: opens the Settings page of the first missing special access. Android does not allow NOVA to flip the switch itself. */
+    private fun featuresFix(): String {
+        val pkgUri = Uri.parse("package:" + packageName)
+        fun enabledIn(key: String): Boolean = try { (Settings.Secure.getString(contentResolver, key) ?: "").contains(packageName) } catch (e: Exception) { true }
+        val steps = LinkedHashMap<String, Intent>()
+        try {
+            if (!Settings.canDrawOverlays(this)) steps["overlay"] = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, pkgUri)
+            if (!Settings.System.canWrite(this)) steps["write"] = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, pkgUri)
+            if (!enabledIn("enabled_accessibility_services")) steps["access"] = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            if (!enabledIn("enabled_notification_listeners")) steps["listener"] = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                val am = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                if (!am.canScheduleExactAlarms()) steps["alarm"] = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkgUri)
+            }
+            if (!packageManager.canRequestPackageInstalls()) steps["install"] = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, pkgUri)
+        } catch (e: Exception) { ErrLog.add("NovaService", "featuresFix " + e.toString()) }
+        val keys = steps.keys.toList()
+        var opened: String? = null
+        for ((k, i) in steps) {
+            try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); opened = k; break } catch (e: Exception) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
+        }
+        return FeatureFixRules.reply(keys, opened)
+    }
+
+    private fun insertCalendarEvent(spec: MeetingEventRules.Spec): Boolean {
+        if (checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) != android.content.pm.PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != android.content.pm.PackageManager.PERMISSION_GRANTED) return false
+        var calId = -1L
+        contentResolver.query(CalendarContract.Calendars.CONTENT_URI,
+            arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.IS_PRIMARY, CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL),
+            CalendarContract.Calendars.VISIBLE + "=1", null, null)?.use { c ->
+            while (c.moveToNext()) {
+                if (c.getInt(2) < CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR) continue
+                if (calId < 0 || c.getInt(1) == 1) calId = c.getLong(0)
+            }
+        }
+        if (calId < 0) return false
+        val v = android.content.ContentValues()
+        v.put(CalendarContract.Events.CALENDAR_ID, calId)
+        v.put(CalendarContract.Events.TITLE, spec.title)
+        v.put(CalendarContract.Events.DTSTART, spec.startMillis)
+        v.put(CalendarContract.Events.DTEND, spec.startMillis + 3600000L)
+        v.put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
+        v.put(CalendarContract.Events.HAS_ALARM, 1)
+        val uri = contentResolver.insert(CalendarContract.Events.CONTENT_URI, v) ?: return false
+        val id = uri.lastPathSegment?.toLongOrNull() ?: return false
+        try {
+            val rv = android.content.ContentValues()
+            rv.put(CalendarContract.Reminders.EVENT_ID, id)
+            rv.put(CalendarContract.Reminders.MINUTES, 10)
+            rv.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
+            contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, rv)
+        } catch (e: Exception) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
+        return true
+    }
+
     private fun scheduleCreate(encoded: String): String {
         val spec = ScheduledTaskRules.decode(encoded) ?: return tr("Time/task samajh nahi aaya. Bolo: roz subah 8 baje weather bolo.", "I could not understand the schedule. Try: every day at 8 in the morning, tell me the weather.")
         if (spec.kind == ScheduledTaskRules.Kind.SEND_MESSAGE && (spec.recipient.isBlank() || spec.message.isBlank())) {
@@ -2241,6 +2337,11 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "camera_eye"
             return runCameraEye(eyeReq)
         }
+        val trReq = if (text.isBlank()) null else TradeRules.parse(text)   // v7.90: "nova gold ka analysis karo / eurusd buy lena chahiye"
+        if (trReq != null) {
+            lastTurnLocal = true; lastKind = "trade_analysis"
+            return runTradeAnalysis(trReq)
+        }
         val psReq = if (text.isBlank()) null else ProfileSearchRules.parse(text)   // v7.89: "nova instagram par rahul_sharma search karo" (name / username only, never a face)
         if (psReq != null) {
             lastTurnLocal = true; lastKind = "profile_search"
@@ -2412,7 +2513,7 @@ class NovaService : Service() {
                     ActionLog.add(this, "NOVA AUTO", "NOVA", "", if (autoReq.blocked) "skipped" else "sent", tk + " + " + AutoTrace.cleanSubject(autoReq.subject))
                 }
             } catch (e: Throwable) {
-                try { ErrLog.add("AutoIntent", "auto log failed: " + (e.message ?: e.javaClass.simpleName)) } catch (e2: Throwable) { }
+                try { ErrLog.add("AutoIntent", "auto log failed: " + (e.message ?: e.javaClass.simpleName)) } catch (e2: Throwable) { ErrLog.addOnce("quiet:NovaService", e2.toString()) }
             }
         }
         if (autoReq != null && autoReq.kind == AutoIntent.Kind.SITE) {
@@ -3351,6 +3452,8 @@ class NovaService : Service() {
             tr("Queue se $count pending job hata diye.", "Removed $count pending job(s) from the queue.")
         }
         "schedule_create" -> scheduleCreate(c.arg)
+        "calendar_add" -> calendarAdd(c.arg)
+        "features_fix" -> featuresFix()
         "schedule_list" -> ScheduledTaskStore.listText(this)
         "schedule_cancel_all" -> askFirst(tr("Saare scheduled task cancel kar du? Haan ya nahi bolo.", "Cancel all scheduled tasks? Say yes or no."), true) {
             val count = ScheduledTaskStore.cancelAll(this)
@@ -4390,13 +4493,13 @@ class NovaService : Service() {
                 lastTurnLocal = true; lastKind = "site_media_place"
                 return tr("Theek hai, ye photo/video website mein us jagah lagaunga. Ab bolo: website banao ...", "Okay, that media will go to that place. Now say: build a website ...")
             }
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
         try {
             if (lastSiteHtml.isNotBlank() && lastSiteSubject.isNotBlank() && MediaPlace.isPlaceCommand(text) && ((SiteMediaStore.items().isNotEmpty() && SiteMediaStore.applyText(text) > 0) || (SiteMedia.count(this) > 0 && SiteMedia.placeText(this, text) > 0))) {
                 lastTurnLocal = false; lastKind = "site"
                 return siteBegin(SiteIntent.Parsed(lastSiteSubject, false, text, true))
             }
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
         val m = MediaIntent.classify(text) ?: return null
         return when (m.kind) {
             MediaIntent.Kind.SITE -> { lastTurnLocal = false; lastKind = "site"; siteBegin(SiteIntent.Parsed(m.subject, m.blocked, m.raw)) }
@@ -4423,7 +4526,7 @@ class NovaService : Service() {
         siteRunning = true
         val subject = req.subject
         val rawSaid = req.raw
-        try { if (!req.followUp) { SiteMediaStore.applyText(rawSaid); if (MediaPlace.isPlaceCommand(rawSaid)) SiteMedia.placeText(this, rawSaid) } } catch (e: Throwable) { }   // v7.12: "pehli photo hero mein" said together with the website request
+        try { if (!req.followUp) { SiteMediaStore.applyText(rawSaid); if (MediaPlace.isPlaceCommand(rawSaid)) SiteMedia.placeText(this, rawSaid) } } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }   // v7.12: "pehli photo hero mein" said together with the website request
         val epoch = stopEpoch
         val baseHtml = if (req.followUp) lastSiteTemplate.ifBlank { lastSiteHtml } else null
         Thread({
@@ -6366,7 +6469,7 @@ class NovaService : Service() {
     private fun readFullReport(): String {
         val en = cfg.lang == "en"
         val part = ResultCardRules.chunks(lastFullReport, 3800).firstOrNull() ?: return ResultCardRules.nothingToReadText(en)
-        if (!cfg.silentMode) h.postDelayed({ try { speak(part, false, false) } catch (e: Throwable) { } }, 700)
+        if (!cfg.silentMode) h.postDelayed({ try { speak(part, false, false) } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) } }, 700)
         return ResultCardRules.readingText(en)
     }
 
@@ -6382,7 +6485,7 @@ class NovaService : Service() {
         screenLaserEpoch++
         if (screenLaserOn) return
         val latch = java.util.concurrent.CountDownLatch(1)
-        h.post { try { screenStage = "READ TEXT 20"; screenLaserOn = true; startLaser() } catch (e: Throwable) { } ; latch.countDown() }
+        h.post { try { screenStage = "READ TEXT 20"; screenLaserOn = true; startLaser() } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) } ; latch.countDown() }
         try { latch.await(700, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: InterruptedException) { }
     }
     private fun screenLaserEnd() {
@@ -6433,7 +6536,7 @@ class NovaService : Service() {
         try {
             if (card.isNotBlank()) lastFullReport = text   // v7.67 PART 15: "poora padho" reads it
             emit("ai", ChatText.clean(if (card.isNotBlank()) card + "\n\n" + text else text))   // v7.66 14B-5: small card first, then the full text
-            if (hist.isNotBlank()) { try { ActionLog.add(this, "NOVA MOVIE", "NOVA", "", "sent", hist) } catch (e: Throwable) { } }   // History: text only
+            if (hist.isNotBlank()) { try { ActionLog.add(this, "NOVA MOVIE", "NOVA", "", "sent", hist) } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) } }   // History: text only
             h.post { hud?.setReply(if (card.isNotBlank()) card else speech) }
             if (speech.isNotBlank()) speak(speech, false, false)
         } catch (e: Throwable) { ErrLog.add("movieScan", "deliver") }
@@ -6478,7 +6581,7 @@ class NovaService : Service() {
                 try { lz?.hideForShot() } catch (e: Throwable) { }
                 try { return NovaAccessibilityService.movieShot() }
                 finally {
-                    try { lz?.showAfterShot() } catch (e: Throwable) { }
+                    try { lz?.showAfterShot() } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
                     taken++; screenStage = "CAPTURE " + minOf(9, taken * 3)
                 }
             }
@@ -6505,7 +6608,7 @@ class NovaService : Service() {
             "NO_AI" -> return null
             "UNREADABLE" -> MovieGuessRules.unreadableText(en)
             "CANCELLED" -> MovieFrameRules.statusText(MovieFrameRules.Stop.CANCELLED, 0, en)
-            else -> MovieGuessRules.failedText(d.kind, en)
+            else -> MovieGuessRules.failedText(d.kind, en, try { OfflineJobQueue.hasInternet(this) } catch (e: Exception) { false })
         }
         if (d.kind == "OK") synchronized(scrHist) {   // follow-ups ("aur detail") know what the video showed
             scrHist.add(msg("user", "(video dekho)"))
@@ -6550,6 +6653,46 @@ class NovaService : Service() {
         return CameraEyeRules.resultText(out)
     }
 
+    /** v7.90 TRADING EXPERT, worker thread: live-price analysis via the owner's AI key + Google Search. Never places a trade. */
+    private fun runTradeAnalysis(req: TradeRules.Req): String {
+        val en = cfg.lang == "en"
+        // v7.91: real candles + own indicators first (works without any AI key). The AI + Google Search answer below is the fallback.
+        val tsym = Logic.norm(req.query).split(" ").map { TradeEngine.Spec.canon(it) }.firstOrNull { it.isNotEmpty() }
+        if (tsym != null) {
+            try {
+                if (req.placeAsk) {   // open MT5 first so its own price can be read and the levels match the MT5 screen
+                    val li0 = try { packageManager.getLaunchIntentForPackage(TradeRules.MT5_PKG) } catch (e: Exception) { null }
+                    if (li0 != null) { try { startActivity(li0.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }; try { Thread.sleep(3500) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) } }
+                }
+                val tr = TradeHub.analyse2(this, tsym)
+                if (tr.feedOk) {
+                    var tail = ""
+                    if (req.placeAsk && tr.signal.dir != TradeEngine.Dir.WAIT) {
+                        val sd = TradeHub.sendToMt5(this, tr.signal, tr.lots, false, false)   // DEMO only; real orders need the NOVA TRADE screen and its Yes box
+                        tail = sd.msg
+                    } else if (req.openMt5) {
+                        val li = try { packageManager.getLaunchIntentForPackage(TradeRules.MT5_PKG) } catch (e: Exception) { null }
+                        tail = if (li == null) TradeRules.mt5MissingText(en) else try { startActivity(li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "" } catch (e: Exception) { TradeRules.mt5MissingText(en) }
+                    }
+                    return (tr.spoken + " " + tail + " " + TradeRules.disclaimer(en)).replace(Regex("\\s+"), " ").trim()
+                }
+            } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
+        }
+        if (!SecureStore.hasKeys(this)) return TradeRules.noKeyText(en)
+        val contents = JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", TradeRules.userPrompt(req.query)))))
+        val body = JSONObject(cloudBody(contents, false, TradeRules.systemPrompt(en))).put("tools", JSONArray().put(JSONObject().put("google_search", JSONObject()))).toString()
+        val (code, resp) = postFallback(body, 15000L, 40000L)
+        if (code !in 200..299) return cloudFailure(code)
+        val out = candidateText(resp).trim()
+        if (out.isEmpty()) return TradeRules.failedText(en)
+        var opened = ""
+        if (req.openMt5) {
+            val li = try { packageManager.getLaunchIntentForPackage(TradeRules.MT5_PKG) } catch (e: Exception) { null }
+            opened = if (li == null) TradeRules.mt5MissingText(en) else try { startActivity(li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); if (req.placeAsk) TradeRules.placeText(en) else "" } catch (e: Exception) { TradeRules.mt5MissingText(en) }
+        }
+        return (out + " " + opened + " " + TradeRules.disclaimer(en)).replace(Regex("\\s+"), " ").trim()
+    }
+
     /**
      * v7.89 PROFILE SEARCH, worker thread. Opens the public profile page (username) or the site's public people search (name). No AI, no key, no scraping,
      * no background work. A face / photo / number / address / password request gets an honest refusal line instead.
@@ -6579,7 +6722,7 @@ class NovaService : Service() {
                         try { l?.hideForShot() } catch (e: Throwable) { }   // v7.66 14B-4: no laser in the frames
                         try { return NovaAccessibilityService.movieShot() }
                         finally {
-                            try { l?.showAfterShot() } catch (e: Throwable) { }
+                            try { l?.showAfterShot() } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
                             taken++; movieStage = "CAPTURE " + minOf(9, taken * 3)
                         }
                     }
@@ -6612,7 +6755,7 @@ class NovaService : Service() {
                                 "REFUSED" -> MovieGuessRules.privateText(en)
                                 "NO_AI" -> MovieGuessRules.noAiText(en)
                                 "UNREADABLE" -> MovieGuessRules.unreadableText(en)
-                                else -> MovieGuessRules.failedText(d.kind, en)
+                                else -> MovieGuessRules.failedText(d.kind, en, try { OfflineJobQueue.hasInternet(this) } catch (e: Exception) { false })
                             }
                             val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en) else line
                             val ok = d.kind == "OK"
@@ -6647,7 +6790,7 @@ class NovaService : Service() {
             val shown = if (ok) AnalysisVoiceRules.doneLine(en) + "\n" + (if (card != null) card.first + "\n\n" else "") + text else text
             emit("ai", ChatText.clean(shown))
             if (ok) lastFullReport = text
-            if (card != null) { try { ActionLog.add(this, "NOVA ANALYSIS", "NOVA", "", "sent", card.second) } catch (e: Throwable) { } }
+            if (card != null) { try { ActionLog.add(this, "NOVA ANALYSIS", "NOVA", "", "sent", card.second) } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) } }
             val said = if (ok) speech else text
             h.post { hud?.setReply(if (card != null) card.first else said) }
             if (speakIt && said.isNotBlank()) speak(said, false, false)
@@ -6964,7 +7107,7 @@ class NovaService : Service() {
             }
             shot = verifyShot
         }
-        try { lz?.showAfterShot() } catch (e: Throwable) { }   // v7.75: laser back after the screenshot and the second screen read
+        try { lz?.showAfterShot() } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }   // v7.75: laser back after the screenshot and the second screen read
         val parts = JSONArray()
         if (shot != null) {
             parts.put(JSONObject().put("inlineData", JSONObject()

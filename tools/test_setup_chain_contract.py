@@ -19,6 +19,6 @@ check("each page opened once per run (special_done reset at run start)", '"speci
 check("chain only opens Settings pages and asks Android's own dialog: no grant / no secure-settings write", not any(x in fr + ms + ns for x in ("putInt(contentResolver", "Settings.Secure.putString", "WRITE_SECURE_SETTINGS", "grantRuntimePermission")))
 check("chain never starts the microphone service", "startForegroundService" not in fr + ms + ns and "cfg.active = true" not in fr + ms + ns)
 check("brand autostart page is offered once and only for known brands", "PowerGuideRules.targets(" in ms and 'id == "autostart"' in SR)
-check("runs on every app open (onCreate) and continues on return (onResume)", "web.post { firstRunPermissions() }" in MA and "nextSpecialPermission()" in MA.split("override fun onResume()")[1][:400])
+check("runs on every app open (onCreate) and continues on return (onResume)", "web.post { firstRunPermissions() }" in MA and "nextSpecialPermission()" in MA.split("override fun onResume()")[1][:1500])
 check("manual re-run exists: bridge rerunSetup() + button in the status box", "fun rerunSetup()" in MA and "Android.rerunSetup()" in UI and "SETUP DOBARA CHALAO" in UI)
 sys.exit(1 if bad else 0)

@@ -62,14 +62,14 @@ object WatchMic {
     fun stop(ctx: Context, rec: AudioRecord?) {
         try {
             val a = am(ctx)
-            try { rec?.setPreferredDevice(null) } catch (e: Exception) { }
+            try { rec?.setPreferredDevice(null) } catch (e: Exception) { ErrLog.addOnce("quiet:WatchMic", e.toString()) }
             if (Build.VERSION.SDK_INT >= 31) a.clearCommunicationDevice()
             else {
                 @Suppress("DEPRECATION") a.stopBluetoothSco()
                 @Suppress("DEPRECATION") run { a.isBluetoothScoOn = false }
             }
             a.mode = AudioManager.MODE_NORMAL
-        } catch (e: Exception) { }
+        } catch (e: Exception) { ErrLog.addOnce("quiet:WatchMic", e.toString()) }
         active = false
     }
 }

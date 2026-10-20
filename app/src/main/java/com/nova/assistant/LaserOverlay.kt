@@ -131,14 +131,14 @@ class LaserOverlay(private val ctx: Context) {
     fun hideForShot() {
         val v = view ?: return
         val latch = CountDownLatch(1)
-        main.post { try { v.visibility = View.INVISIBLE } catch (e: Throwable) { }; latch.countDown() }
+        main.post { try { v.visibility = View.INVISIBLE } catch (e: Throwable) { ErrLog.addOnce("quiet:LaserOverlay", e.toString()) }; latch.countDown() }
         try { latch.await(400, TimeUnit.MILLISECONDS) } catch (e: InterruptedException) { }
         try { Thread.sleep(140) } catch (e: InterruptedException) { }   // one or two display frames for the compositor to drop the layer
     }
 
     fun showAfterShot() {
         val v = view ?: return
-        main.post { try { v.visibility = View.VISIBLE } catch (e: Throwable) { } }
+        main.post { try { v.visibility = View.VISIBLE } catch (e: Throwable) { ErrLog.addOnce("quiet:LaserOverlay", e.toString()) } }
     }
 
     fun destroy() {

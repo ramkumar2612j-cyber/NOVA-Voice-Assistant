@@ -255,7 +255,7 @@ class NovaHud(private val ctx: Context) {
         try {
             val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
             imm?.hideSoftInputFromWindow(v.windowToken, 0)
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaHud", e.toString()) }
         try { wm.removeView(v) } catch (e: Exception) { }
     }
 
@@ -334,7 +334,7 @@ class NovaHud(private val ctx: Context) {
                     et.requestFocus()
                     val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
                     imm?.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                } catch (e: Throwable) { }
+                } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaHud", e.toString()) }
             }
         } catch (e: Exception) {
             chat = null    // no overlay allowed right now: the popup keeps working without the box

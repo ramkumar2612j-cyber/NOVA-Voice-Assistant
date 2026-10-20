@@ -32,7 +32,7 @@ class MainActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         cfg = Cfg(this)
-        try { getSharedPreferences("nova_perm", Context.MODE_PRIVATE).edit().putBoolean("user_stopped", false).apply() } catch (e: Exception) { }   // wip15: ACTIVATE button is hidden; every fresh app start lets NOVA start by itself again
+        try { getSharedPreferences("nova_perm", Context.MODE_PRIVATE).edit().putBoolean("user_stopped", false).apply() } catch (e: Exception) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }   // wip15: ACTIVATE button is hidden; every fresh app start lets NOVA start by itself again
         ApiUsage.init(this)
         Thread { try { ScheduledTaskReceiver().notifyMissed(applicationContext, ScheduledTaskStore.rescheduleAll(applicationContext)) } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()) } }.start()   // v7.12: alarms re-armed at every open
         LocalBrains.installEngine(this)
@@ -224,7 +224,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         NovaService.uiVisible = true
-        try { web.onResume() } catch (e: Throwable) { }   // v7.38 PART 3: the WebView renders again; JS timers are NOT paused (replies arriving while the screen is off must still reach the page)
+        try { web.onResume() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }   // v7.38 PART 3: the WebView renders again; JS timers are NOT paused (replies arriving while the screen is off must still reach the page)
         runJs(NativeSmooth.backgroundJs(false))
         pushFlow("resumed")
         nextSpecialPermission()   // v6.38: continues the one-time permission chain after the user comes back from a Settings page
@@ -286,7 +286,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         NovaService.uiVisible = false
         runJs(NativeSmooth.backgroundJs(true))   // v7.38 PART 3: the page pauses its CSS animations / effects
-        try { web.onPause() } catch (e: Throwable) { }
+        try { web.onPause() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
         AutoTest.stop()   // Part 10: the 5-second feature watcher sleeps while the screen is closed
         super.onPause()
     }
@@ -433,7 +433,7 @@ class MainActivity : Activity() {
                 pushFlow(if (ok) "contacts_ok" else "contacts_denied")
             }
             REQ_CALENDAR -> {
-                val ok = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                val ok = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED   // v7.90: READ is [0]; WRITE is asked in the same dialog
                 val count = if (ok) CalendarRead.scheduleUpcoming(this) else 0
                 pushFlow(if (ok) "calendar_ok:$count" else "calendar_denied")
             }
@@ -461,7 +461,7 @@ class MainActivity : Activity() {
             e.apply()
         }
         val ask = ArrayList<String>()
-        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.CALL_PHONE)) {
+        for (p in listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR, Manifest.permission.CALL_PHONE)) {
             if (!granted(p)) ask.add(p)
         }
         if (Build.VERSION.SDK_INT >= 33 && !granted(Manifest.permission.POST_NOTIFICATIONS)) ask.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -571,7 +571,7 @@ class MainActivity : Activity() {
     /** v7.51 Part 11-C: one place that reacts when MediaIntakeStore finished a share / pick: honest Toast + page refresh. */
     private fun mediaChanged() {
         runOnUiThread {
-            try { if (!isDestroyed) android.widget.Toast.makeText(this, MediaIntakeStore.lastMessage, android.widget.Toast.LENGTH_LONG).show() } catch (e: Throwable) { }
+            try { if (!isDestroyed) android.widget.Toast.makeText(this, MediaIntakeStore.lastMessage, android.widget.Toast.LENGTH_LONG).show() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
         }
         runJs("try{onMediaIntake()}catch(e){}")
     }
@@ -884,7 +884,7 @@ class MainActivity : Activity() {
                 val r = ConnectorApi.verify(id, token)
                 val name = ConnectorCatalog.byId(id)?.name ?: id
                 if (r.first && ConnectorStore.save(this@MainActivity, id, token, r.second)) {
-                    if (fromClip) runOnUiThread { try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).clearPrimaryClip() } catch (e: Exception) { } }
+                    if (fromClip) runOnUiThread { try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).clearPrimaryClip() } catch (e: Exception) { ErrLog.addOnce("quiet:MainActivity", e.toString()) } }
                     if (ConnectorFlow.active() == id) ConnectorFlow.clear()
                     if (announce) NovaService.instance?.announce("$name connect ho gaya (${r.second}). Abhi sirf padhna allowed hai. " +
                         "Likhne ke liye bolo: ${name.lowercase()} write on karo")
@@ -958,6 +958,100 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun clearKey() { SecureStore.clearKeys(this@MainActivity) }
+
+        // ---- v7.91 TRADE (practice on MT5 demo first; real money stays locked until the score card passes)
+        @JavascriptInterface
+        fun tradeCard(): String = try { TradeHub.cardJson2(this@MainActivity).toString() } catch (e: Exception) { "{}" }
+
+        @JavascriptInterface
+        fun tradeSettle(): String {
+            Thread { try { val n = TradeHub.settleAllV2(this@MainActivity); runJs("onTradeSettled(" + n + ")") } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()); runJs("onTradeSettled(-1)") } }.start()
+            return "ok"
+        }
+
+        @JavascriptInterface
+        fun tradeAnalyse(symbol: String, interval: String): String {
+            val sym = symbol.take(20)
+            val iv = if (interval.take(8) in setOf("5m", "15m", "30m", "60m", "1d")) interval else "15m"
+            Thread {
+                try {
+                    val r = TradeHub.analyse2(this@MainActivity, sym, iv)
+                    runJs("onTradeAnalysis(" + JSONObject.quote(TradeHub.resultJson2(r).toString()) + ")")
+                } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()); runJs("onTradeAnalysis(" + JSONObject.quote("{}") + ")") }
+            }.start()
+            return "ok"
+        }
+
+        /** Saves the newest BUY / SELL idea as a practice trade (score card only, nothing is sent anywhere). */
+        @JavascriptInterface
+        fun tradePractice(): String {
+            val r = TradeHub.freshLast() ?: return "stale"
+            if (r.signal.dir == TradeEngine.Dir.WAIT) return "wait"
+            return if (TradeHub.openPractice(this@MainActivity, r.signal, r.lots)) "ok" else "already_open"
+        }
+
+        /** Practice order on the MT5 DEMO account (refuses on any other account). */
+        @JavascriptInterface
+        fun tradeSendDemo(): String {
+            val r = TradeHub.freshLast() ?: return "stale"
+            Thread {
+                try {
+                    val x = TradeHub.sendToMt5(this@MainActivity, r.signal, r.lots, false, false)
+                    runJs("onTradeSent(" + x.ok + "," + JSONObject.quote(x.stage) + "," + JSONObject.quote(x.msg) + ")")
+                } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()); runJs("onTradeSent(false,'error',''" + ")") }
+            }.start()
+            return "ok"
+        }
+
+        /** REAL order: a native Yes/No box with the exact numbers is shown first. The gate is checked again inside sendToMt5. */
+        @JavascriptInterface
+        fun tradeSendReal(): String {
+            val r = TradeHub.freshLast() ?: return "stale"
+            val c = TradeEngine.card(TradeHub.trades(this@MainActivity), TradeEngine.Mode.DEMO)
+            if (!TradeEngine.Gate.unlocked(c)) return "locked"
+            if (r.signal.dir == TradeEngine.Dir.WAIT) return "wait"
+            val s = r.signal
+            val lots = TradeEngine.lots(s.symbol, TradeHub.balance(this@MainActivity), minOf(TradeHub.risk(this@MainActivity), TradeEngine.Gate.REAL_RISK_PCT), s.entry, s.sl)
+            runOnUiThread {
+                try {
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("REAL paisa: " + s.symbol + " " + s.dir.name)
+                        .setMessage("Entry " + s.entry + "\nStop Loss " + s.sl + "\nTarget " + s.tp1 + "\nLot " + lots + "\n\nStop Loss lagne par is trade me asli paisa jaayega. Koi guarantee nahi. Bhejna hai?")
+                        .setNegativeButton("NAHI", null)
+                        .setPositiveButton("HAAN, REAL BHEJO") { _, _ ->
+                            Thread {
+                                try {
+                                    val x = TradeHub.sendToMt5(this@MainActivity, s, lots, true, true)
+                                    runJs("onTradeSent(" + x.ok + "," + JSONObject.quote(x.stage) + "," + JSONObject.quote(x.msg) + ")")
+                                } catch (e: Throwable) { ErrLog.add("MainActivity", e.toString()); runJs("onTradeSent(false,'error',''" + ")") }
+                            }.start()
+                        }.show()
+                } catch (e: Exception) { ErrLog.add("MainActivity", e.toString()) }
+            }
+            return "ask"
+        }
+
+        /** v7.92: switches for the 1 hour trend filter and the session / news guard (both ON by default). */
+        @JavascriptInterface
+        fun tradeSetFilters(htf: Boolean, session: Boolean) { TradeHub.setFilters(this@MainActivity, htf, session) }
+
+        @JavascriptInterface
+        fun tradeSetRisk(pct: Double) { TradeHub.setRisk(this@MainActivity, pct) }
+
+        @JavascriptInterface
+        fun tradeSetBalance(v: Double) { TradeHub.setBalance(this@MainActivity, v) }
+
+        @JavascriptInterface
+        fun tradeSetSymbols(csv: String) { TradeHub.setSymbols(this@MainActivity, csv.take(120)) }
+
+        @JavascriptInterface
+        fun tradeResetPractice() { TradeHub.resetPractice(this@MainActivity) }
+
+        @JavascriptInterface
+        fun tradeOpenMt5(): String = try {
+            val li = packageManager.getLaunchIntentForPackage(TradeRules.MT5_PKG)
+            if (li == null) "missing" else { startActivity(li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "ok" }
+        } catch (e: Exception) { "fail" }
 
 
         // ---- v6.40 schedule editor (days + time + how important, own words)
@@ -2164,8 +2258,8 @@ class MainActivity : Activity() {
         /** Calendar permission is requested only from this explicit in-app button tap, never from voice. */
         @JavascriptInterface
         fun requestCalendarRead(): String {
-            if (granted(Manifest.permission.READ_CALENDAR)) { CalendarRead.scheduleUpcoming(this@MainActivity); return "granted" }
-            runOnUiThread { requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR), REQ_CALENDAR) }
+            if (granted(Manifest.permission.READ_CALENDAR) && granted(Manifest.permission.WRITE_CALENDAR)) { CalendarRead.scheduleUpcoming(this@MainActivity); return "granted" }
+            runOnUiThread { requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR), REQ_CALENDAR) }
             return "asked"
         }
 
@@ -2677,7 +2771,7 @@ class MainActivity : Activity() {
                     val dv = ConnectorApi.deviceStart(cid)
                     if (dv == null) { pushConn(ConnectorCatalog.GITHUB, "fail", "GitHub login shuru nahi hua. Client ID aur 'Device Flow' setting check karo"); return@Thread }
                     pushConn(ConnectorCatalog.GITHUB, "device", dv.userCode + "|" + dv.url)
-                    runOnUiThread { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dv.url))) } catch (e: Exception) { } }
+                    runOnUiThread { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dv.url))) } catch (e: Exception) { ErrLog.addOnce("quiet:MainActivity", e.toString()) } }
                     var wait = dv.intervalSec
                     val end = System.currentTimeMillis() + dv.expiresSec * 1000L
                     while (System.currentTimeMillis() < end && gen == deviceGen) {

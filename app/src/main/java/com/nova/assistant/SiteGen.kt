@@ -230,7 +230,7 @@ object SiteGen {
                     val small = ImageGen.shrink(raw, 1024) ?: raw
                     aiCache[d] = "data:image/jpeg;base64," + ImageGen.b64(small)
                 }
-            } catch (e: Throwable) { }
+            } catch (e: Throwable) { ErrLog.addOnce("quiet:SiteGen", e.toString()) }
         }
         val out = HashMap<String, String>()
         for (d in wanted) aiCache[d]?.let { out[d] = it }

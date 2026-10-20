@@ -66,7 +66,7 @@ class MoviePopup(private val ctx: Context) {
             }
             val lpB = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             lpB.leftMargin = (6 * d).toInt()
-            bar.addView(btn(browserLabel, Color.rgb(40, 90, 170)) { try { onOpenBrowser(web?.url ?: url) } catch (e: Throwable) { } ; destroy() }, lpB)
+            bar.addView(btn(browserLabel, Color.rgb(40, 90, 170)) { try { onOpenBrowser(web?.url ?: url) } catch (e: Throwable) { ErrLog.addOnce("quiet:MoviePopup", e.toString()) } ; destroy() }, lpB)
             bar.addView(btn(closeLabel, Color.rgb(190, 30, 40)) { destroy() }, lpB)
             box.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -148,7 +148,7 @@ class MoviePopup(private val ctx: Context) {
         val r = root
         val w = web
         root = null; web = null
-        try { w?.stopLoading() } catch (e: Throwable) { }
+        try { w?.stopLoading() } catch (e: Throwable) { ErrLog.addOnce("quiet:MoviePopup", e.toString()) }
         try { if (r != null) wm.removeView(r) } catch (e: Throwable) { }
         try { w?.destroy() } catch (e: Throwable) { }
     }

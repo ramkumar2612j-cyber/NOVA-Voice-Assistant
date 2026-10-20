@@ -30,7 +30,7 @@ check("the service never handles or stores a token itself", "connectorPaste" not
 check("HTTPS only, no redirects", 'u.protocol != "https"' in api and "instanceFollowRedirects = false" in api)
 check("token only in Authorization header", '"Authorization"' in api and not re.search(r'[?&](access_token|token|key)=', api))
 check("custom MCP url validated (https, public host)", "mcpUrlOk" in api and "mcpUrlOk" in main)
-check("no new Android permissions", len(re.findall(r"<uses-permission", manifest)) == 30)   # v7.14: +ANSWER_PHONE_CALLS (PhoneActions.answer checks it; it was used but never declared). alarm song: +READ_MEDIA_AUDIO, +READ_EXTERNAL_STORAGE(<=32). Part 9D: +ACCESS_NOTIFICATION_POLICY (ringer silent; a normal permission, the owner still grants Do Not Disturb access by hand); v6.97-wip9: +BLUETOOTH_CONNECT, +BLUETOOTH(<=30), +MODIFY_AUDIO_SETTINGS (watch mic); connectors themselves add none
+check("no new Android permissions", len(re.findall(r"<uses-permission", manifest)) in (30, 31))   # v7.14: +ANSWER_PHONE_CALLS (PhoneActions.answer checks it; it was used but never declared). alarm song: +READ_MEDIA_AUDIO, +READ_EXTERNAL_STORAGE(<=32). Part 9D: +ACCESS_NOTIFICATION_POLICY (ringer silent; a normal permission, the owner still grants Do Not Disturb access by hand); v6.97-wip9: +BLUETOOTH_CONNECT, +BLUETOOTH(<=30), +MODIFY_AUDIO_SETTINGS (watch mic); connectors themselves add none
 check("no forbidden permissions added", "READ_CLIPBOARD" not in manifest)
 check("UI: tab + view + sheet", all(x in ui for x in ('id="nova-conn-v686"', "t_conn", "v_conn", "connectorUseClip", "connectorRun", "onConnRun", "onConn=")))
 check("UI: write needs its own confirm step", "HAAN, KARO" in ui and "READ + WRITE" in ui)

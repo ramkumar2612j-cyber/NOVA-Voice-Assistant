@@ -13,7 +13,8 @@ W.__isSmooth=function(){return h.classList.contains("qsmooth")};
 /* true = draw this frame. In SMOOTH a loop keyed k draws at most about 3 times a second (state colour still follows within 0.3 s). Other modes: always true. */
 W.__qsGate=function(k,now){if(!h.classList.contains("qsmooth"))return true;var l=G[k]||0;if(now-l<300)return false;G[k]=now;return true};
 })();</script>
-<script>/* v6.38: repeating UI timers pause while the page is hidden */(function(){var si=window.setInterval;window.setInterval=function(f,t){var a=[].slice.call(arguments,2);if(typeof f!=="function")return si(f,t);return si(function(){if(document.hidden)return;f.apply(null,a)},t)}})();</script>
+<script>/* v6.38: repeating UI timers pause while the page is hidden */(function(){var si=window.setInterval;window.setInterval=function(f,t){var a=[].slice.call(arguments,2);if(typeof f!=="function")return si(f,t);if(t>=2000&&window.__tier!=="high")t=Math.round(t*1.6);   /* v7.90: status polls (2-5 s) run 60% less often on LOW / MID phones */
+return si(function(){if(document.hidden)return;f.apply(null,a)},t)}})();</script>
 <style>
 :root{--c1:#00f0ff;--c2:#2a6bff;--bg:#05060f}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
@@ -1255,7 +1256,7 @@ function fsRender(){
   var tg=el('button','sm ftog',fsAll?'SIRF DIKKAT WALE DIKHAO':'SAB FEATURE DIKHAO');tg.onclick=function(){fsAll=!fsAll;fsRender()};box.appendChild(tg);var rs=el('button','sm','SETUP DOBARA CHALAO');rs.onclick=function(){try{Android.rerunSetup()}catch(e){}};box.appendChild(rs);
   box.appendChild(el('div','fm','Yeh phone ki asli permission / key / service ki sthiti hai. Kaam ki jaanch app khud karta hai: Settings > TEST REPORT.'));
 }
-function fsLoad(){try{fsData=JSON.parse(Android.getFeatureStatus())}catch(e){fsData=null}fsRender()}
+var fsRaw0=null;function fsLoad(){var raw=null;try{raw=Android.getFeatureStatus();if(raw===fsRaw0&&fsData)return;fsRaw0=raw;fsData=JSON.parse(raw)}catch(e){fsData=null;fsRaw0=null}fsRender()}   /* v7.90: same answer = no DOM rebuild (less lag) */
 setTimeout(fsLoad,900);setInterval(function(){if(!document.hidden&&!document.getElementById('intro').classList.contains('on'))fsLoad()},5000);   /* Part 10: live feature status refreshes every 5 seconds */
 window.addEventListener('focus',function(){fsLoad()});
 function ucMaybe(){if(ucFree()&&ucOffers().length&&!ucShown2){ucShown2=true}}   /* v31: offers wait quietly in UPDATE CENTER */
@@ -1625,6 +1626,7 @@ sh.addEventListener('pointerdown',function(e){if(e.target===sh)closeSheet()});
 var box=$('feats');
 F.forEach(function(f,i){var d=document.createElement('div');d.className='f';d.style.animationDelay=(.45+i*.08)+'s';d.innerHTML='<svg viewBox="0 0 24 24"><path d="'+IC[f[0]]+'"/></svg><b>'+f[1].toUpperCase()+'</b><i>'+f[2]+'</i>';d.onclick=function(){openSheet(f)};box.appendChild(d)});
 var al2=document.createElement('div');al2.className='f all';al2.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><b>SAB SKILLS</b><i>poori list + search</i>';al2.onclick=function(){var t=document.getElementById('t_skills');if(t)t.click()};box.appendChild(al2);
+var al3=document.createElement('div');al3.className='f all';al3.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 8-9M15 5h5v5"/></svg><b>TRADE</b><i>MT5 practice + analysis</i>';al3.onclick=function(){try{window.novaTradeShow&&novaTradeShow()}catch(e){}};box.appendChild(al3);
 /* ===== globe + waveform dashboard ===== */
 var gl=$('gl'),g=gl.getContext('2d'),GD=Math.min(devicePixelRatio||1,window.__dprCap||3),GS=250,GP=[];
 gl.width=GS*GD;gl.height=GS*GD;gl.style.width=GS+'px';gl.style.height=GS+'px';
@@ -2223,6 +2225,29 @@ window.novaAccOpen=function(id){
 <nav id="tabs" aria-label="NOVA menu"><button class="tb act" id="t_home" aria-label="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>HOME</span></button><button class="tb" id="t_skills" aria-label="skills"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>SKILLS</span></button><button class="tb" id="t_limits" aria-label="limits"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1116 0M12 18l4-6M7 18h.01M17 18h.01"/></svg><span>LIMITS</span></button></nav>
 <div class="vw" id="v_skills"><h2>SKILLS</h2><div class="sub">NOVA ke saare kaam ek jagah. Chip se dekho kya ON hai aur kya setup maangta hai. Hara RUN = seedha chalao. SAY = line chat me bhar jaati hai (naam / text aap badlo).</div><div class="sk-top"><input class="sk-s" id="sk_q" type="search" placeholder="Dhundo: call, photo, mausam, alarm, github..." autocomplete="off" maxlength="40" aria-label="skills search"><div class="sk-f" id="sk_f"></div><div class="sk-cnt" id="sk_c"></div></div><div id="sk_l"></div></div>
 <div class="vw" id="v_limits"><h2>API LIMITS</h2><div class="sub" id="li_sub"></div><div class="tot"><div><strong id="li_tot">0</strong><span>AAJ KE CALLS</span></div><div><strong id="li_day">-</strong><span>DIN</span></div></div><div class="vmsg" id="li_msg"></div><div id="li_l"></div><div class="vc"><div class="acts"><button class="a" id="li_reset">RESET TODAY</button><button class="v" id="li_ref">REFRESH</button></div><div class="meta">Ginti sirf is phone ki hai. Groq ka LIVE count Groq ke header se aata hai (wahi sahi hai). Jis service ki limit publish nahi hai, wahan sirf ginti dikhti hai &mdash; koi number banaya nahi jaata. Keys yahan kabhi nahi dikhti.</div></div></div>
+<div class="vw" id="v_trade"><h2>TRADE</h2><div class="sub">Pehle MT5 DEMO par practice. Asli paisa tabhi khulega jab neeche ka score card pass ho, aur har real order par aapki haan lagegi. Ye analysis hai, profit ki guarantee nahi.</div>
+<div class="tr-mode" id="tr_mode"></div>
+<div class="grp">ANALYSIS</div>
+<div class="tr-chips" id="tr_chips"></div>
+<div class="tr-row"><select id="tr_iv" aria-label="timeframe"><option value="5m">5 min</option><option value="15m" selected>15 min</option><option value="60m">1 ghanta</option><option value="1d">1 din</option></select><button class="trb" id="tr_go">ANALYSE KARO</button></div>
+<div class="tr-msg" id="tr_msg"></div>
+<div class="tr-res" id="tr_res" style="display:none"><div class="tr-dir" id="tr_dir"></div><div class="tr-grid" id="tr_grid"></div><ul id="tr_why"></ul><div class="tr-note" id="tr_note"></div>
+<div class="tr-row"><button class="trb" id="tr_prac">PRACTICE ME SAVE</button><button class="trb ok" id="tr_demo">MT5 DEMO ME ORDER</button></div>
+<div class="tr-row"><button class="trb" id="tr_mt5">MT5 KHOLO</button><button class="trb danger" id="tr_real">REAL ORDER</button></div></div>
+<div class="grp">SCORE CARD (PRACTICE)</div>
+<div class="tr-grid" id="tr_card"></div>
+<div class="tr-gate" id="tr_gate"></div>
+<div class="tr-row"><button class="trb" id="tr_sync">RESULT UPDATE</button></div>
+<div class="grp">SETTINGS</div>
+<label class="tr-l">Risk har trade (% balance, 0.1 se 2)<input id="tr_risk" type="number" step="0.1" min="0.1" max="2" inputmode="decimal"></label>
+<label class="tr-l">Demo balance (MT5 se apne aap padh leta hoon jab MT5 khula ho)<input id="tr_bal" type="number" min="1" inputmode="decimal"></label>
+<label class="tr-l">Symbols (comma se): gold, eurusd, btc...<input id="tr_syms" maxlength="120"></label>
+<label class="tr-l"><input type="checkbox" id="tr_htf" style="display:inline;width:auto;margin:0 6px 0 0">1 ghante ka bada trend sath me ho tabhi signal (FILTER)</label>
+<label class="tr-l"><input type="checkbox" id="tr_sess" style="display:inline;width:auto;margin:0 6px 0 0">Weekend / rollover / badi news (NFP) ke time WAIT (GUARD). Live news calendar nahi hai, FOMC / CPI ye nahi pakadta.</label>
+<div class="tr-row"><button class="trb" id="tr_save">SAVE</button><button class="trb danger" id="tr_reset">PRACTICE RESET</button></div>
+<div class="grp">PICHHLE PRACTICE TRADE</div>
+<div id="tr_list"></div>
+<div class="tr-note">Practice result asli candle se nikalta hai, stop loss pehle gina jaata hai (pessimistic), spread ka kharcha ghataya jaata hai aur aadha hissa Target 1 par band hota hai, baaki Target 2 tak (stop entry par). Isliye result asliyat se behtar nahi dikhta. Pichhla result aage ki guarantee nahi.</div></div>
 <script id="nova-tabs-v37">
 (function(){
 function g(i){return document.getElementById(i)}
@@ -2231,7 +2256,7 @@ var tabs=g('tabs'),cb=g('chatb'),gr=g('gear');
 if(!tabs)return;
 if(cb){cb.className='tb';var e1=cb.querySelector('em');if(e1)e1.textContent='CHAT';tabs.appendChild(cb)}
 if(gr){gr.className='tb';var e2=gr.querySelector('em');if(e2)e2.textContent='SETUP';tabs.appendChild(gr)}
-var VS=g('v_skills'),VL=g('v_limits'),chat=g('chat'),panel=g('panel'),uc=g('uc'),sheet=g('sheet');
+var VS=g('v_skills'),VL=g('v_limits'),VT=g('v_trade'),chat=g('chat'),panel=g('panel'),uc=g('uc'),sheet=g('sheet');
 function J(f){try{return JSON.parse(Android[f]())}catch(e){return {}}}
 function B(f){try{return Android[f]()===true}catch(e){return false}}
 function el(t,c,x){var d=document.createElement(t);if(c)d.className=c;if(x!=null)d.textContent=x;return d}
@@ -2243,6 +2268,7 @@ function sync(){
   else if(panel&&panel.style.display==='block')t='setup';
   else if(VS.classList.contains('on'))t='skills';
   else if(VL.classList.contains('on'))t='limits';
+  else if(VT&&VT.classList.contains('on'))t='trade';
   var map={home:'t_home',skills:'t_skills',limits:'t_limits',chat:'chatb',setup:'gear'};
   for(var k in map){var b=g(map[k]);if(b)b.classList.toggle('act',k===t)}
   try{var _u=document.getElementById('uc');window.__cover=(t!=='home')||!!(_u&&_u.classList.contains('on'))}catch(e){}
@@ -2251,6 +2277,7 @@ function sync(){
 function closeOthers(keep){
   if(keep!=='skills')VS.classList.remove('on');
   if(keep!=='limits')VL.classList.remove('on');
+  if(keep!=='trade'&&VT)VT.classList.remove('on');
   if(keep!=='chat'&&chat&&chat.classList.contains('on')){var c=g('c_close');if(c)c.click()}
   if(keep!=='setup'&&panel&&panel.style.display==='block'&&window.novaPanel)window.novaPanel(false);
   if(sheet&&sheet.classList.contains('on')){try{sheet.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))}catch(e){}}
@@ -2259,8 +2286,9 @@ function closeOthers(keep){
 g('t_home').onclick=function(){closeOthers('home');sync()};
 g('t_skills').onclick=function(){closeOthers('skills');renderSkills();VS.classList.add('on');VS.scrollTop=0;sync()};
 g('t_limits').onclick=function(){closeOthers('limits');VL.classList.add('on');VL.scrollTop=0;renderLimits(true);sync()};
+window.novaTradeShow=function(){closeOthers('trade');VT.classList.add('on');VT.scrollTop=0;try{window.novaTradeOpen&&novaTradeOpen()}catch(e){}sync()};
 if(cb)cb.addEventListener('click',function(){closeOthers('chat');setTimeout(sync,50)});
-if(gr)gr.addEventListener('click',function(){VS.classList.remove('on');VL.classList.remove('on');if(chat&&chat.classList.contains('on')){var c=g('c_close');if(c)c.click()}setTimeout(sync,600)});
+if(gr)gr.addEventListener('click',function(){VS.classList.remove('on');VL.classList.remove('on');if(VT)VT.classList.remove('on');if(chat&&chat.classList.contains('on')){var c=g('c_close');if(c)c.click()}setTimeout(sync,600)});
 setInterval(function(){if(!document.hidden)sync()},1000);
 /* ---- SKILLS (wip12) ---- */
 /* ---- SKILLS (wip12): every NOVA feature in one searchable list. Status chips are read from the REAL phone state; nothing here is invented.
@@ -4387,8 +4415,8 @@ window.addEventListener('error',function(e){try{L('js_error',(e&&e.message?e.mes
    every JS function Kotlin calls exists, the key elements and the new scripts exist, and answers with Android.verifyPage(json). Read-only: it clicks nothing and reads no typed text. */
 (function(){try{
 var d=document;
-var BRIDGE=["actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow"];
-var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMediaIntake", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup", "onChatPhotoGo", "onChatPhotoNo"];
+var BRIDGE=["actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow", "tradeAnalyse", "tradeCard", "tradeOpenMt5", "tradePractice", "tradeResetPractice", "tradeSendDemo", "tradeSendReal", "tradeSetBalance", "tradeSetRisk", "tradeSetSymbols", "tradeSettle", "tradeSetFilters"];
+var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMediaIntake", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup", "onChatPhotoGo", "onChatPhotoNo", "onTradeAnalysis", "onTradeSent", "onTradeSettled"];
 var IDS=['clog','c_in','c_send','c_thw','c_thumb','c_auto','p4_core','p4_stars','btn','autoT','c_imode','chatb','st','p6_board','p6_dock'];
 var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify','p6_home','p7_motion','pt8_chat','pt9_persona','pt10_wire','pt11_media','pt12_frames','pt13_analyse','pt13d_chat','pt14_laser','pt17_switches','pt18_safe'];
 window.p6Verify=function(){try{
@@ -5151,6 +5179,72 @@ function go(e){try{
 d.addEventListener('click',go,true);d.addEventListener('keydown',go,true);
 }catch(e){}})();
 </script>
+<script id="nova-trade-v791">
+(function(){
+function g(i){return document.getElementById(i)}
+function A(f){try{var a=Array.prototype.slice.call(arguments,1);return Android[f].apply(Android,a)}catch(e){return null}}
+function el(t,c,x){var d=document.createElement(t);if(c)d.className=c;if(x!=null)d.textContent=x;return d}
+var sym='',card={},last=null;
+function msg(t){var m=g('tr_msg');if(m)m.textContent=t||''}
+function cell(k,v){var d=el('div',null,k);d.appendChild(el('b',null,String(v)));return d}
+function renderCard(){
+  var raw=A('tradeCard');try{card=JSON.parse(raw||'{}')}catch(e){card={}}
+  var c=card,gr=g('tr_card');if(!gr)return;gr.textContent='';
+  [['Closed trade',c.closed||0],['Open',c.open||0],['Win %',(c.winRate||0)+'%'],['Average R',c.expectancy||0],['Profit factor',c.pf||0],['Sabse bada girna',(c.dd||0)+'R'],['Pichhle 10',(c.last10||0)+'R'],['Kul R',c.totalR||0],['Bharose ki seema',(c.lb||0)+'R']].forEach(function(p){gr.appendChild(cell(p[0],p[1]))});
+  var gt=g('tr_gate');gt.textContent='';
+  var n=c.need||{};
+  gt.appendChild(el('div',null,'REAL ke liye chahiye: '+(n.trades||100)+' trade, '+(n.days||30)+' alag din, average '+(n.exp||0.2)+'R, profit factor '+(n.pf||1.3)+', girna '+(n.dd||8)+'R se kam, pichhle 10 negative nahi, aur bharose ki seema '+(n.lb||0)+'R se upar (taaki result sirf kismat na ho).'));
+  if(c.unlocked){gt.appendChild(el('div','okk','Score card pass. Real order ab possible hai, par har baar aapki haan lagegi. Pichhla result guarantee nahi.'))}
+  else{(c.missing||[]).forEach(function(m){gt.appendChild(el('div','miss','• '+m))})}
+  var mode=g('tr_mode');
+  mode.className='tr-mode'+(c.unlocked?' real':'');
+  mode.textContent=c.unlocked?'PRACTICE chal rahi hai. REAL order unlock hai, lekin har trade par Yes/No box aayega. Risk real me aadha hi rahega.':'PRACTICE MODE: sirf MT5 DEMO account. REAL order locked.';
+  var rb=g('tr_real');rb.disabled=!c.unlocked;
+  var ch=g('tr_chips');ch.textContent='';
+  (c.symbols||[]).forEach(function(s){var b=el('button',s===sym?'on':'',s);b.onclick=function(){sym=s;renderCard();msg('')};ch.appendChild(b)});
+  if(!sym&&c.symbols&&c.symbols.length){sym=c.symbols[0];renderCard();return}
+  var th=g('tr_htf'),ts=g('tr_sess');if(th&&document.activeElement!==th)th.checked=c.htfOn!==false;if(ts&&document.activeElement!==ts)ts.checked=c.sessOn!==false;
+  var ri=g('tr_risk');if(ri&&document.activeElement!==ri)ri.value=c.risk||1;
+  var bi=g('tr_bal');if(bi&&document.activeElement!==bi)bi.value=c.balance||'';
+  var si=g('tr_syms');if(si&&document.activeElement!==si)si.value=(c.symbols||[]).join(', ');
+  var L=g('tr_list');L.textContent='';
+  var rec=c.recent||[];
+  if(!rec.length)L.appendChild(el('div','tr-note','Abhi koi practice trade nahi. ANALYSE karo, phir PRACTICE ME SAVE dabao.'));
+  rec.forEach(function(t){var d=el('div','tr-t');d.appendChild(el('span',null,t.sym+' '+t.dir+' @'+t.entry+' lot '+t.lots));var k=t.st==='WIN'?'W':t.st==='LOSS'?'L':'O';d.appendChild(el('span',k,t.st==='OPEN'?'OPEN':(t.r>0?'+':'')+t.r+'R'));L.appendChild(d)});
+}
+function show(r){
+  last=r;var box=g('tr_res');box.style.display='block';
+  var d=g('tr_dir');d.className='tr-dir '+r.dir;d.textContent=r.dir==='WAIT'?'WAIT':r.symbol+' '+r.dir;
+  var gr=g('tr_grid');gr.textContent='';
+  if(r.dir!=='WAIT'){[['Entry',r.entry],['Stop Loss',r.sl],['Target 1',r.tp1],['Target 2',r.tp2],['Lot',r.lots],['Score',r.score+'/5'],['RSI',r.rsi],['Trend',r.trend],['1H trend',r.htf||'-'],['Spread kharcha',(r.costR||0)+'R'],['Data source',r.feedName||'-']].forEach(function(p){gr.appendChild(cell(p[0],p[1]))})}
+  var u=g('tr_why');u.textContent='';
+  if(r.dir==='WAIT')u.appendChild(el('li',null,r.why||'Abhi saaf signal nahi.'));
+  (r.reasons||[]).forEach(function(x){u.appendChild(el('li',null,x))});
+  var nt=g('tr_note');
+  nt.textContent=(r.calibrated?'Levels MT5 ke bhav se mila diye gaye. ':'MT5 screen par nahi dikha, isliye data-feed ke levels hain (MT5 se thoda alag ho sakte hain). ')+(r.stale?'Data purana lag raha hai. ':'')+(r.filtered?'Filter ne is signal ko roka. ':'')+(r.session&&r.dir==='WAIT'?'Abhi: '+r.session+'. ':'')+'Sirf poori ho chuki candle par analysis hota hai. Practice me aadha Target 1 par band, baaki Target 2 tak (stop entry par), spread kharcha ghata kar. Ye analysis hai, guarantee nahi.';
+  var can=r.dir!=='WAIT';
+  g('tr_prac').disabled=!can;g('tr_demo').disabled=!can;
+  if(!(card&&card.unlocked))g('tr_real').disabled=true;else g('tr_real').disabled=!can;
+}
+window.onTradeAnalysis=function(j){
+  var b=g('tr_go');b.disabled=false;
+  var r={};try{r=JSON.parse(j)}catch(e){}
+  if(!r.symbol){msg('Analysis nahi ho paya. Internet check karo.');return}
+  msg(r.feed?'':'Market data nahi mila.');show(r);
+};
+window.onTradeSent=function(ok,stage,m){msg((ok?'OK: ':'Ruka ('+stage+'): ')+m);renderCard()};
+window.onTradeSettled=function(n){renderCard();if(n>0)msg(n+' practice trade band hue.')};
+window.novaTradeOpen=function(){renderCard();A('tradeSettle')};
+g('tr_go').onclick=function(){if(!sym){msg('Pehle symbol chuno.');return}this.disabled=true;msg('Asli candle se analysis ho raha hai...');A('tradeAnalyse',sym,g('tr_iv').value)};
+g('tr_prac').onclick=function(){var r=A('tradePractice');msg(r==='ok'?'Practice me save ho gaya. Score card asli candle se band karega.':r==='already_open'?'Is symbol ka practice trade pehle se khula hai.':r==='stale'?'Analysis purana ho gaya, dobara ANALYSE karo.':'Save nahi hua.');renderCard()};
+g('tr_demo').onclick=function(){var r=A('tradeSendDemo');if(r==='stale'){msg('Analysis purana ho gaya, dobara ANALYSE karo.');return}msg('MT5 khol raha hoon, pehle Demo account check karunga...')};
+g('tr_real').onclick=function(){var r=A('tradeSendReal');if(r==='locked')msg('Real trade abhi locked hai, score card pura karo.');else if(r==='stale')msg('Analysis purana ho gaya, dobara ANALYSE karo.');else if(r==='wait')msg('WAIT par order nahi lagta.')};
+g('tr_mt5').onclick=function(){var r=A('tradeOpenMt5');if(r==='missing')msg('Is phone me MetaTrader 5 install nahi hai.')};
+g('tr_sync').onclick=function(){msg('Practice trade asli candle se check ho rahe hain...');A('tradeSettle')};
+g('tr_save').onclick=function(){var r=parseFloat(g('tr_risk').value),b=parseFloat(g('tr_bal').value);if(r>0)A('tradeSetRisk',r);if(b>0)A('tradeSetBalance',b);A('tradeSetSymbols',g('tr_syms').value||'');A('tradeSetFilters',!!(g('tr_htf')&&g('tr_htf').checked),!!(g('tr_sess')&&g('tr_sess').checked));msg('Save ho gaya.');renderCard()};
+g('tr_reset').onclick=function(){if(confirm('Saari practice history mit jayegi aur real ka lock dobara band ho jayega. Pakka?')){A('tradeResetPractice');msg('Practice reset.');renderCard()}};
+})();
+</script>
 <style id="pt14_laser_css">
 /* v7.62 PART 14 GREEN LASER SCAN: full-screen hacker scan while a REAL analysis runs. Add-only. Shown only for status.state==='running'; every number comes from the real status (percent, stage). */
 #p14_scan{position:fixed;inset:0;z-index:2147483000;display:none;pointer-events:none;overflow:hidden;background:rgba(0,10,4,.72);font-family:ui-monospace,Menlo,Consolas,monospace;color:#5dff9a}
@@ -5276,5 +5370,59 @@ if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watch);else wa
 <style id="v77_chat_perf">
 /* v7.77 chat speed (add-only): no blur on every chat bubble, GPU layer hints off. Delete this one block to undo. */
 #clog .msg,html:not(.lowfx) #clog .msg{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;will-change:auto!important}
+
+#v_trade .tr-mode{margin:6px 0 10px;padding:9px 11px;border-radius:10px;font-size:11px;line-height:1.5;border:1px solid rgba(0,240,255,.35);background:rgba(0,240,255,.07);color:#cfefff}
+#v_trade .tr-mode.real{border-color:rgba(255,90,90,.6);background:rgba(255,60,60,.1);color:#ffd9d9}
+#v_trade .tr-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+#v_trade .tr-chips button{padding:7px 11px;font-size:11px;letter-spacing:.5px;border-radius:16px;box-shadow:none;border-width:1px}
+#v_trade .tr-chips button.on{background:rgba(0,240,255,.28);color:#fff}
+#v_trade .tr-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+#v_trade .tr-row select,#v_trade .tr-l input{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(0,240,255,.35);border-radius:9px;padding:9px;font-size:13px}
+#v_trade .tr-l{display:block;font-size:11px;color:var(--mut);margin:8px 0}
+#v_trade .tr-l input{display:block;width:100%;box-sizing:border-box;margin-top:4px}
+#v_trade .trb{flex:1 1 130px;padding:10px 12px;font-size:11px;letter-spacing:1px;border-radius:10px;box-shadow:none;border-width:1px;min-height:40px}
+#v_trade .trb.ok{border-color:#30e090;color:#aaffd8;background:rgba(48,224,144,.1)}
+#v_trade .trb.danger{border-color:#ff5a5a;color:#ffc4c4;background:rgba(255,80,80,.08)}
+#v_trade .trb[disabled]{opacity:.35}
+#v_trade .tr-msg{font-size:12px;line-height:1.5;color:#cfefff;margin:6px 2px;min-height:16px}
+#v_trade .tr-res{border:1px solid rgba(0,240,255,.3);border-radius:12px;padding:12px;margin:8px 0;background:rgba(255,255,255,.03)}
+#v_trade .tr-dir{font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;margin-bottom:8px}
+#v_trade .tr-dir.BUY{color:#30e090}#v_trade .tr-dir.SELL{color:#ff6a6a}#v_trade .tr-dir.WAIT{color:#ffd24a}
+#v_trade .tr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+#v_trade .tr-grid div{border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:7px 9px;font-size:10px;color:var(--mut)}
+#v_trade .tr-grid b{display:block;font-size:15px;color:#fff;margin-top:2px;font-weight:600}
+#v_trade ul{margin:8px 0 4px 18px;padding:0;font-size:11.5px;line-height:1.55;color:#dff}
+#v_trade .tr-note{font-size:10.5px;line-height:1.5;color:var(--mut);margin:8px 2px}
+#v_trade .tr-gate{font-size:11.5px;line-height:1.6;margin:8px 2px;color:#dff}
+#v_trade .tr-gate .miss{color:#ffd24a}#v_trade .tr-gate .okk{color:#30e090}
+#v_trade .tr-t{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.08);padding:7px 2px;color:#dff}
+#v_trade .tr-t .W{color:#30e090}#v_trade .tr-t .L{color:#ff6a6a}#v_trade .tr-t .O{color:#ffd24a}
 </style>
+<script id="autosmooth-v790">
+/* v7.90 AUTO lag guard (add-only). Only when GRAPHICS QUALITY = AUTO: after the page has run 4 s, frames are timed for 5 s.
+   If the phone is really slow (average frame > 55 ms, or 1 frame in 3 over 110 ms) SMOOTH is switched on at once (same as choosing SMOOTH by hand), and remembered for the next start.
+   SHARP / SMOOTH chosen by the owner are never touched. Delete this one script to undo. */
+(function(){try{
+var W=window,d=document,N=W.NovaQuality;if(!N)return;
+function q(){try{return localStorage.getItem("nova_q")||"auto"}catch(e){return "auto"}}
+function on(){try{N.apply("smooth");W.__autoSmooth=true;var a=d.getElementById("s_qnote");if(a)a.textContent="Phone atak raha tha, isliye NOVA ne apne aap SMOOTH laga diya. Wapas SHARP chahiye to GRAPHICS QUALITY me chuno."}catch(e){}}
+if(q()!=="auto")return;
+var mem="";try{mem=localStorage.getItem("nova_autosmooth")||""}catch(e){}
+if(mem==="1"){setTimeout(function(){if(q()==="auto")on()},300);return}
+setTimeout(function(){
+  if(q()!=="auto"||N.smooth()||d.hidden)return;
+  var last=0,n=0,sum=0,bad=0,t0=0;
+  function f(t){
+    if(d.hidden){return}
+    if(!t0)t0=t;
+    if(last){var dt=t-last;if(dt<1000){n++;sum+=dt;if(dt>110)bad++}}
+    last=t;
+    if(t-t0<5000){requestAnimationFrame(f);return}
+    if(n>20&&(sum/n>55||bad*3>n)&&q()==="auto"&&!N.smooth()){try{localStorage.setItem("nova_autosmooth","1")}catch(e){}on()}
+  }
+  requestAnimationFrame(f);
+},4000);
+}catch(e){}})();
+</script>
+
 </body></html>

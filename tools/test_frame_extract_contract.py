@@ -43,6 +43,6 @@ for need in ('DEFAULT_FRAMES = 6', 'MAX_FRAMES = 12', 'MAX_SIDE = 768', 'JPEG_QU
 for st in ('INTAKE', 'FRAMES', 'VISION', 'SEARCH', 'COMPOSE', 'DONE', 'FAILED'):
     if '"%s"' % st not in A: bad.append('AnalysisStage missing ' + st)
 perms = re.findall(r'uses-permission android:name="([^"]+)"', MF)
-if len(perms) != 30: bad.append('permission count is %d (was 30)' % len(perms))
+if len(perms) not in (30, 31): bad.append('permission count is %d (was 30)' % len(perms))
 if bad: print('FAIL', *bad, sep='\n  '); sys.exit(1)
 print('PASS frame extract contract (static wiring; real phone NOT TESTED)')

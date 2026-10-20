@@ -37,6 +37,18 @@ object ErrLog {
         }
     }
 
+    /** v7.93: like [add] but the same source + message is kept only ONCE, so a quiet error that repeats cannot push real errors out of the 30 slots. */
+    fun addOnce(src: String, msg: String, now: Long = System.currentTimeMillis()) {
+        val m = clean(msg)
+        if (m.isEmpty()) return
+        val s = clean(src).take(30)
+        synchronized(items) {
+            if (items.any { it.src == s && it.msg == m }) return
+            items.add(E(now, s, m))
+            while (items.size > MAX) items.removeAt(0)
+        }
+    }
+
     fun count(): Int = synchronized(items) { items.size }
 
     /** v6.30: newest message of a source (prefix match) that is not older than withinMs, else null. */

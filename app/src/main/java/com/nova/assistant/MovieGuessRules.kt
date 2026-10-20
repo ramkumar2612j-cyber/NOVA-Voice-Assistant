@@ -194,6 +194,10 @@ object MovieGuessRules {
     fun noAiText(en: Boolean): String = t(en,
         "Movie pehchanne ke liye AI chahiye (Gemini key ya free vision), abhi koi chalu nahi hai. Settings me key daalo.",
         "Guessing the movie needs an AI (Gemini key or free vision) and none is available now. Add a key in Settings.")
+    /** v7.90: the network layer reports a TIMEOUT (599) as "OFFLINE" too. When the phone is really online the honest reason is "too slow", not "no internet". */
+    fun failedText(kind: String, en: Boolean, online: Boolean): String =
+        if (kind == "OFFLINE" && online) t(en, "Internet chalu hai, par AI ka jawab time par nahi aaya (network dheema tha). Dobara bolo, ya SCREEN SCAN ek baar aur karo.", "The internet is on, but the AI did not answer in time (slow network). Ask again.")
+        else failedText(kind, en)
     fun failedText(kind: String, en: Boolean): String = when (kind) {
         "OFFLINE" -> t(en, "Internet nahi mila, movie ka naam nahi nikal paya.", "No internet, so I could not get the movie name.")
         "LIMIT" -> t(en, "AI ki limit abhi lagi hai, thodi der baad dobara bolo.", "The AI is rate-limited right now, ask again in a little while.")

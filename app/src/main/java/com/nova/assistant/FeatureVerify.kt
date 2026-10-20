@@ -137,7 +137,7 @@ object FeatureVerify {
                 try { probes(rec) } catch (e: Throwable) { rec("FAIL", "Parts 1-5 probes ruk gaye", e.javaClass.simpleName) }
                 try { stateChecks(act, rec) } catch (e: Throwable) { rec("FAIL", "State checks ruk gaye", e.javaClass.simpleName) }
                 pageJson = null
-                try { askPage() } catch (e: Throwable) { }
+                try { askPage() } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureVerify", e.toString()) }
                 var g = 0
                 while (pageJson == null && g++ < 40) Thread.sleep(200)
                 pageChecks(pageJson, rec)
@@ -148,7 +148,7 @@ object FeatureVerify {
                 lastSummary = sum
                 lastReport = "NOVA AUTO VERIFY\n" + out.joinToString("\n") + "\n" + sum
                 for (f in lastFails.take(5)) ErrLog.add("Verify", f)
-                try { ActionLog.add(act, "NOVA VERIFY", "NOVA", "", if (fails.isEmpty()) "sent" else "failed", sum.take(120)) } catch (e: Throwable) { }
+                try { ActionLog.add(act, "NOVA VERIFY", "NOVA", "", if (fails.isEmpty()) "sent" else "failed", sum.take(120)) } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureVerify", e.toString()) }
                 show(sum, lastReport)
             } catch (e: Throwable) {
                 ErrLog.add("Verify", "verify run failed: " + e.javaClass.simpleName)

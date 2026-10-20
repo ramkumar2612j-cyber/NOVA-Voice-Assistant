@@ -36,7 +36,7 @@ object SiteMedia {
             val m = Regex("^(img|vid)_(\\d+)_(\\d+)x(\\d+)\\.(jpg|mp4|webm)$").find(f.name) ?: continue
             try {
                 out.add(Item(m.groupValues[1], m.groupValues[2].toInt(), mimeOf(m.groupValues[5]), f.readBytes(), m.groupValues[3].toInt(), m.groupValues[4].toInt()))
-            } catch (e: Exception) { }
+            } catch (e: Exception) { ErrLog.addOnce("quiet:SiteMedia", e.toString()) }
         }
         return out.sortedWith(compareBy({ it.kind }, { it.index }))
     }
@@ -101,7 +101,7 @@ object SiteMedia {
     private fun lastSubj(ctx: Context) = File(ctx.filesDir, "last_site_subject.txt")
 
     fun saveLast(ctx: Context, subject: String, template: String) {
-        try { lastFile(ctx).writeText(template, Charsets.UTF_8); lastSubj(ctx).writeText(subject.take(300), Charsets.UTF_8) } catch (e: Exception) { }
+        try { lastFile(ctx).writeText(template, Charsets.UTF_8); lastSubj(ctx).writeText(subject.take(300), Charsets.UTF_8) } catch (e: Exception) { ErrLog.addOnce("quiet:SiteMedia", e.toString()) }
     }
 
     /** Returns Pair(subject, template) or null. Only when younger than maxAgeMs. */

@@ -20,7 +20,7 @@ object CrashNote {
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
             try { File(app.filesDir, CRASH).writeText(format(t.name, e, System.currentTimeMillis())) } catch (x: Throwable) { ErrLog.add("CrashNote", x.toString()) }
-            try { CrashGuardStore.recordCrash(app) } catch (x: Throwable) { }   // v7.69 PART 18: safe mode after repeated crashes
+            try { CrashGuardStore.recordCrash(app) } catch (x: Throwable) { ErrLog.addOnce("quiet:CrashNote", x.toString()) }   // v7.69 PART 18: safe mode after repeated crashes
             if (prev != null) prev.uncaughtException(t, e)
         }
     }

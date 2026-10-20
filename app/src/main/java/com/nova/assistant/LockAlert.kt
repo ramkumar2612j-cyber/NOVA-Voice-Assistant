@@ -73,7 +73,7 @@ object LockAlert {
         generation++
         main.removeCallbacksAndMessages(null)
         try { tts?.stop() } catch (e: Exception) { }
-        try { tone?.stopTone() } catch (e: Exception) { }
+        try { tone?.stopTone() } catch (e: Exception) { ErrLog.addOnce("quiet:LockAlert", e.toString()) }
         try { tone?.release() } catch (e: Exception) { }
         tone = null
         val c = app
@@ -111,7 +111,7 @@ object LockAlert {
             val want = if (english) Locale("en", "IN") else Locale("hi", "IN")
             val r = t.setLanguage(want)
             if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) t.setLanguage(Locale.getDefault())
-        } catch (e: Exception) { }
+        } catch (e: Exception) { ErrLog.addOnce("quiet:LockAlert", e.toString()) }
     }
 
     private fun playRound(gen: Int) {
@@ -120,7 +120,7 @@ object LockAlert {
         val tg = try { tone ?: ToneGenerator(AudioManager.STREAM_ALARM, 100).also { tone = it } } catch (e: Exception) { null }
         for (i in 0 until 3) {
             main.postDelayed({
-                if (active && gen == generation) try { tg?.startTone(ToneGenerator.TONE_PROP_BEEP2, 280) } catch (e: Exception) { }
+                if (active && gen == generation) try { tg?.startTone(ToneGenerator.TONE_PROP_BEEP2, 280) } catch (e: Exception) { ErrLog.addOnce("quiet:LockAlert", e.toString()) }
             }, i * 450L)
         }
         main.postDelayed({ if (active && gen == generation) speakNow(gen) }, 1500L)
@@ -171,7 +171,7 @@ object LockAlert {
         try {
             val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             am.setStreamVolume(AudioManager.STREAM_ALARM, savedVol, 0)
-        } catch (e: Exception) { }
+        } catch (e: Exception) { ErrLog.addOnce("quiet:LockAlert", e.toString()) }
         savedVol = -1
     }
 

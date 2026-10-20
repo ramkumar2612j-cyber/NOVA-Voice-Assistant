@@ -44,7 +44,7 @@ object CrashGuardStore {
             val list = CrashGuard.add(CrashGuard.decode(p.getString(K_LIST, "")), now)
             val until = CrashGuard.safeUntil(list, now, p.getLong(K_UNTIL, 0L))
             p.edit().putString(K_LIST, CrashGuard.encode(list)).putLong(K_UNTIL, until).commit()
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:CrashGuard", e.toString()) }
     }
 
     fun isSafe(ctx: Context, now: Long = System.currentTimeMillis()): Boolean = try {

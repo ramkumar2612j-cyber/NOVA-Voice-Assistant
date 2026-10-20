@@ -65,4 +65,16 @@ class ErrLogTest {
         assertEquals("http 429 (model) don't retry", ErrLog.clean("http 429 (model) don't retry"))
         assertEquals("code 3 of 12", ErrLog.clean("code 3 of 12"))
     }
+
+    @Test fun v793AddOnceKeepsEachQuietErrorOnlyOnce() {
+        ErrLog.clear()
+        repeat(5) { ErrLog.addOnce("quiet:X", "boom", 1000L) }
+        assertEquals(1, ErrLog.count())
+        ErrLog.addOnce("quiet:X", "other", 1000L)
+        ErrLog.addOnce("quiet:Y", "boom", 1000L)
+        assertEquals(3, ErrLog.count())
+        ErrLog.addOnce("quiet:X", "   ", 1000L)   // blank is ignored like add()
+        assertEquals(3, ErrLog.count())
+        ErrLog.clear()
+    }
 }

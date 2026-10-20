@@ -22,4 +22,10 @@ public class Assert {
     public static void assertEquals(float a, float b, float d){ if(!(Math.abs(a-b)<=d)) f(null,"expected:<"+a+"> but was:<"+b+">"); }
     public static void assertArrayEquals(byte[] a, byte[] b){ if(!java.util.Arrays.equals(a,b)) f(null,"arrays differ"); }
     public static void assertArrayEquals(Object[] a, Object[] b){ if(!java.util.Arrays.equals(a,b)) f(null,"arrays differ"); }
+    public static void assertNotEquals(Object a, Object b){ if(a==null?b==null:a.equals(b)) f(null,"values should differ but both were <"+a+">"); }
+    public static void assertNotEquals(String m, Object a, Object b){ if(a==null?b==null:a.equals(b)) f(m,"values should differ but both were <"+a+">"); }
+    public static void assertNotEquals(long a, long b){ if(a==b) f(null,"values should differ but both were <"+a+">"); }
+    public static void assertNotEquals(String m, long a, long b){ if(a==b) f(m,"values should differ but both were <"+a+">"); }
+    public static void assertArrayEquals(int[] a, int[] b){ if(!java.util.Arrays.equals(a,b)) f(null,"arrays differ"); }
+    public static void assertArrayEquals(long[] a, long[] b){ if(!java.util.Arrays.equals(a,b)) f(null,"arrays differ"); }
 }

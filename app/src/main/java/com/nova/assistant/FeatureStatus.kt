@@ -151,34 +151,34 @@ object FeatureStatus {
             val lg = ExtCfg.lockGuard(ctx)
             row(a, "lockguard", "Lock Guard (lock par call/message alert)", if (lg && na) "ok" else "warn",
                 if (lg && na) "ON hai aur Notification access bhi ON hai" else if (lg) "ON hai par Notification access OFF hai: alert nahi aayega" else "OFF hai (Settings mein ON kar sakte ho, optional)", if (lg && !na) "notifAccess" else "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
         try {
             val ar = ActionLog.autoReplyOn(ctx)
             row(a, "autoreply", "Auto-reply", if (ar) "ok" else "warn",
                 if (ar) "ON hai (jawab Settings ke text se, pehle se bani limits ke saath)" else "OFF hai (Settings mein ON kar sakte ho, optional)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
         try {
             val ba = ExtCfg.alerts(ctx)
             row(a, "batteryalert", "Battery kam alert (khud bolna)", if (ba) "ok" else "warn",
                 if (ba) "ON hai: battery kam ho to NOVA bata dega" else "OFF hai (Settings mein ON kar sakte ho, optional)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
         try {
             val n = org.json.JSONArray(BrainStore.get(ctx).skillsJson()).length()
             row(a, "routines", "Routines (apni bani hui)", if (n > 0) "ok" else "warn",
                 if (n > 0) "$n routine/shortcut saved hai" else "Abhi koi routine nahi (Settings mein bana sakte ho, optional)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
         try {
             val op = OfflinePackStore.any(ctx)
             row(a, "offlinepack", "Offline AI pack (bina internet)", if (op) "ok" else "warn",
                 if (op) "Offline pack phone mein installed hai" else "Offline pack install nahi hai (Settings > Offline pack se; optional)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
         try {
             val rows = JSONObject(ApiUsage.snapshotJson(ctx)).optJSONArray("rows")
             var near = 0
             if (rows != null) for (i in 0 until rows.length()) { val r = rows.optJSONObject(i); if (r != null && r.optInt("percent", -1) >= 90) near++ }
             row(a, "apilimits", "API limits (aaj ka use)", if (near == 0) "ok" else "warn",
                 if (near == 0) "Koi AI limit ke paas nahi (poori list LIMITS screen par)" else "$near AI limit ke paas hai: LIMITS screen dekho", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
 
         // v7.57 (Part 13B-2d): photo / video ANALYSE. Reads only the real saved keys + the free-chain switch; nothing is started.
         try {
@@ -187,7 +187,7 @@ object FeatureStatus {
             row(a, "analyse", "Photo / video ANALYSE (tasveer dekhna)", if (gem || free) "ok" else "warn",
                 if (gem) "Gemini key hai: ANALYSE tasveer dekh sakta hai" else if (free) "Gemini key nahi, par free Groq / OpenRouter key se tasveer dekhi jayegi (3 frames tak)"
                 else "Koi vision key nahi: ANALYSE sirf file ki size / length batayega (Gemini ya Groq / OpenRouter key daalo)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
 
         // v7.59 (Part 13D): web check of the claims + voice / chat-photo analysis. Reads only the real saved keys; nothing is started.
         try {
@@ -195,7 +195,7 @@ object FeatureStatus {
             row(a, "analyse_web", "ANALYSE: dawon ki web jaanch + bolkar analyse", if (gem) "ok" else "warn",
                 if (gem) "Gemini key hai: dawe web par check hote hain; \"nova ye video analyse karo\" ya chat me photo + sawaal bhi chalta hai"
                 else "Gemini key nahi: web jaanch sirf Wikipedia / News se, aur dawe sources se jodne wala AI nahi chalega (saare dawe 'verify nahi hua' rahenge)", "")
-        } catch (e: Throwable) { }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
 
         // 13. install
         val notif = Build.VERSION.SDK_INT < 33 || granted(ctx, Manifest.permission.POST_NOTIFICATIONS)

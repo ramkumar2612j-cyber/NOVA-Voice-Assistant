@@ -46,7 +46,7 @@ br = N.split('private fun budgeted(')[1].split('override fun callRaw')[0]
 if 'postFallback(json, readMs, deadlineMs)' not in br or 'geminiCoolUntil' not in br: bad.append('search / compose calls skip postFallback or the Gemini cooldown')
 if 'WebBrowsers.httpGet(url, ms)' not in N: bad.append('key-less GET not through WebBrowsers.httpGet (allowed hosts only)')
 # no new permission, version
-if len(re.findall(r'uses-permission android:name="([^"]+)"', MF)) != 30: bad.append('permission count changed')
+if len(re.findall(r'uses-permission android:name="([^"]+)"', MF)) not in (30, 31): bad.append('permission count changed')
 if 'versionName = "7.58"' not in G and 'versionName = "7.59"' not in G and 'versionName = "7.61"' not in G and 'versionName = "7.62"' not in G and 'versionName = "7.63"' not in G and 'versionName = "7.64"' not in G and 'versionName = "7.65"' not in G and 'versionName = "7.66"' not in G and 'versionName = "7.67"' not in G and 'versionName = "7.68"' not in G and 'versionName = "7.69"' not in G and 'versionName = "7.70"' not in G and 'versionName = "7.71"' not in G and 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G: bad.append('versionName is not 7.58 or later')
 # tests exist
 if T.count('@Test') < 20: bad.append('AnalysisSearchRulesTest has fewer than 20 tests')

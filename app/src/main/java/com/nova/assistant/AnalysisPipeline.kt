@@ -84,7 +84,7 @@ object AnalysisPipeline {
         if (!alive(g)) return
         val m = AnalysisRules.stageMessage(st, d, t, en)
         stage = st; done = d; total = t; message = m
-        try { onStage?.invoke(AnalysisStage(st, d, t, m)) } catch (x: Throwable) { }
+        try { onStage?.invoke(AnalysisStage(st, d, t, m)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
     }
 
     /** Ends run [g] with an error line. A newer / cancelled generation is ignored. */
@@ -94,8 +94,8 @@ object AnalysisPipeline {
             state = AnalysisPipelineRules.ST_ERROR; stage = AnalysisStage.FAILED; error = text; message = text
             watchdog?.let { main.removeCallbacks(it) }; watchdog = null
         }
-        try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, text)) } catch (x: Throwable) { }
-        try { takeNotify()?.done(false, text, "") } catch (x: Throwable) { }
+        try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, text)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
+        try { takeNotify()?.done(false, text, "") } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
     }
 
     private fun succeed(g: Int, id: String, r: AnalysisRules.Report, en: Boolean) {
@@ -106,9 +106,9 @@ object AnalysisPipeline {
             message = AnalysisRules.stageMessage(AnalysisStage.DONE, 1, 1, en)
             watchdog?.let { main.removeCallbacks(it) }; watchdog = null
         }
-        try { onStage?.invoke(AnalysisStage(AnalysisStage.DONE, 1, 1, message)) } catch (x: Throwable) { }
+        try { onStage?.invoke(AnalysisStage(AnalysisStage.DONE, 1, 1, message)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
         try { lastCard = Pair(ResultCardRules.card(r, en), ResultCardRules.historyLine(r)) } catch (x: Throwable) { lastCard = null }   // v7.67 PART 15: card + History line of this report (text only)
-        try { takeNotify()?.done(true, AnalysisRules.reportText(r, en), AnalysisRules.speechSummary(r, en)) } catch (x: Throwable) { }
+        try { takeNotify()?.done(true, AnalysisRules.reportText(r, en), AnalysisRules.speechSummary(r, en)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
     }
 
     /** v7.67 PART 15: (card text, History line) of the report that was just finished; the service takes it once in deliverAnalysis. */
@@ -164,8 +164,8 @@ object AnalysisPipeline {
                     if (hit) {
                         replaceWorker()
                         try { FrameExtractor.cancel() } catch (x: Throwable) { }
-                        try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, error)) } catch (x: Throwable) { }
-                        try { takeNotify()?.done(false, error, "") } catch (x: Throwable) { }
+                        try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, error)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
+                        try { takeNotify()?.done(false, error, "") } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
                     }
                 }
                 watchdog = wd
@@ -173,7 +173,7 @@ object AnalysisPipeline {
             }
         }
         if (refusal.isNotEmpty()) {
-            try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, 0, 0, refusal)) } catch (x: Throwable) { }
+            try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, 0, 0, refusal)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
             return refusal
         }
         pool.execute {
@@ -202,8 +202,8 @@ object AnalysisPipeline {
         if (was) {
             replaceWorker()
             try { FrameExtractor.cancel() } catch (x: Throwable) { }
-            try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, message)) } catch (x: Throwable) { }
-            try { takeNotify()?.done(false, message, "") } catch (x: Throwable) { }
+            try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, message)) } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
+            try { takeNotify()?.done(false, message, "") } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
         }
     }
 
@@ -372,6 +372,6 @@ object AnalysisPipeline {
         try {
             val ids = MediaIntakeStore.list(c).map { it.id }.toSet()
             synchronized(results) { results.keys.retainAll(ids) }
-        } catch (x: Throwable) { }
+        } catch (x: Throwable) { ErrLog.addOnce("quiet:AnalysisPipeline", x.toString()) }
     }
 }

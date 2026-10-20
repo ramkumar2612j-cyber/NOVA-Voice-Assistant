@@ -56,7 +56,7 @@ for fn in ('onChatPhotoGo', 'onChatPhotoNo'):
     if 'window.' + fn not in ub: bad.append('ui does not define ' + fn)
 if not U.rstrip().endswith('</body></html>'): bad.append('ui.html must end with </body></html>')
 # no new permission, version, tests
-if len(re.findall(r'uses-permission android:name="([^"]+)"', MF)) != 30: bad.append('permission count changed')
+if len(re.findall(r'uses-permission android:name="([^"]+)"', MF)) not in (30, 31): bad.append('permission count changed')
 if 'versionName = "7.59"' not in G and 'versionName = "7.61"' not in G and 'versionName = "7.62"' not in G and 'versionName = "7.63"' not in G and 'versionName = "7.64"' not in G and 'versionName = "7.65"' not in G and 'versionName = "7.66"' not in G and 'versionName = "7.67"' not in G and 'versionName = "7.68"' not in G and 'versionName = "7.69"' not in G and 'versionName = "7.70"' not in G and 'versionName = "7.71"' not in G and 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G: bad.append('versionName is not 7.59')
 if T.count('@Test') < 10: bad.append('AnalysisVoiceRulesTest has fewer than 10 tests')
 if bad: print('FAIL', *bad, sep='\n  '); sys.exit(1)

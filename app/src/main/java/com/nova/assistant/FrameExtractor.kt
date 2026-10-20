@@ -55,7 +55,7 @@ object FrameExtractor {
     private fun emit(g: Int, st: String, d: Int, t: Int, msg: String) {
         if (gen.get() != g) return
         done = d; total = t; message = msg
-        try { onStage?.invoke(AnalysisStage(st, d, t, msg)) } catch (e: Throwable) { }
+        try { onStage?.invoke(AnalysisStage(st, d, t, msg)) } catch (e: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", e.toString()) }
     }
 
     /** Ends run [g] with [st] (done / error / cancelled). A newer or cancelled generation is ignored. */
@@ -66,7 +66,7 @@ object FrameExtractor {
             if (st == "error") { error = msg; message = msg } else { error = ""; message = msg }
             watchdog?.let { main.removeCallbacks(it) }; watchdog = null
         }
-        try { onStage?.invoke(AnalysisStage(if (st == "error") AnalysisStage.FAILED else AnalysisStage.DONE, done, total, msg)) } catch (e: Throwable) { }
+        try { onStage?.invoke(AnalysisStage(if (st == "error") AnalysisStage.FAILED else AnalysisStage.DONE, done, total, msg)) } catch (e: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", e.toString()) }
     }
 
     /** Starts the extraction of media [id]. Returns "ok" or a short honest reason (nothing started). [requested] null = default 6 frames. */
@@ -84,7 +84,7 @@ object FrameExtractor {
             val wd = Runnable {
                 var hit = false
                 synchronized(lock) { if (gen.get() == g && state == "running") { gen.incrementAndGet(); state = "error"; error = FrameRules.errorText(FrameRules.ERR_TIMEOUT); message = error; hit = true } }
-                if (hit) try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, error)) } catch (x: Throwable) { }
+                if (hit) try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, error)) } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
             }
             watchdog = wd
             main.postDelayed(wd, FrameRules.WATCHDOG_MS)
@@ -112,7 +112,7 @@ object FrameExtractor {
                 watchdog?.let { main.removeCallbacks(it) }; watchdog = null
             }
         }
-        if (was) try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, "Roka gaya.")) } catch (x: Throwable) { }
+        if (was) try { onStage?.invoke(AnalysisStage(AnalysisStage.FAILED, done, total, "Roka gaya.")) } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
     }
 
     private fun alive(g: Int): Boolean = gen.get() == g
@@ -159,8 +159,8 @@ object FrameExtractor {
                         else if (alive(g)) { save(sc, File(dir, "f" + (kept + 1) + ".jpg")); sigs.add(sig); times.add(t); kept++ }
                     }
                 } finally {
-                    try { if (sc != null && sc !== bmp) sc.recycle() } catch (x: Throwable) { }
-                    try { bmp?.recycle() } catch (x: Throwable) { }
+                    try { if (sc != null && sc !== bmp) sc.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
+                    try { bmp?.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
                 }
                 emit(g, AnalysisStage.FRAMES, i + 1, pts.size, FrameRules.stageText(i + 1, pts.size))
             }
@@ -190,8 +190,8 @@ object FrameExtractor {
             if (!alive(g)) return
             save(sc, File(dir, "f1.jpg")); times.add(0L)
         } finally {
-            try { if (sc != null && sc !== bmp) sc.recycle() } catch (x: Throwable) { }
-            try { bmp?.recycle() } catch (x: Throwable) { }
+            try { if (sc != null && sc !== bmp) sc.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
+            try { bmp?.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
         }
         emit(g, AnalysisStage.FRAMES, 1, 1, FrameRules.stageText(1, 1))
         finish(g, "done", "1 photo taiyaar (chhota karke JPEG).")
@@ -237,7 +237,7 @@ object FrameExtractor {
             val txt = "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP)
             return if (txt.length <= 400_000) txt else ""
         } catch (x: OutOfMemoryError) { return "" } catch (x: Throwable) { return "" }
-        finally { try { bmp?.recycle() } catch (x: Throwable) { } }
+        finally { try { bmp?.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) } }
     }
 
     /** Removes frame folders of media that is gone (owner HATAO / SAAF KARO / 24 h). Never touches a running job's folder. Safe on any thread. */
@@ -252,6 +252,6 @@ object FrameExtractor {
                 if (d.name !in ids || now - d.lastModified() > MediaIntake.TTL_MS) d.deleteRecursively()
             }
             synchronized(lock) { if (state != "running" && mediaId.isNotEmpty() && mediaId !in ids) { state = "idle"; message = ""; error = ""; done = 0; total = 0; times.clear() } }
-        } catch (x: Throwable) { }
+        } catch (x: Throwable) { ErrLog.addOnce("quiet:FrameExtractor", x.toString()) }
     }
 }

@@ -196,7 +196,7 @@ class CameraEyeActivity : Activity() {
         try { device?.close() } catch (e: Throwable) { }
         try { jpeg?.close() } catch (e: Throwable) { }
         try { preview?.close() } catch (e: Throwable) { }
-        try { thread?.quitSafely() } catch (e: Throwable) { }
+        try { thread?.quitSafely() } catch (e: Throwable) { ErrLog.addOnce("quiet:CameraEyeActivity", e.toString()) }
         session = null; device = null; jpeg = null; preview = null; thread = null
     }
 

@@ -152,7 +152,7 @@ object MediaIntakeStore {
             busy = true; progressPct = 0; progressName = ""
             try { run(app, uris, sharedText, mimeHint) }
             catch (e: Throwable) { lastMessage = "Media lene me dikkat aayi: " + (e.message ?: e.javaClass.simpleName).take(80); ErrLog.add("MediaIntakeStore", e.toString()) }
-            finally { busy = false; progressPct = 0; progressName = ""; try { onChanged?.invoke() } catch (e: Throwable) { } }
+            finally { busy = false; progressPct = 0; progressName = ""; try { onChanged?.invoke() } catch (e: Throwable) { ErrLog.addOnce("quiet:MediaIntakeStore", e.toString()) } }
         }
     }
 
@@ -184,7 +184,7 @@ object MediaIntakeStore {
                 if (ni >= 0 && !cur.isNull(ni)) name = cur.getString(ni)
                 if (si >= 0 && !cur.isNull(si)) size = cur.getLong(si)
             }
-        } catch (e: Throwable) { } finally { try { cur?.close() } catch (e: Throwable) { } }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:MediaIntakeStore", e.toString()) } finally { try { cur?.close() } catch (e: Throwable) { } }
         return Pair(name, size)
     }
 
@@ -299,7 +299,7 @@ object MediaIntakeStore {
             val txt = "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP)
             return if (txt.length <= 400_000) txt else ""
         } catch (x: OutOfMemoryError) { return "" } catch (x: Throwable) { return "" }
-        finally { try { if (scaled != null && scaled !== bmp) scaled.recycle(); bmp?.recycle() } catch (x: Throwable) { } }
+        finally { try { if (scaled != null && scaled !== bmp) scaled.recycle(); bmp?.recycle() } catch (x: Throwable) { ErrLog.addOnce("quiet:MediaIntakeStore", x.toString()) } }
     }
 
     /** JSON for the UI (11-C bridge): no path, no uri. Only id, kind, name, size text, age, link url. */

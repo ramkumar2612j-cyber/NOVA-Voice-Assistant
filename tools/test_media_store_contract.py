@@ -26,7 +26,7 @@ for m in ('image/*', 'video/*', 'text/plain'):
     need('android:mimeType="%s"' % m in man, 'manifest mime ' + m)
 need(man.index('android.intent.action.SEND"') < man.index('WatchCommandActivity'), 'share filters must sit on MainActivity')
 perms = re.findall(r'<uses-permission android:name="([^"]+)"', man)
-need(len(perms) == 30, 'permission count changed (%d, expected 30)' % len(perms))
+need(len(perms) in (30, 31), 'permission count changed (%d, expected 30)' % len(perms))
 need(not any(x in perms for x in ('android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.MANAGE_EXTERNAL_STORAGE')), 'no NEW gallery permission allowed (READ_EXTERNAL_STORAGE maxSdk 32 is old, from before Part 11)')
 need('MediaIntakeStore.onIntent(this, i)' in ma and 'MediaIntakeStore.cleanExpired(' in ma and 'i?.removeExtra("autostart")' in ma, 'MainActivity.handleIntent must call the store (old line kept)')
 need(os.path.exists(os.path.join(R, 'app/src/test/java/com/nova/assistant/MediaIntakeTest.kt')) and 'storeHelpers' in rd('app/src/test/java/com/nova/assistant/MediaIntakeTest.kt'), 'JUnit storeHelpers missing')

@@ -154,7 +154,7 @@ object Logic {
 
     /** Replies of these commands are always spoken: the user asked to HEAR something (driving messages, screen text, the mode switch). */
     val LOUD_KINDS: Set<String> = setOf(
-        "drive_on", "drive_off", "drive_read", "drive_clear", "drive_reply", "drive_dictate", "message_on", "message_off", "message_read", "message_reply", "message_dictate", "analyze", "camera_eye", "profile_search", "screen", "screen_end", "quiet_on", "quiet_off",
+        "drive_on", "drive_off", "drive_read", "drive_clear", "drive_reply", "drive_dictate", "message_on", "message_off", "message_read", "message_reply", "message_dictate", "analyze", "camera_eye", "profile_search", "trade_analysis", "screen", "screen_end", "quiet_on", "quiet_off",
         "mem_save", "mem_list", "mem_forget", "mem_forget_all",
         "rec"   // PART 6A: starting / stopping a recording is always said aloud (unless the owner added "chup rehna")
     )
@@ -404,6 +404,9 @@ object Logic {
 
         // ---- scheduled task list/cancel + clear scheduled natural-language requests
         ScheduledTaskRules.command(n)?.let { return it }
+        // v7.90: "3:30 ka schedule banao rss meeting" -> a real calendar event (not an empty calendar screen)
+        MeetingEventRules.parse(n)?.let { return Cmd("calendar_add", MeetingEventRules.encode(it)) }
+        if (FeatureFixRules.matches(n)) return Cmd("features_fix")   // v7.90
         LeadRules.command(n)?.let { return it }
         OfflineQueueRules.command(n)?.let { return it }
 
