@@ -1,3 +1,20 @@
+## v7.86 - popup / laser / "samajh nahi aaya" loop fixes (add-only), versionName 7.86
+- ROOT CAUSE (from code, NOT reproduced on phone): after a scan of a reel / movie the hands-free FOLLOW-UP listen (no wake word) opened by itself; the video's own sound was heard as a command -> "Ye samajh nahi aaya, ek baar aur bolo" + HUD card + more replies, up to 6 times (looks like several assistants / popups by themselves).
+- FIX: QuickScan.followAllowed + videoQuietUntil: no hands-free follow-up for 90 s after a video scan (wake word "nova" still works). A follow-up turn that is only noise / not a command now ends silently (screenFollow + the two "samajh nahi aaya" fallbacks in handle()).
+- Phrases: QuickScan.wantsScan ("nova scan karo", "screen scan", "laser scan") and wantsLook without the look word ("nova ye kya chal raha hai", "ye kya dikh raha hai"). Logic.classify routes both to "analyze". qr / virus / "scan band karo" are excluded.
+- Movie popup: automatic popup only for MEDIUM / HIGH names and only if overlay permission is ON; never opens the browser by itself on a normal scan (explicit "ye kaun si movie hai" keeps old behaviour); auto closes after 90 s.
+- HUD (NovaHud): a card that is flying apart is removed at once when a new one shows, and by a 700 ms fallback (no ghost second assistant).
+- Laser: epoch guard (old end no longer kills a new scan's laser), 90 s watchdog, big label shrinks to fit narrow phones.
+- UI (add-only): Home card "SCREEN SCAN" (ui.html F list) with the phrases + POPUP ALLOW / ACCESSIBILITY buttons; HelpGuide topic "scan" (voice: "scan kaise karun"). "ab ye dekho" follow-up now also shows the laser (screenAnswer wrapper). Text-path laser already moves to VISION 60 after the screenshot.
+- Tests added: QuickScanV786Test (4). versionName 7.86.
+- RUN here: Kotlin compile 0 error, JUnit 1400/1400 PASS (1396 old + 4 new). Python guards 144/144 PASS after 3 small guard-driven fixes (literal `if (screenOpen() ||` kept; helper not named screenAnswer*; new help topic mirrored in ui.html CAPS + Skills list + test_part6 MAP). NOT RUN: GitHub Actions. NOT TESTED: phone.
+
+## v7.85 - Home stall on MID phones in SHARP (add-only), versionName 7.85
+- Phone report (v7.84, SHARP, MID tier, battery 15%): Home opened nicely, then stalled after 1-2 s and the orb / stars vanished for a moment.
+- Likely cause (headless Chrome cannot reproduce a phone GPU stall, so this is NOT proven): full-screen star canvas at 2x pixels + 60 fps + canvas glow (shadowBlur) + backdrop blur re-done every frame on top of it.
+- FIX (ui.html only): MID / LOW phones: star canvas max 1.25x pixels, star + core canvases 30 fps, no canvas shadow glow, no backdrop blur (html[data-tier]). HIGH phones unchanged. NOVA core keeps full sharp pixels. Canvases repaint at once after Android drops them (contextrestored / app visible again).
+- NOT TESTED on the phone. Kotlin not changed.
+
 ## v7.84 - SMOOTH graphics mode really smooth (add-only), versionName 7.84
 - PROBLEM FOUND: in SMOOTH the live theme (3D orb, NOVA core, starfield) still redrew about 30 times a second, and a quality change needed an app restart.
 - FIX (ui.html only, nothing removed): SMOOTH = still theme. Orb, core and starfield are drawn once per state change (listen / think / speak colour and text still follow), decorative CSS loops and HUD rings are off, old 2D orb fallback is throttled. Functional signals stay (typing dots, busy spinner, voice bars, laser scan).

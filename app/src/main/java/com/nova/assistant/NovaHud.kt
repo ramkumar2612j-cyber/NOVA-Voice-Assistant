@@ -162,8 +162,18 @@ class NovaHud(private val ctx: Context) {
     fun visibleForMs(): Long = if (view == null) 0L else System.currentTimeMillis() - shownAt
 
     /** state: "listen", "think", "reply". */
+    @Volatile private var leaving: HudView? = null   // v7.86: a card that is flying apart; it must never stay as a second assistant
+
+    private fun removeLeaving() {
+        val l = leaving ?: return
+        leaving = null
+        try { l.cancelAnim() } catch (e: Throwable) { }
+        try { wm.removeView(l) } catch (e: Exception) { }
+    }
+
     fun show(state: String) {
         if (!canShow(ctx)) return
+        removeLeaving()
         val v = view
         if (v != null) { v.changeState(state); return }
         val nv = HudView(ctx)
@@ -337,12 +347,16 @@ class NovaHud(private val ctx: Context) {
         closeChat()
         val v = view ?: return
         view = null
-        v.disassemble { try { wm.removeView(v) } catch (e: Exception) { } }
+        removeLeaving()
+        leaving = v
+        v.disassemble { if (leaving === v) removeLeaving() else try { wm.removeView(v) } catch (e: Exception) { } }
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (leaving === v) removeLeaving() }, 700L)   // v7.86: if the animation was cancelled, remove anyway
     }
 
     /** Immediate removal (service stopping). */
     fun destroy() {
         closeChat()
+        removeLeaving()
         val v = view ?: return
         view = null
         v.cancelAnim()

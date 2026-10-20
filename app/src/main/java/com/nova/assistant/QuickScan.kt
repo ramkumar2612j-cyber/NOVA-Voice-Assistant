@@ -63,9 +63,41 @@ object QuickScan {
         val t = tokens(text)
         if (t.size < 2 || t.size > 10) return false
         if (t.any { it in OTHER }) return false
-        if (t.none { it in LOOK }) return false
-        val going = t.contains("kya") && t.contains("chal") && t.any { it in GOING }
+        val going = t.contains("kya") && (t.contains("chal") || t.contains("ho") || t.any { it in SEEN }) && t.any { it in GOING }
+        if (t.none { it in LOOK }) return going && t.any { it in POINT }   // v7.86: "ye kya chal raha hai" (no look word, but it points at the screen)
         val pointAsk = t.any { it in POINT } && t.any { it in ASK }
         return going || pointAsk
     }
+
+    private val SEEN = setOf("dikh", "dikha", "dikhta", "dikhai", "dikhe")
+    private val SCAN = setOf("scan", "scanning", "skan", "laser", "lazer")
+    /** "qr scan", "virus scan", "scan band karo" are other things, not the screen scan. */
+    private val SCAN_NOT = setOf(
+        "qr", "barcode", "virus", "malware", "storage", "wifi", "bluetooth", "network", "document", "doc", "pdf", "photo", "file", "files",
+        "app", "apps", "memory", "ram", "cache", "fingerprint", "face", "band", "bandh", "off", "stop", "roko", "ruko", "rok", "cancel", "hatao"
+    )
+
+    /** v7.86: "nova scan karo", "screen scan", "laser scan chalu karo", "lazer scan": the owner names the scan itself. */
+    fun wantsScan(text: String?): Boolean {
+        val t = tokens(text)
+        if (t.isEmpty() || t.size > 7) return false
+        if (t.none { it in SCAN }) return false
+        return t.none { it in SCAN_NOT }
+    }
+
+    // ------------------------------------------------------------------ v7.86: no listening-by-itself after a video scan
+    const val QUIET_FOLLOW_MS = 90_000L   // a reel / movie plays sound: the hands-free follow-up listen stays OFF this long after a video scan (wake word "nova" still works)
+
+    /** Same rule as before (screen session open, or conversation mode with follow-ups left), except during the quiet time after a video scan. */
+    fun followAllowed(screenOpen: Boolean, convo: Boolean, followCount: Int, maxFollow: Int, quietUntilMs: Long, nowMs: Long): Boolean {
+        if (nowMs < quietUntilMs) return false
+        return screenOpen || (convo && followCount < maxFollow)
+    }
+
+    /** A follow-up listen (no wake word) that heard only noise / nothing: end quietly. Never "samajh nahi aaya, dobara bolo". */
+    fun quietJunkFollow(isFollowTurn: Boolean, said: String?): Boolean = isFollowTurn && Logic.isJunk(said ?: "")
+
+    val PHRASES_HI = listOf("nova ye kya chal raha hai", "nova screen dekho", "nova scan karo", "nova dekho batao kya chal raha hai", "nova ye kaun si movie hai")
+    fun phrasesText(en: Boolean): String =
+        (if (en) "Say one of these: " else "Ye bolo: ") + PHRASES_HI.joinToString(" / ") { "\"" + it + "\"" }
 }

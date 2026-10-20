@@ -49,3 +49,25 @@ class QuickScanTest {
             assertFalse(s, QuickScan.wantsLook(s))
     }
 }
+
+class QuickScanV786Test {
+    @org.junit.Test fun scanWords() {
+        for (s in listOf("nova scan karo", "screen scan", "laser scan chalu karo", "lazer scan")) org.junit.Assert.assertTrue(s, QuickScan.wantsScan(s))
+        for (s in listOf("qr scan karo", "virus scan", "scan band karo", "torch jala do")) org.junit.Assert.assertFalse(s, QuickScan.wantsScan(s))
+    }
+    @org.junit.Test fun lookWithoutLookWord() {
+        for (s in listOf("nova ye kya chal raha hai", "ye kya chal rha h", "ye kya dikh raha hai")) org.junit.Assert.assertTrue(s, QuickScan.wantsLook(s))
+        for (s in listOf("kya chal raha hai bhai", "gaana kya chal raha hai", "ye battery kya hai")) org.junit.Assert.assertFalse(s, QuickScan.wantsLook(s))
+    }
+    @org.junit.Test fun classifyRoutes() {
+        for (s in listOf("nova scan karo", "nova ye kya chal rha h screen pe", "nova ye kya chal raha hai")) org.junit.Assert.assertEquals(s, "analyze", Logic.classify(s)?.kind)
+    }
+    @org.junit.Test fun quietFollow() {
+        org.junit.Assert.assertFalse(QuickScan.followAllowed(true, true, 0, 6, 2000L, 1000L))
+        org.junit.Assert.assertTrue(QuickScan.followAllowed(true, false, 0, 6, 0L, 1000L))
+        org.junit.Assert.assertTrue(QuickScan.followAllowed(false, true, 2, 6, 0L, 1000L))
+        org.junit.Assert.assertFalse(QuickScan.followAllowed(false, true, 6, 6, 0L, 1000L))
+        org.junit.Assert.assertTrue(QuickScan.quietJunkFollow(true, ""))
+        org.junit.Assert.assertFalse(QuickScan.quietJunkFollow(false, ""))
+    }
+}

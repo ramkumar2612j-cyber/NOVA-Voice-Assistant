@@ -456,6 +456,7 @@ object Logic {
         }
 
         if (ScreenSession.wantsIdentify(text)) return Cmd("analyze", text)   // v6.97-wip9: "ye kaun si movie hai" = screenshot + web search
+        if (QuickScan.wantsScan(text)) return Cmd("analyze", text)   // v7.86: "nova scan karo" / "laser scan" = the same live scan
         if (has("screen") && !has("brightness", "brightnes", "timeout", "lock", "rotate", "rotation", "record", "recording", "shot", "off", "band") && // FIXSCREEN2
             (has("analyze", "analyse", "analysis", "dekho", "check", "read", "summarize", "summary",
                 "dekh", "dekhna", "dikh", "dikha", "dikhao", "dikhta", "padh", "padho", "padhna", "batao", "bata", "kya", "likha",

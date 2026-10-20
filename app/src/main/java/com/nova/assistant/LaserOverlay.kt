@@ -223,7 +223,11 @@ private class LaserView(ctx: Context, private val en: Boolean, private val simpl
             c.drawText("$mark $name", 18f * d, yy, txt)
             yy += 18f * d
         }
-        c.drawText(LaserMath.label(st.name, en) + "  " + st.percent + "%", w / 2, h * 0.5f, big)
+        val bigText = LaserMath.label(st.name, en) + "  " + st.percent + "%"
+        big.textSize = 18f * d
+        val bigW = big.measureText(bigText)
+        if (bigW > w - 24f * d) big.textSize = 18f * d * (w - 24f * d) / bigW   // v7.86: long Hindi label must fit narrow phones
+        c.drawText(bigText, w / 2, h * 0.5f, big)
         c.drawText(LaserMath.clock(now - t0, en), w / 2, h * 0.5f + 26f * d, clk)   // v7.81: real clock of this scan
 
         // progress bar + STOP

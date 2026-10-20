@@ -202,6 +202,7 @@ class NovaService : Service() {
     @Volatile private var scrLabel = ""
     @Volatile private var scrText = ""
     @Volatile private var scrLines: List<String> = emptyList()
+    @Volatile private var videoQuietUntil = 0L      // v7.86: until this time no hands-free follow-up listen (a video scan just ran)
     @Volatile private var turnIsFollow = false      // this turn was heard in the follow window (no wake word)
     private val scrHist: MutableList<JSONObject> = Collections.synchronizedList(ArrayList<JSONObject>())
     @Volatile private var wakeRequest = false        // set by the default-assistant button (long-press Home / power): same as the wake word
@@ -607,7 +608,7 @@ class NovaService : Service() {
         if (finished && id == replyUtt) {
             val ss = scrState
             if (ss != null) scrState = ScreenSession.refresh(ss, System.currentTimeMillis())   // the spoken reply does not eat the idle time
-            if (screenOpen() || (ExtCfg.convo(this) && followCount < MAX_FOLLOW)) followWindow = true
+            if (screenOpen() || (ExtCfg.convo(this) && followCount < MAX_FOLLOW)) { if (QuickScan.followAllowed(true, true, 0, 1, videoQuietUntil, System.currentTimeMillis())) followWindow = true }   // v7.86: no hands-free listen while a reel / movie plays
         }
     }
 
@@ -1183,7 +1184,7 @@ class NovaService : Service() {
                     }
                     if (followWindow) {
                         followWindow = false
-                        if (pending == null && (followCount < MAX_FOLLOW || screenOpen())) { followCount++; followCount2++; followCap = true; startCapture(false); continue }
+                        if (pending == null && System.currentTimeMillis() >= videoQuietUntil && (followCount < MAX_FOLLOW || screenOpen())) { followCount++; followCount2++; followCap = true; startCapture(false); continue }
                     }
                     if (wakeRequest) {
                         wakeRequest = false
@@ -2696,12 +2697,13 @@ class NovaService : Service() {
                 val secs = "%.1f".format(pcm.size / (2.0 * RATE))
                 quietAlert("listen", tr("Awaaz samajh nahi aayi (audio $secs sec). Groq key: ${if (SecureStore.hasGroq(this)) "hai" else "nahi"}, Gemini key: ${if (SecureStore.hasKeys(this)) "hai" else "nahi"}, Hindi pack: ${if (HindiPack.ready(this)) "ready" else "abhi nahi" }. Key ya limit check karo.",
                     "Speech not understood (audio $secs s). Groq key: ${if (SecureStore.hasGroq(this)) "yes" else "no"}, Gemini key: ${if (SecureStore.hasKeys(this)) "yes" else "no"}, Hindi pack: ${if (HindiPack.ready(this)) "ready" else "not yet"}. Check keys or limits."))
-                return tr("Samajh nahi aaya, dobara bolo", "I did not catch that, please say it again")
+                return if (turnIsFollow) "" else tr("Samajh nahi aaya, dobara bolo", "I did not catch that, please say it again")   // v7.86: silent on a hands-free follow-up
             }
             val ans = Routing.run(steps, said, { cloudStep(pcm, said) }, { localAnswer(said, online, steps.contains(AiRouter.Step.CLOUD)) },
                 { ms -> cloudCoolUntil = System.currentTimeMillis() + ms })
             if (ans != null) return ans
         }
+        if (turnIsFollow) return ""   // v7.86: a hands-free follow-up that is not a command is not answered with "samajh nahi aaya"
         if (!SecureStore.hasKeys(this)) return tr(
             "Ye abhi samajh nahi aaya. Chhota bolo, jaise 'phone lock karo'. Lambi baat ke liye Settings mein Gemini key daalo.",
             "I did not catch that. Say it short, like 'lock phone'. For long sentences add a Gemini key in Settings."
@@ -6363,8 +6365,12 @@ class NovaService : Service() {
     @Volatile private var screenLaserOn = false
     @Volatile private var screenStage = "READ TEXT 20"
     /** v7.75 worker thread: laser overlay while "screen dekho" reads and thinks. Waits (max 0.7 s) until the overlay exists so the screenshot step can hide it. */
+    @Volatile private var screenLaserEpoch = 0
+    private val laserWatchdog = Runnable { if (laser != null) { screenLaserOn = false; movieScanCancel = true; stopLaser() } }   // v7.86: a stuck overlay can never stay on screen
     private fun screenLaserBegin() {
-        if (movieScanRunning || screenLaserOn) return
+        if (movieScanRunning) return
+        screenLaserEpoch++
+        if (screenLaserOn) return
         val latch = java.util.concurrent.CountDownLatch(1)
         h.post { try { screenStage = "READ TEXT 20"; screenLaserOn = true; startLaser() } catch (e: Throwable) { } ; latch.countDown() }
         try { latch.await(700, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: InterruptedException) { }
@@ -6372,7 +6378,8 @@ class NovaService : Service() {
     private fun screenLaserEnd() {
         if (!screenLaserOn) return
         screenStage = "RESULT 100"
-        h.postDelayed({ screenLaserOn = false; stopLaser() }, 900)
+        val ep = screenLaserEpoch
+        h.postDelayed({ if (ep == screenLaserEpoch) { screenLaserOn = false; stopLaser() } }, 900)   // v7.86: a newer scan keeps its laser
     }
     private val laserTick = object : Runnable {
         override fun run() {
@@ -6399,12 +6406,13 @@ class NovaService : Service() {
                 stopSpeaking()
                 stopLaser()
             }
-            if (l.show(cfg.lang == "en")) { laser = l; h.post(laserTick) }
+            if (l.show(cfg.lang == "en")) { laser = l; h.post(laserTick); h.removeCallbacks(laserWatchdog); h.postDelayed(laserWatchdog, 90_000L) }
         } catch (e: Throwable) { ErrLog.add("laser", "start") }
     }
 
     private fun stopLaser() {
         h.removeCallbacks(laserTick)
+        h.removeCallbacks(laserWatchdog)
         val l = laser ?: return
         laser = null
         try { l.destroy() } catch (e: Throwable) { }
@@ -6425,7 +6433,7 @@ class NovaService : Service() {
     private var moviePopup: MoviePopup? = null
 
     /** Any thread. Opens the small popup browser for a found title; without the overlay permission the normal browser opens instead. */
-    private fun showMoviePopup(o: MovieGuessRules.Outcome, kind: ScreenVideoRules.Kind, note: String = "") {
+    private fun showMoviePopup(o: MovieGuessRules.Outcome, kind: ScreenVideoRules.Kind, note: String = "", explicit: Boolean = true) {
         val en = cfg.lang == "en"
         val url = ScreenVideoRules.popupUrl(o.title, o.year, kind)
         h.post {
@@ -6433,7 +6441,8 @@ class NovaService : Service() {
                 moviePopup?.destroy(); moviePopup = null
                 val p = MoviePopup(this)
                 val ok = p.show(url, o.title, if (en) "CLOSE" else "BAND", "BROWSER", note, ScreenVideoRules.suggestions(o.title, o.year, kind, en)) { u -> openUrl(u) }
-                if (ok) moviePopup = p else { overlayNudge(); openUrl(url) }
+                if (ok) { moviePopup = p; h.postDelayed({ if (moviePopup === p) { try { p.destroy() } catch (e: Throwable) { }; moviePopup = null } }, 90_000L) }   // v7.86: closes by itself
+                else if (explicit) { overlayNudge(); openUrl(url) }
             } catch (e: Throwable) { ErrLog.add("moviePopup", "open") }
         }
     }
@@ -6444,6 +6453,7 @@ class NovaService : Service() {
      */
     private fun screenVideoRead(): String? {
         val en = cfg.lang == "en"
+        videoQuietUntil = System.currentTimeMillis() + QuickScan.QUIET_FOLLOW_MS   // v7.86
         if (Build.VERSION.SDK_INT < 30 || movieScanRunning) return null
         if (NovaAccessibilityService.movieProtected() != false) return null
         h.post { try { moviePopup?.destroy(); moviePopup = null } catch (e: Throwable) { } }
@@ -6477,8 +6487,8 @@ class NovaService : Service() {
         val out: String = when (d.kind) {
             "OK" -> if (rd == null) return null else {
                 val o = d.outcome
-                val popup = ScreenVideoRules.isWork(rd.kind) && ScreenVideoRules.shouldPopup(o)
-                if (popup && o != null) showMoviePopup(o, rd.kind, rd.summary)
+                val popup = ScreenVideoRules.isWork(rd.kind) && ScreenVideoRules.autoPopup(o) && MoviePopup.canShow(this)   // v7.86: not for a LOW guess, never the browser by itself
+                if (popup && o != null) showMoviePopup(o, rd.kind, rd.summary, false)
                 ScreenVideoRules.resultText(rd, o, en, popup)
             }
             "REFUSED" -> MovieGuessRules.privateText(en)
@@ -6499,6 +6509,7 @@ class NovaService : Service() {
         val en = cfg.lang == "en"
         if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
         movieScanRunning = true; movieScanCancel = false; movieFrames = emptyList(); movieStage = "CAPTURE 0"
+        videoQuietUntil = System.currentTimeMillis() + QuickScan.QUIET_FOLLOW_MS   // v7.86
         h.post { startLaser() }
         Thread {
             try {
@@ -7011,6 +7022,7 @@ class NovaService : Service() {
             }
         }
         lastTurnLocal = false
+        if (QuickScan.quietJunkFollow(turnIsFollow, said)) { endScreenSession(); lastKind = "screen_end"; return "" }   // v7.86: noise / video sound heard by the hands-free listen: end quietly
         if (said.isBlank()) {   // nothing understood: ask again, this still counts as one turn
             lastKind = "screen"
             scrState = ScreenSession.touch(st, now)
@@ -7041,6 +7053,12 @@ class NovaService : Service() {
     }
 
     private fun screenAnswer(intent: ScreenSession.Intent, said: String): String {
+        val withLaser = intent == ScreenSession.Intent.REFRESH || intent == ScreenSession.Intent.IDENTIFY   // v7.86: "ab ye dekho" also shows the laser
+        if (withLaser) screenLaserBegin()
+        try { return answerScreenCore(intent, said) } finally { if (withLaser) screenLaserEnd() }
+    }
+
+    private fun answerScreenCore(intent: ScreenSession.Intent, said: String): String {
         val en = cfg.lang == "en"
         val snap = NovaAccessibilityService.readScreen(false)
         val other = snap != null && snap.pkg.isNotEmpty() && snap.pkg != packageName

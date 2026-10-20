@@ -151,6 +151,9 @@ object ScreenVideoRules {
     /** Popup is worth opening for any named work (even LOW: the owner can check it on the page; the card says "not verified"). */
     fun shouldPopup(o: MovieGuessRules.Outcome?): Boolean = o != null && o.title.length >= 2
 
+    /** v7.86: the popup that opens BY ITSELF during a normal "kya chal raha hai" scan: only a MEDIUM / HIGH name, never a LOW guess. */
+    fun autoPopup(o: MovieGuessRules.Outcome?): Boolean = shouldPopup(o) && o!!.level != MovieGuessRules.Level.LOW
+
     // ------------------------------------------------------------------ saying it
 
     private fun t(en: Boolean, hi: String, e: String): String = if (en) e else hi
