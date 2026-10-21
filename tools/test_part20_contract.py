@@ -19,7 +19,7 @@ def rd(p):
         return ''
     return open(fp, encoding='utf-8', errors='replace').read()
 
-G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else '')
+G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|1[0-9][0-9])"', G) else '')
 if 'versionName = "7.72"' not in G and 'versionName = "7.73"' not in G and 'versionName = "7.74"' not in G:   # v7.73: add-only, both accepted
     bad.append('versionName is not 7.72 or 7.73')
 CH = rd('CHANGELOG.md')

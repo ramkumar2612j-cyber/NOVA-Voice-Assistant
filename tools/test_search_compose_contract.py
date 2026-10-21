@@ -7,7 +7,7 @@ R = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 rd = lambda p: open(os.path.join(R, p), encoding='utf-8').read()
 J = 'app/src/main/java/com/nova/assistant/'
 P = rd(J + 'AnalysisPipeline.kt'); S = rd(J + 'AnalysisSearchRules.kt'); A = rd(J + 'AnalysisRules.kt'); N = rd(J + 'NovaService.kt')
-T = rd('app/src/test/java/com/nova/assistant/AnalysisSearchRulesTest.kt'); MF = rd('app/src/main/AndroidManifest.xml'); G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else '')
+T = rd('app/src/test/java/com/nova/assistant/AnalysisSearchRulesTest.kt'); MF = rd('app/src/main/AndroidManifest.xml'); G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|1[0-9][0-9])"', G) else '')
 bad = []
 # pure rules: no Android, no raw network
 for w in ('import android', 'HttpURLConnection', 'OkHttp', 'URL(', 'Socket('):

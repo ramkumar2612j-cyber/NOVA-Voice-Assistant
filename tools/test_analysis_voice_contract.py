@@ -7,7 +7,7 @@ R = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 rd = lambda p: open(os.path.join(R, p), encoding='utf-8').read()
 J = 'app/src/main/java/com/nova/assistant/'
 V = rd(J + 'AnalysisVoiceRules.kt'); P = rd(J + 'AnalysisPipeline.kt'); S = rd(J + 'NovaService.kt'); M = rd(J + 'MainActivity.kt'); U = rd('app/src/main/assets/ui.html')
-PR = rd(J + 'PersonaRules.kt'); MF = rd('app/src/main/AndroidManifest.xml'); G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else ''); T = rd('app/src/test/java/com/nova/assistant/AnalysisVoiceRulesTest.kt')
+PR = rd(J + 'PersonaRules.kt'); MF = rd('app/src/main/AndroidManifest.xml'); G = rd('app/build.gradle.kts'); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|1[0-9][0-9])"', G) else ''); T = rd('app/src/test/java/com/nova/assistant/AnalysisVoiceRulesTest.kt')
 bad = []
 for w in ('import android', 'HttpURLConnection', 'URL(', 'OkHttp'):
     if w in V: bad.append('AnalysisVoiceRules not pure: ' + w)

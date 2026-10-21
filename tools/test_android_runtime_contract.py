@@ -4,7 +4,7 @@ import os, sys, re
 R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 rd = lambda p: open(os.path.join(R, p), encoding="utf-8").read()
 MA = rd("app/src/main/java/com/nova/assistant/MainActivity.kt"); NS = rd("app/src/main/java/com/nova/assistant/NovaService.kt")
-G = rd("app/build.gradle.kts"); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9])"', G) else ''); MF = rd("app/src/main/AndroidManifest.xml")
+G = rd("app/build.gradle.kts"); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|1[0-9][0-9])"', G) else ''); MF = rd("app/src/main/AndroidManifest.xml")
 bad = 0
 def check(n, c):
     global bad

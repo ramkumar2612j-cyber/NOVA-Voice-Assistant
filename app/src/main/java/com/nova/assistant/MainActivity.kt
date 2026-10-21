@@ -597,7 +597,7 @@ class MainActivity : Activity() {
             try {
                 web.evaluateJavascript("(function(){try{return window.p6Verify?window.p6Verify():null}catch(e){return null}})()") { v ->
                     try {
-                        if (v != null && v.startsWith("{")) FeatureVerify.setPage(v)
+                        if (v != null && v.startsWith("\u007B")) FeatureVerify.setPage(v)
                         else web.evaluateJavascript("(function(){try{return 'p6Verify='+typeof window.p6Verify+', Android.verifyPage='+typeof Android.verifyPage}catch(e){return 'diag error'}})()") { d -> FeatureVerify.pageDiag = (d ?: "").trim('"').take(80) }
                     } catch (e: Throwable) { ErrLog.addOnce("quiet:askPageDirect", e.toString()) }
                 }
