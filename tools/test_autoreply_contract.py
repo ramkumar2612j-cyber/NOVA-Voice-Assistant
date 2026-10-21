@@ -13,7 +13,7 @@ def check(name, cond):
 check("listener auto replies only for selected Message Mode apps", "MessageMode.isSelected(this, pkg)) autoReply(" in ns)
 check("auto reply never sends to groups / codes / no-button", all(x in ar for x in ('isGroup -> "group"', 'hidden -> "code"', '!canReply -> "no_reply_button"')))
 check("rate limits present (10 min, 3/h, 80/day)", all(x in ar for x in ("SENDER_COOLDOWN_MS = 600_000L", "SENDER_PER_HOUR = 3", "DAY_CAP = 80")))
-check("v7.46: no fixed text is ever sent (AI answer only)", "ActionLog.autoReplyText(ctx)" not in ns and "smartAutoReply(ctx, m)" in ns)
+check("v7.46: no fixed text is ever sent (AI answer only)", "ActionLog.autoReplyText(ctx)" not in ns and "smartAutoReply(ctx, m" in ns)
 check("every attempt is written to the history", 'ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)' in ns)
 check("code messages are stored without their text", "m.hidden" in ar or 'hidden -> "code"' in ar)
 check("owner is told afterwards, never asked", "fun onAutoReplied" in rd("NovaService.kt") and "askOrRun" not in ns)

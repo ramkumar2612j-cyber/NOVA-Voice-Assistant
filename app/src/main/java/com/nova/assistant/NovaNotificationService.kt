@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.service.notification.NotificationListenerService.RankingMap
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -37,6 +38,17 @@ class NovaNotificationService : NotificationListenerService() {
 
     companion object {
         @Volatile private var live: NovaNotificationService? = null
+
+        /** v7.97: Android often leaves the listener unbound after an app update / reinstall although the switch shows ON. Ask it to bind again and wait up to ~2 s (call from a worker thread). */
+        fun snapshotMessagesWithRebind(ctx: Context): List<Driving.Msg>? {
+            snapshotMessages()?.let { return it }
+            try { requestRebind(android.content.ComponentName(ctx, NovaNotificationService::class.java)) } catch (e: Throwable) { ErrLog.add("Listener", "rebind: $e") }
+            for (i in 0 until 8) {
+                try { Thread.sleep(250) } catch (e: InterruptedException) { break }
+                snapshotMessages()?.let { return it }
+            }
+            return null
+        }
 
         /** Messages from the allow-listed messaging apps that are still showing. null = the listener is not connected. Never logged, never uploaded. */
         fun snapshotMessages(): List<Driving.Msg>? {
@@ -73,6 +85,47 @@ class NovaNotificationService : NotificationListenerService() {
         }
     }
 
+    /**
+     * v7.99 OWNER FIRST: the owner opened (click), swiped, or the app cancelled the chat notification (read in the app / on another device) = he SAW it.
+     * A reply the AI is still waiting to send for this chat is dropped, and the AI stays out of that person's chat for 3 minutes.
+     */
+    override fun onNotificationRemoved(sbn: StatusBarNotification?, rankingMap: RankingMap?, reason: Int) {
+        super.onNotificationRemoved(sbn, rankingMap, reason)
+        try {
+            if (sbn == null) return
+            val pkg = sbn.packageName ?: return
+            if (pkg == packageName || pkg !in Driving.APPS) return
+            if (reason != REASON_CLICK && reason != REASON_CANCEL && reason != REASON_CANCEL_ALL && reason != REASON_APP_CANCEL && reason != REASON_APP_CANCEL_ALL) return
+            val key = sbn.key ?: return
+            val now = System.currentTimeMillis()
+            if (ReplyPresenceRules.sent.recent(key, now)) return   // NOVA's own reply made the app refresh the notification
+            ReplyPresenceRules.pending.cancel(key, ReplyPresenceRules.CODE_SEEN)
+            val title = sbn.notification?.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: return
+            ReplyPresenceRules.takeover.mark(title, now, ReplyPresenceRules.SEEN_TAKEOVER_MS)
+        } catch (e: Throwable) {
+            ErrLog.add("NotifListener", "removed: $e")
+        }
+    }
+
+    /** v7.99: the chat lines the notification still carries (MessagingStyle). The writer "You" / the notification's own name = the owner. Blank writers are never the owner. */
+    private fun historyOf(ex: Bundle): List<ReplyPresenceRules.Line> {
+        val out = ArrayList<ReplyPresenceRules.Line>()
+        try {
+            val self = ex.getCharSequence("android.selfDisplayName")?.toString()
+            @Suppress("DEPRECATION") val arr = ex.getParcelableArray("android.messages") ?: return out
+            for (p in arr) {
+                val b = p as? Bundle ?: continue
+                val text = b.getCharSequence("text")?.toString() ?: continue
+                @Suppress("DEPRECATION") val person = try { (b.getParcelable<android.os.Parcelable>("sender_person") as? android.app.Person)?.name?.toString() } catch (e: Throwable) { null }
+                val sender = b.getCharSequence("sender")?.toString() ?: person
+                out.add(ReplyPresenceRules.Line(ReplyPresenceRules.isOwnSender(sender, self), text))
+            }
+        } catch (e: Throwable) {
+            ErrLog.add("NotifListener", "history: $e")
+        }
+        return out
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return
@@ -93,7 +146,15 @@ class NovaNotificationService : NotificationListenerService() {
             val action = DrivingBridge.replyAction(n)
             val m = Driving.makeMsg(sbn.key ?: "$pkg:${sbn.id}", pkg, title, body, System.currentTimeMillis(), action != null) ?: return
             if (action != null) DrivingBridge.remember(m.key, action)
-            if (MessageMode.enabled && MessageMode.isSelected(this, pkg)) autoReply(m, ex.getBoolean("android.isGroupConversation", false))
+            // v7.99 OWNER FIRST: if the owner wrote last in this chat (his own line is the newest in the notification) the AI stays out; NOVA's own reply echoing back does not count.
+            val lines = historyOf(ex)
+            val nowTs = System.currentTimeMillis()
+            val ownLast = ReplyPresenceRules.ownerSpokeLast(lines) && !ReplyPresenceRules.sent.recent(m.key, nowTs)
+            if (ownLast) {
+                ReplyPresenceRules.pending.cancel(m.key, ReplyPresenceRules.CODE_OWNER)
+                ReplyPresenceRules.takeover.mark(m.sender, nowTs, ReplyPresenceRules.OWNER_TAKEOVER_MS)
+            }
+            if (!ownLast && MessageMode.enabled && MessageMode.isSelected(this, pkg)) autoReply(m, ex.getBoolean("android.isGroupConversation", false), lines)
             // Avoid double-reading when both independent switches are ON. Message Mode wins the announcement;
             // Driving retains its own inbox only when Message Mode is OFF.
             if (MessageMode.enabled && MessageMode.isSelected(this, pkg)) {
@@ -144,12 +205,16 @@ class NovaNotificationService : NotificationListenerService() {
      * v6.53 owner request: reply at once, no yes needed; NOVA tells the owner afterwards and writes it into the history.
      * Rules and limits are in AutoReplyRules. Works even when NOVA is not ACTIVATED (the system keeps this listener alive).
      */
-    private fun autoReply(m: Driving.Msg, isGroup: Boolean) {
+    private fun autoReply(m: Driving.Msg, isGroup: Boolean, lines: List<ReplyPresenceRules.Line> = emptyList()) {
         try {
             val ctx = applicationContext
             if (!ActionLog.autoReplyOn(ctx)) return
             val now = System.currentTimeMillis()
             if (WaBiz.active(now) && (m.pkg == "com.whatsapp" || m.pkg == "com.whatsapp.w4b")) return   // business watch has its own rules
+            if (ReplyPresenceRules.takeover.active(m.sender, now)) {   // v7.99: the owner is in this chat right now
+                ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", ReplyPresenceRules.skipText(ReplyPresenceRules.Verdict.OWNER, true), m.pkg)
+                return
+            }
             val smart = true   // v7.46: every auto-reply is the AI's own answer, never a fixed text
             val pre = AutoReplyRules.skipReason(isGroup, m.canReply, m.hidden, m.text)
             val reason = pre ?: (if (smart) SmartReplyRules.gate.allow(m.sender, now) else AutoReplyRules.gate.allow(m.sender, now))
@@ -157,7 +222,7 @@ class NovaNotificationService : NotificationListenerService() {
                 if (AutoReplyRules.worthLogging(reason)) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", AutoReplyRules.reasonText(reason, true))
                 return
             }
-            smartAutoReply(ctx, m)   // v7.46: the AI's own answer only; no fixed text path exists any more
+            smartAutoReply(ctx, m, false, lines)   // v7.46: the AI's own answer only; no fixed text path exists any more
         } catch (e: Exception) {
             // one odd notification must never crash the listener
         }
@@ -167,13 +232,26 @@ class NovaNotificationService : NotificationListenerService() {
      * Part 7 AI SMART REPLY: the AI answers in its own words (own thread: the AI call must never run on the main thread), then the owner is told
      * (history + phone notification + voice when idle). If no AI is available the owner's fixed text is sent instead. Rules: SmartReplyRules.
      */
-    private fun smartAutoReply(ctx: Context, m: Driving.Msg, business: Boolean = false) {
+    private fun smartAutoReply(ctx: Context, m: Driving.Msg, business: Boolean = false, lines: List<ReplyPresenceRules.Line> = emptyList()) {
         Thread {
             try {
                 if (SmartReplyRules.convo.lastAssistant(m.sender) == m.text) return@Thread   // our own reply showing up again
                 if (!SmartReplyRules.seen.fresh(m.sender, m.text, System.currentTimeMillis())) return@Thread   // the same notification posted twice
                 val svc = NovaService.instance
-                val res = try { svc?.smartDraft(m.sender, m.text, business) } catch (e: Throwable) { null }
+                // v7.99 OWNER FIRST: give the owner a moment. Seen (opened / swiped), answered himself, or a newer message = the AI sends nothing for this one.
+                if (!business) {
+                    val stamp = System.nanoTime()
+                    ReplyPresenceRules.pending.start(m.key, stamp)
+                    val v = ReplyPresenceRules.waitVerdict(ReplyPresenceRules.pending, m.key, stamp) { ms -> try { Thread.sleep(ms) } catch (e: InterruptedException) { } }
+                    ReplyPresenceRules.pending.done(m.key, stamp)
+                    if (v != ReplyPresenceRules.Verdict.SEND) {
+                        if (v != ReplyPresenceRules.Verdict.REPLACED) ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", ReplyPresenceRules.skipText(v, true), m.pkg)
+                        return@Thread
+                    }
+                    if (ReplyPresenceRules.takeover.active(m.sender, System.currentTimeMillis())) return@Thread
+                }
+                val recent = ReplyPresenceRules.context(lines)
+                val res = try { svc?.smartDraft(m.sender, m.text, business, recent) } catch (e: Throwable) { null }
                 if (res != null && res.skip) {
                     ActionLog.add(ctx, m.app, m.sender, m.text, "skipped", "Jawab ki zaroorat nahi thi", m.pkg)
                     return@Thread
@@ -188,6 +266,7 @@ class NovaNotificationService : NotificationListenerService() {
                     svc?.onSmartReplied(held)
                     return@Thread
                 }
+                ReplyPresenceRules.sent.mark(m.key, System.currentTimeMillis())   // v7.99: the echo of this reply is not the owner talking
                 val ok = DrivingBridge.sendReply(ctx, m.key, text)
                 ActionLog.add(ctx, m.app, m.sender, m.text, if (ok) "sent" else "failed", text, m.pkg)
                 val line = SmartReplyRules.inform(m.sender, m.app, m.text, text, needOwner, ok, true)

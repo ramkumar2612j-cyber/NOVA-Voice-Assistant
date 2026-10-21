@@ -62,9 +62,9 @@ object UnreadQueryRules {
         "Mujhe abhi aapke notification dikhte nahi. Settings me NOVA ke liye Notification access ON karo, phir poochho."
 
     fun notReadyText(en: Boolean): String = if (en)
-        "The notification reader is not connected right now. Open NOVA once and ask again in a moment."
+        "The notification reader is not connected although the switch shows ON. I opened the Notification access page: switch NOVA OFF, then ON again, then ask me again."
     else
-        "Notification padhne wala hissa abhi jud nahi paya. Ek baar NOVA kholo aur thodi der baad dobara poochho."
+        "Notification padhne wala hissa judta nahi, switch ON dikh raha hai phir bhi. Maine Notification access page khol diya hai: NOVA ko OFF karo, phir ON karo, phir mujhse poochho."
 
     private fun appMatches(item: Driving.Msg, app: String?): Boolean = app == null || item.app.startsWith(app)
 

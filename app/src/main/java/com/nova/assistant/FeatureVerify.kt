@@ -81,6 +81,15 @@ object FeatureVerify {
         chk(rec, er, "Privacy: error log e-mail / number chhupata hai", "ErrLog.clean")
         val me = try { isAsk("auto verify status") && !isAsk("mujhe ek logo chahiye") } catch (e: Throwable) { false }
         chk(rec, me, "Verify: 'auto verify status' sawal samjha", "FeatureVerify.isAsk")
+        // v7.98: the newer skills must be reachable by voice, not only listed
+        val nw = ArrayList<String>()
+        if (try { TradeRules.parse("gold ka analysis karo") == null } catch (e: Throwable) { true }) nw.add("trade")
+        if (try { UnreadQueryRules.parse("ye btao insta pe koi naya message aaya h") == null } catch (e: Throwable) { true }) nw.add("unread")
+        if (try { !FeatureFixRules.matches("band features set karo") } catch (e: Throwable) { true }) nw.add("features")
+        if (try { Logic.classify("3:30 ka schedule banao rss meeting me jana hai")?.kind != "calendar_add" } catch (e: Throwable) { true }) nw.add("meeting")
+        if (try { ProfileSearchRules.parse("instagram par rahul_sharma search karo") == null } catch (e: Throwable) { true }) nw.add("profile")
+        if (try { CameraEyeRules.parse("peeche wale camera se dekho ye kya hai") == null } catch (e: Throwable) { true }) nw.add("camera")
+        chk(rec, nw.isEmpty(), "Naye skills: trade, naya message, band features, meeting, profile, camera bolne se pakde jate hain", nw.joinToString(", "))
     }
 
     /** Real phone state. Never changes anything. */

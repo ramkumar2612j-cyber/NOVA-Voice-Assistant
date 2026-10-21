@@ -1819,7 +1819,7 @@ class NovaService : Service() {
      * Part 7 AI SMART REPLY: ONE blocking AI call. Call it from a background thread, never the main thread.
      * null = no AI answered (the caller then sends the owner's fixed auto-reply text). Safety rules are in SmartReplyRules.
      */
-    fun smartDraft(sender: String, incoming: String, business: Boolean = false): SmartReplyRules.Result? {
+    fun smartDraft(sender: String, incoming: String, business: Boolean = false, recent: List<String> = emptyList()): SmartReplyRules.Result? {
         if (!alive || !ExtCfg.freeChain(this)) return null
         val en = cfg.lang == "en"
         val keyless = ExtCfg.freeKeyless(this)
@@ -1836,7 +1836,7 @@ class NovaService : Service() {
                 }
             },
             { id -> id != "pollinations" || keyless },
-            SmartReplyRules.systemPrompt(ActionLog.ownerName(this), !en, business, SmartReplyRules.convo.facts(sender)),
+            SmartReplyRules.systemPrompt(ActionLog.ownerName(this), !en, business, SmartReplyRules.convo.facts(sender), recent),
             incoming.take(500),
             freeCooldowns,
             { System.currentTimeMillis() },
@@ -2841,7 +2841,11 @@ class NovaService : Service() {
         lastKind = "unread_query"
         val en = cfg.lang == "en"
         if (!DrivingBridge.listenerEnabled(this)) return UnreadQueryRules.noAccessText(en)
-        val items = NovaNotificationService.snapshotMessages() ?: return UnreadQueryRules.notReadyText(en)
+        val items = NovaNotificationService.snapshotMessagesWithRebind(this) ?: run {
+            // v7.97: switch is ON but Android did not bind the reader: open the Notification access page so the owner can flip it OFF / ON (the usual fix)
+            try { DrivingBridge.openListenerSettings(this) } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
+            return UnreadQueryRules.notReadyText(en)
+        }
         return UnreadQueryRules.reply(items, req, en)
     }
 
@@ -4604,10 +4608,18 @@ class NovaService : Service() {
     private fun agentBegin(raw: String): String {
         val task = AgentRules.taskText(raw)
         if (agentRunning) return tr("Ek kaam abhi chal raha hai. 'Ruko' bolo to rok dunga", "A task is already running. Say stop to cancel it")
-        if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) return tr(
-            "Is kaam ke liye Accessibility permission chahiye. Pehle use on karo",
-            "This job needs the Accessibility permission. Turn it on first"
-        )
+        if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) {
+            // v7.97: open the Accessibility page at once and say exactly what to press (Android never lets an app switch it on itself)
+            val listedOn = NovaAccessibilityService.isEnabled(this)
+            try { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
+            return if (listedOn) tr(
+                "Accessibility ON dikh raha hai par NOVA se judi nahi. Maine page khol diya: NOVA ko OFF karke phir ON karo, phir ye kaam dobara bolo",
+                "Accessibility shows ON but is not connected. I opened the page: switch NOVA OFF then ON, then say this job again"
+            ) else tr(
+                "Is kaam ke liye Accessibility ON chahiye. Maine page khol diya: NOVA par tap karo, switch ON karo, phir ye kaam dobara bolo",
+                "This job needs Accessibility ON. I opened the page: tap NOVA, switch it ON, then say this job again"
+            )
+        }
         if (!SecureStore.hasKeys(this) && !agentChainReady()) return tr(
             "Abhi ye kaam shuru nahi ho pa raha. Settings me key check karo",
             "I cannot start this job right now. Check the key in Settings"

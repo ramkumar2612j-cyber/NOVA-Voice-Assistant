@@ -1,3 +1,29 @@
+## v7.99 - OWNER FIRST: the AI does not talk over you (WhatsApp / Instagram), versionName 7.99
+- Owner request: when a message arrives and the owner answers / has seen it, the AI must not chat; the AI should look at the owner's last messages.
+- NEW ReplyPresenceRules.kt (pure, unit-tested). (1) The AI waits 25 s before sending. If the owner opens or swipes the chat notification, or the app cancels it (read in the app / on another device), the pending AI reply is dropped (history line "Aapne message dekh liya"). (2) If the owner's own line is the newest in the notification, the AI stays out of that person's chat for 15 min; after "seen" for 3 min. NOVA's own reply echoing back as a notification update is ignored (10 s). (3) The recent chat lines of the notification (incl. what the OWNER wrote) go to the AI as read-only context; secrets are dropped. A newer message from the same chat replaces the waiting one.
+- NovaNotificationService: onNotificationRemoved + historyOf + wait in smartAutoReply; SmartReplyRules.systemPrompt(recent); NovaService.smartDraft(recent). Business Watch path is unchanged (no wait).
+- SKILLS row + MADAD topic "ownerfirst" + CAPS entry.
+- HONEST LIMITS: Android gives NOVA only the notification, not WhatsApp's blue ticks: "seen" = notification opened / swiped / cancelled. The notification carries only the last few lines of a chat. Instagram DMs may not carry the chat lines (then only the single message is used). AI reply still needs Message mode ON with the app chosen, Notification access, and the AI chain.
+- RUN: Kotlin compile 0 errors, JUnit incl. 11 new tests. NOT TESTED on phone.
+
+## v7.98 - every skill listed + reachable (SKILLS, MADAD, auto check), versionName 7.98
+- Owner: the trading skill (and other newer ones) did not show in SKILLS or anywhere except one Home card.
+- ADDED: SKILLS screen rows + MADAD topics + CAPS entries for Trading (MT5 practice + analysis, with a TRADE KHOLO button), "Naya message aaya?" (notification), "Band features set karo", "Meeting schedule banao". test_part6 map updated (56 topics).
+- ADDED: WiringAuditTest (every MADAD example sentence must be understood by at least one real recognizer, not the AI fallback) and an AUTO VERIFY probe (FeatureVerify) that checks trade / unread / band features / meeting / profile search / camera eye phrases on the phone itself.
+- RUN: compile 0 errors, JUnit incl. 3 new tests. NOT TESTED on phone (permissions and hardware cannot be proven here).
+
+## v7.97 - "notification reader not connected" + "Accessibility permission" dead ends (Kotlin), versionName 7.97
+- Phone report (v7.96): "ye btao insta pe koi naya message aaya" -> "Notification padhne wala hissa abhi jud nahi paya"; "Instagram kholo aur message karo" -> "Accessibility permission chahiye. Pehle use on karo". Both texts only told the owner to do something, nothing was opened.
+- CAUSE (from code): after an APK install Android leaves the notification listener / accessibility service unbound even if the switch shows ON (or the switch is OFF again). NOVA saw "listener enabled but not connected" / "service instance null" and just printed a line.
+- FIX: NovaNotificationService.snapshotMessagesWithRebind: asks Android to bind the listener again (requestRebind) and waits up to 2 s before giving up; if still not connected it opens the Notification access page and says "OFF karo phir ON karo". agentBegin: opens the Accessibility page at once and says exactly what to press (switch ON, or OFF then ON when it already shows ON). Android never lets an app switch these on by itself, so the final tap stays with the owner.
+- RUN: Kotlin compile 0 errors, JUnit 1454/1454. NOT TESTED on phone.
+
+## v7.96 - SMOOTH switch no longer disables the hang safety net (ui.html only), versionName 7.96
+- Phone report (v7.95): app was on AUTO, owner chose SMOOTH, the app hung (white screen in the app switcher).
+- FOUND (from code, headless run): choosing SMOOTH live called NovaPerf.set(3), which PINS the governor. A pinned governor never goes down a level, so on a slow phone the stall safety net (orb stopped at level 4, 2D orb instead) was off. SMOOTH chosen before an app start was not pinned. Not reproducible in headless Chrome (no real phone GPU): the cause is a likely one, NOT confirmed on the phone.
+- FIX: new NovaPerf.floorTo(n) raises the lowest level without pinning. SMOOTH live uses floorTo(3); leaving SMOOTH uses floorTo(1) + auto. Headless check: after SMOOTH, pinned=false, 2 long stalls -> level 4 and the 3D orb falls back to 2D.
+- NOT TESTED on phone.
+
 ## v7.95 - checks completed (no feature code changed), versionName 7.95
 - RUN (sandbox): Kotlin compile of app/src/main = 0 errors; JUnit with the REAL JUnit 4.13.2 + real org.json = 1454/1454 PASS. The 4 failures seen in v7.94 (e.g. WebBrowsersTest.breakerSkipsADeadBrowser) came only from the small JUnit stub harness, not from app code: all pass with real JUnit.
 - RUN: python guards. 10 old guards failed only because they were stale (permission count 30 -> 31 since WRITE_CALENDAR in v7.90, an onResume text window, CHANGELOG-start check). Guards were relaxed (30 or 31, window 1500, v7.9x accepted); no app code touched.
