@@ -128,7 +128,7 @@ object SelfTest {
             val b = svc.testBattery()
             rec(if (b.any { it.isDigit() }) "PASS" else "FAIL", "Battery padhna", b)
             if (quiet && !full) {
-                rec("INFO", "Torch / volume / mic", "is baar chhota test: ye install ke baad pehli baar aur har update ke baad apne aap chalte hain")
+                rec("INFO", "Torch / volume / mic", "ye phone ko chalate hain (torch jalti hai, volume badalta hai), isliye sirf Settings > POORI JAANCH ABHI dabane par chalte hain")
             } else {
             val t1 = svc.testTorch(true)
             pause(700)
@@ -155,7 +155,7 @@ object SelfTest {
         } else {
             rec("PASS", "Accessibility connected", "")
             if (quiet && !full) {
-                rec("INFO", "Screen padhna / scroll / back", "is baar chhota test: ye install ke baad pehli baar aur har update ke baad apne aap chalte hain")
+                rec("INFO", "Screen padhna / scroll / back", "ye doosri screen kholte hain, isliye sirf Settings > POORI JAANCH ABHI dabane par chalte hain")
             } else {
             val own = NovaAccessibilityService.readScreen(false)
             rec("INFO", "NOVA ki apni screen", "app=" + (own?.pkg ?: "none") + " lines=" + (own?.lines?.size ?: 0))

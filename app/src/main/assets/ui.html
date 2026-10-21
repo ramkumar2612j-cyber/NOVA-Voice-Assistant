@@ -354,7 +354,7 @@ html.lowfx #sk_l .vc{content-visibility:auto;contain-intrinsic-size:auto 130px}
 </div>
 <div id="st_box"><!-- FIXTEST-UI -->
 <b>TEST REPORT (apne aap chalta hai)</b>
-<small>App install hone ke baad khud jaanch karta hai (torch, volume, mic, awaaz sunna, screen padhna, 5 web browsers). Aapko kuch dabana nahi hai. Neeche taza report dikhti hai. Koi call, message ya payment nahi hota.</small>
+<small>App chup-chaap jaanch karta hai (permission, key, service, internet, samajh). Torch, volume, mic aur screen wali asli jaanch tabhi chalti hai jab aap EXTRA JAANCH > POORI JAANCH ABHI dabate ho. Neeche taza report dikhti hai, COPY REPORT se copy karo. Koi call, message ya payment nahi hota.</small>
 <div class="row"><button class="sm" id="st_err">AKHRI GALTIYAN</button><button class="sm" id="st_pow">BATTERY / AUTOSTART</button></div>
 <details id="st_more"><summary style="font-size:11px;letter-spacing:1px;opacity:.85;margin:8px 0">EXTRA JAANCH (zaroorat par, apne aap wali jaanch alag chalti hai)</summary>
 <div class="row"><button class="sm" id="st_run">POORI JAANCH ABHI</button><button class="sm" id="st_chats">MERI CHATS</button></div>
@@ -2438,7 +2438,7 @@ function skRegistry(X){
   /* ---- SAFE ---- */
   {c:'SAFE',i:'lock',t:'Lock guard',d:'Phone lock hote hi koi voice command nahi. Sirf zaroori call/message alert beep ke saath. Volume key 1 baar = alert band.',s:B('getLockGuard'),say:[],act:[['SWITCH',go('wb_lg')]]},
   {c:'SAFE',i:'bell',t:'History aur alerts',d:'NOVA ne kya kiya, har kaam ki list (upar ghanti). Saaf bhi kar sakte ho.',s:null,say:[],act:[['HISTORY KHOLO',function(){X.openHist()}]]},
-  {c:'SAFE',i:'shield',t:'Apne aap test aur status',d:'App khud torch, volume, mic, screen, 5 web browsers ki jaanch karta hai. Report Settings me.',s:null,say:[],act:[['TEST REPORT',go('st_err')],['SAARE FEATURES',go('fcc')]]},
+  {c:'SAFE',i:'shield',t:'Apne aap test aur status',d:'App chup-chaap permission, key, service aur samajh ki jaanch karta hai. Torch, volume, mic wali jaanch aap dabate ho tab chalti hai. Report Settings me.',s:null,say:[],act:[['TEST REPORT',go('st_err')],['SAARE FEATURES',go('fcc')]]},
   {c:'SAFE',i:'bolt',t:'Background me chalte rehna',d:'Battery / Autostart ki setting jahan NOVA ko chalne dena hai (Xiaomi jaise brand ke liye alag guide).',s:!!st.battery,say:[],act:[['BATTERY SETTING',call('openBatterySettings')]]},
   {c:'SAFE',i:'bell',t:'Battery kam: yaad + Papa-Mummy ko SOS',d:'Battery girne par NOVA bolta hai (SETTINGS me khud bolo wala switch). Bahut kam (5 percent) par Papa aur Mummy ko WhatsApp bhejne ki koshish karta hai. Contact ka naam \"Papa\" / \"Mummy\" ho aur Accessibility ON ho. Na bhej paye to sach batata hai.',s:!!st.acc,say:[],act:[['ACCESSIBILITY',call('openAccessibility')],['BATTERY SWITCH',go('al_bat')]]},
   {c:'SAFE',i:'hand',t:'Jo NOVA nahi karta',d:'Phone band / restart / factory reset, bank-payment-password screen par kaam, OTP / PIN yaad rakhna. Ye clear jawab deta hai, koshish nahi karta.',s:null,say:[]}
@@ -4435,6 +4435,7 @@ window.p6Verify=function(){try{
   if(typeof Android!=='undefined'&&typeof Android.verifyPage==='function')Android.verifyPage(JSON.stringify(r));
   return r
 }catch(e){return null}};
+setTimeout(function(){try{window.p6Verify()}catch(e){}},3500);   // v7.100: the page pushes its answer once by itself, so Kotlin never waits for a paused WebView
 var rep='';
 function box(){var b=d.getElementById('p6_box');if(b)return b;var a=d.getElementById('autoT');if(!a||!a.parentNode)return null;
   b=d.createElement('div');b.id='p6_box';b.className='status';b.style.cssText='display:none;cursor:pointer';
@@ -4450,6 +4451,16 @@ function box(){var b=d.getElementById('p6_box');if(b)return b;var a=d.getElement
   a.parentNode.insertBefore(b,a.nextSibling);return b}
 window.onFeatureVerify=function(sm,r){try{rep=String(r||'');var b=box();if(!b)return;b.style.display='';b.firstChild.textContent=String(sm||'');
   b.style.borderColor=/FAIL/.test(String(sm))&&!/koi FAIL nahi/.test(String(sm))?'#ff5a5a':'#50ffaa'}catch(e){}};
+}catch(e){}})();
+</script>
+<style id="p6_fix">/* v7.101 add-only: the AUTO VERIFY box opens as a readable card (normal letters, rounded corners, scrolls inside), not as a squeezed pill */
+#p6_box{box-sizing:border-box;max-width:100%}
+#p6_box.p6_open{border-radius:16px!important;padding:10px 12px!important;letter-spacing:0!important;text-transform:none!important}
+#p6_rep{letter-spacing:0!important;text-transform:none!important;font-family:var(--mono,monospace);font-size:11px!important;line-height:1.5;max-height:45vh!important;overflow-y:auto;overflow-x:hidden;word-break:break-word;-webkit-overflow-scrolling:touch}
+</style>
+<script id="p6_fix_js">
+(function(){try{var d=document;function sync(){try{var b=d.getElementById('p6_box'),p=d.getElementById('p6_rep');if(b&&p)b.classList.toggle('p6_open',p.style.display!=='none')}catch(e){}}
+if(window.MutationObserver){var t=setInterval(function(){var p=d.getElementById('p6_rep');if(p){clearInterval(t);new MutationObserver(sync).observe(p,{attributes:true,attributeFilter:['style']})}},500);setTimeout(function(){clearInterval(t)},60000)}
 }catch(e){}})();
 </script>
 <style id="p7_auto">/* wip15 add-only: NOVA starts by itself (autoActivate), so the ACTIVATE/STOP button is only hidden, never removed: every script still finds #btn */
@@ -5333,8 +5344,12 @@ timer=setTimeout(poll,1600);
 </script>
 <style id="v76_pro_css">
 /* v7.76 add-only: hide developer / test items so the app looks professional. NOTHING is removed: ids, buttons and code stay, only display:none. Delete this block to show them again. */
-html body #wb_bt_all,html body #wb_bt,html body #st_more,html body #st_err,html body #st_out,html body #st_copy,html body #st_share,
-html body #st_box>b,html body #st_box>small,html body #rm_recover,html body #provider_health_box{display:none!important}
+html body #wb_bt_all,html body #wb_bt,html body #rm_recover,html body #provider_health_box{display:none!important}
+/* v7.100: TEST REPORT, COPY REPORT, SHARE and the extra checks are visible again (the owner copies the report from here) */
+html body #st_box>b,html body #st_box>small{display:block!important}
+html body #st_more,html body #st_err,html body #st_out,html body #st_copy,html body #st_share{display:revert!important}
+html body #st_box .row{display:flex!important;flex-wrap:wrap;gap:8px;margin:8px 0}
+html body #st_box button.sm{display:inline-flex!important;align-items:center;justify-content:center;min-height:44px;padding:8px 14px}
 </style>
 <style id="p21_oneplus_css">
 /* v7.74 add-only: photo / video / file now live ONLY under the + button. The separate paperclip and MEDIA buttons are hidden (their ids and code stay; the + menu clicks them). */

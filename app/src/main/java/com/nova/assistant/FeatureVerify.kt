@@ -21,6 +21,7 @@ object FeatureVerify {
     @Volatile var lastReport: String = ""
     @Volatile var lastSummary: String = ""
     @Volatile private var pageJson: String? = null
+    @Volatile var pageDiag: String = ""
     @Volatile private var running = false
     @Volatile private var lastAt = 0L
     @Volatile private var lastFails: List<String> = emptyList()
@@ -114,7 +115,7 @@ object FeatureVerify {
 
     /** The answer of the page (script p6_verify). */
     fun pageChecks(json: String?, rec: (String, String, String) -> Unit) {
-        if (json == null) { rec("FAIL", "Page: ui.html ne jawab nahi diya (p6_verify)", "page script nahi chala"); return }
+        if (json == null) { rec("FAIL", "Page: ui.html ne jawab nahi diya (p6_verify)", "page script nahi chala" + (if (pageDiag.isNotEmpty()) " [" + pageDiag + "]" else "")); return }
         val o = try { JSONObject(json) } catch (e: Throwable) { null }
         if (o == null) { rec("FAIL", "Page: jawab padha nahi gaya", ""); return }
         val mb = arr(o, "missingBridge"); val mc = arr(o, "missingCb"); val mi = arr(o, "missingIds"); val ms = arr(o, "missingScripts")
@@ -145,12 +146,21 @@ object FeatureVerify {
                 try { FeatureCheck.understanding(rec) } catch (e: Throwable) { rec("FAIL", "Samajh checks beech me ruk gaye", e.javaClass.simpleName) }
                 try { probes(rec) } catch (e: Throwable) { rec("FAIL", "Parts 1-5 probes ruk gaye", e.javaClass.simpleName) }
                 try { stateChecks(act, rec) } catch (e: Throwable) { rec("FAIL", "State checks ruk gaye", e.javaClass.simpleName) }
-                pageJson = null
-                try { askPage() } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureVerify", e.toString()) }
+                // v7.100: the page may answer late (heavy orb, screen just closed). Ask again every 4 s for up to 24 s; an earlier answer of the same page is also valid (page is a static asset).
                 var g = 0
-                while (pageJson == null && g++ < 40) Thread.sleep(200)
-                pageChecks(pageJson, rec)
-                lastAt = System.currentTimeMillis()
+                while (pageJson == null && g < 120) {
+                    if (g % 20 == 0) { try { askPage() } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureVerify", e.toString()) } }
+                    Thread.sleep(200); g++
+                }
+                if (pageJson == null && !NovaService.uiVisible) {
+                    // screen closed: the WebView is paused, that is not a bug. Do not show a false FAIL; check again at the next open.
+                    rec("WARN", "Page: screen band tha, app khulne par dobara check hoga", "")
+                    pageJson = null
+                    lastAt = 0L
+                } else {
+                    pageChecks(pageJson, rec)
+                    lastAt = System.currentTimeMillis()
+                }
                 val sum = summaryOf(out)
                 val fails = out.filter { it.startsWith("FAIL") }
                 lastFails = fails.map { it.drop(6).take(100) }

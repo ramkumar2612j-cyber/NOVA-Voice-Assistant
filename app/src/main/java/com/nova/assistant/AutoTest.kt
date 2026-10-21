@@ -73,14 +73,13 @@ object AutoTest {
                         lastAt = now
                         // v6.97: no manual test any more. The FIRST run after an install / update also does the torch, volume, mic and screen-read checks by itself (full);
                         // later runs (a permission or key changed) stay quiet and read-only.
-                        val ver = UpdateManager.appVersion(act).toString()
-                        val sp = act.getSharedPreferences("nova_autotest", android.content.Context.MODE_PRIVATE)
-                        val full = AutoTestRules.needsFull(sp.getString("full_ver", "") ?: "", ver)
+                        // v7.100: the automatic run is ALWAYS quiet and read-only. The old "full" run (torch flash, volume change, mic grab, Android Settings opened,
+                        // scroll, BACK, NOVA pulled to the front) woke the phone by itself, showed popups, stole the mic from the wake word and produced the false FAILs.
+                        // Those hardware checks now run ONLY when the owner presses POORI JAANCH ABHI in Settings.
                         SelfTest.start(act, { }, { rep ->
                             lastReport = rep
-                            if (full) { try { sp.edit().putString("full_ver", ver).apply() } catch (e: Exception) { ErrLog.add("AutoTest", e.toString()) } }
                             show(AutoTestRules.summary(rep), rep)
-                        }, true, full)
+                        }, true, false)
                         // wait for it to finish before a second pass could start
                         var guard = 0
                         while (SelfTest.running && guard++ < 120) Thread.sleep(1000)

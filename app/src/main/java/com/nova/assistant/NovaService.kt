@@ -1209,7 +1209,10 @@ class NovaService : Service() {
                             try { porc.close() } catch (x: Throwable) { }
                             pw = null; wakeEngine = "Vosk (Porcupine band)"; false
                         }
-                        if (hit && peak >= 500.0 && System.currentTimeMillis() - lastCaptureEnd >= Logic.WAKE_COOLDOWN_MS) {
+                        // v7.100: Porcupine gets the same self-tuning as the Vosk path: a faint sound or a hit right after a false wake does not wake NOVA (no popup out of nowhere).
+                        val nowMs = System.currentTimeMillis()
+                        val needLoud = maxOf(700.0, noise * 3.0) * WakeAdapt.scale(wakeMiss, wakeMissAt, nowMs)
+                        if (hit && peak >= needLoud && nowMs - lastCaptureEnd >= Logic.WAKE_COOLDOWN_MS * (1 + minOf(wakeMiss, 3))) {
                             wakeCount++
                             followCount = 0
                             followCap = false

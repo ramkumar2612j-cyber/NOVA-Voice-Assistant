@@ -233,7 +233,7 @@ class MainActivity : Activity() {
         // v6.33: quiet automatic self test (no popup/sound/torch/screen jump) once keys + mic permission exist, and again when they change.
         AutoTest.kick(this) { sum, rep -> runJs("onAutoTest(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
         // v7.35 AUTO VERIFY: 12 s after the app opens NOVA checks by itself that every feature is understood and wired (read-only, once per 10 min).
-        FeatureVerify.start(this, 12_000L, { runJs("window.p6Verify&&p6Verify()") }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
+        FeatureVerify.start(this, 12_000L, { askPageDirect() }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
     }
 
     @Volatile private var lastAutoActivateAt = 0L
@@ -588,6 +588,21 @@ class MainActivity : Activity() {
             MediaIntakeStore.ingest(this, uris, null, null)
             runJs("try{onMediaIntake()}catch(e){}")   // shows the busy state at once
         } catch (e: Throwable) { ErrLog.add("MainActivity", "media pick: " + e.toString()) }
+    }
+
+    /** v7.101: ask the page for its wiring answer and take the value straight from evaluateJavascript (no bridge needed), plus a short diagnosis if the page gives nothing. */
+    private fun askPageDirect() {
+        runOnUiThread {
+            if (isDestroyed) return@runOnUiThread
+            try {
+                web.evaluateJavascript("(function(){try{return window.p6Verify?window.p6Verify():null}catch(e){return null}})()") { v ->
+                    try {
+                        if (v != null && v.startsWith("{")) FeatureVerify.setPage(v)
+                        else web.evaluateJavascript("(function(){try{return 'p6Verify='+typeof window.p6Verify+', Android.verifyPage='+typeof Android.verifyPage}catch(e){return 'diag error'}})()") { d -> FeatureVerify.pageDiag = (d ?: "").trim('"').take(80) }
+                    } catch (e: Throwable) { ErrLog.addOnce("quiet:askPageDirect", e.toString()) }
+                }
+            } catch (e: Throwable) { ErrLog.addOnce("quiet:askPageDirect", e.toString()) }
+        }
     }
 
     private fun runJs(js: String) {
@@ -1130,7 +1145,7 @@ class MainActivity : Activity() {
         /** v7.35 AUTO VERIFY: long-press on the AUTO VERIFY box = check again now. Returns started / busy. */
         @JavascriptInterface
         fun verifyNow(): String = try {
-            FeatureVerify.start(this@MainActivity, 0L, { runJs("window.p6Verify&&p6Verify()") }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
+            FeatureVerify.start(this@MainActivity, 0L, { askPageDirect() }) { sum, rep -> runJs("onFeatureVerify(" + JSONObject.quote(sum) + "," + JSONObject.quote(rep) + ")") }
         } catch (e: Throwable) { "busy" }
 
         // ---- v6.69 chat sessions (New Chat, history list, resume). The page shows the result; nothing here speaks or acts on the phone.
