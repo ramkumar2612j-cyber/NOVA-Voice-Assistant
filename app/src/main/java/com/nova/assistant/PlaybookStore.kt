@@ -32,7 +32,7 @@ class PlaybookStore(context: Context) {
         prefs.edit().putString(KEY, arr.toString()).apply()
     }
 
-    private fun read(): List<PlaybookRules.Entry> = try {
+    private fun read(): List<PlaybookRules.Entry> { return try {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
         val arr = JSONArray(raw)
         val out = ArrayList<PlaybookRules.Entry>()
@@ -50,7 +50,7 @@ class PlaybookStore(context: Context) {
             if (routes.isNotEmpty()) out.add(PlaybookRules.Entry(kind, routes.take(PlaybookRules.MAX_ROUTES_PER_KIND)))
         }
         out
-    } catch (_: Exception) { emptyList() }
+    } catch (_: Exception) { emptyList() } }
 
     companion object { private const val KEY = "entries" }
 }

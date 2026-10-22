@@ -31,7 +31,7 @@ class SiteLearningStore(context: Context) {
         prefs.edit().putString(KEY, arr.toString()).apply()
     }
 
-    private fun read(): List<SiteLearningRules.Note> = try {
+    private fun read(): List<SiteLearningRules.Note> { return try {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
         val arr = JSONArray(raw)
         val out = ArrayList<SiteLearningRules.Note>()
@@ -50,7 +50,7 @@ class SiteLearningStore(context: Context) {
             out.add(SiteLearningRules.Note(key, o.optInt("ok", 0).coerceIn(0, 999), blocked, o.optInt("sw", 0).coerceIn(0, 999), o.optLong("last", 0L).coerceAtLeast(0L)))
         }
         out.take(SiteLearningRules.MAX_ENTRIES)
-    } catch (_: Exception) { emptyList() }
+    } catch (_: Exception) { emptyList() } }
 
     companion object { private const val KEY = "notes" }
 }

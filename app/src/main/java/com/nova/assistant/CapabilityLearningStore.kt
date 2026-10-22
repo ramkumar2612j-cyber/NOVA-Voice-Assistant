@@ -32,7 +32,7 @@ class CapabilityLearningStore(context: Context) {
     /** v7.110 PART 7: the CLEAR button in Settings (LearnedMemory.clearAll) empties these lessons too. */
     @Synchronized fun clear() { prefs.edit().remove(KEY).apply() }
 
-    private fun read(): List<CapabilityLearningRules.Lesson> = try {
+    private fun read(): List<CapabilityLearningRules.Lesson> { return try {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
         val arr = JSONArray(raw)
         val out = ArrayList<CapabilityLearningRules.Lesson>()
@@ -42,7 +42,7 @@ class CapabilityLearningStore(context: Context) {
             out.add(CapabilityLearningRules.Lesson(gap, o.optInt("count", 1).coerceIn(1, 999), o.optLong("last", 0L).coerceAtLeast(0L)))
         }
         out.take(CapabilityLearningRules.MAX_RECORDS)
-    } catch (_: Exception) { emptyList() }
+    } catch (_: Exception) { emptyList() } }
 
     companion object { private const val KEY = "lessons" }
 }
