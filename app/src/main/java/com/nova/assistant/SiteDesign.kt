@@ -116,6 +116,18 @@ object SiteDesign {
         "three.js https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js and GSAP https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js (+ScrollTrigger.min.js same folder). No other external files. " +
         "Use only phone numbers, addresses, prices and medical/legal claims that the owner supplied; otherwise clearly marked editable placeholders."
 
+    /** v7.111: the owner got a plain blog-style page; this rule forces a real landing-site structure and handles garbled voice requests. */
+    const val NOT_A_BLOG = "NOT A BLOG (the owner rejected a plain blog-style page): never output a text-heavy blog or article layout (a title, paragraphs and a list). " +
+        "Unless the owner literally asked for a blog, build a product / brand LANDING SITE: a full-screen hero with a very large headline, a one-line promise, two buttons and ONE animated visual " +
+        "(inline SVG scene, CSS 3D object or canvas particles) that fits the subject; then feature cards with custom SVG icons, a numbered how-it-works strip, a big stats row, " +
+        "a showcase section drawn in SVG (phone frame, dashboard or product mock), testimonials clearly marked as samples, an FAQ accordion, a final call-to-action band and a multi-column footer. " +
+        "Alternate dark and light bands, use one strong gradient accent, glass cards and scroll-reveal. Every section needs a visual element, never only text. " +
+        "PICTURES: where the page has NOVA_IMG pictures, put each one inside a container that already has a designed gradient background, so a missing picture still looks finished. " +
+        "NEVER draw a flat coloured box with one lone circle, triangle or square as an 'image': that looks broken. An inline SVG illustration must be a real scene with at least 15 layered shapes " +
+        "(background gradient, horizon or floor, the main subject, props, soft shadows, highlights); if you cannot draw that well, use a gradient mesh with a large icon and a caption instead. " +
+        "If the spoken request is short, garbled or unclear (speech-to-text slips such as 'fast or starting 10 sec'), do not write about the garbled words: infer the most likely product " +
+        "(for example an app or tool that is fast and starts in about 10 seconds) and build a confident, specific site for THAT, with believable copy in the owner's language."
+
     /** v7.4 premium finish + phone performance rules, appended after CRAFT. */
     const val LUXURY = "LUXURY / PROFESSIONAL FINISH (this is what makes it look expensive): " +
         "a strict design system: 8px spacing scale, one container max-width 1200px, fluid type with clamp() (hero 44-88px, body 16-18px, line-height 1.6), section padding 96-140px desktop and 56-72px mobile, one consistent radius, layered soft shadows, hairline borders, restrained palette (one accent colour), plenty of white space. " +

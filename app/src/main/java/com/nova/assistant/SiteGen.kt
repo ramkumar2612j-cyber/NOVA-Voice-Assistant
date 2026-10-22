@@ -125,7 +125,7 @@ object SiteGen {
             append("Never invent a working download URL.\n")
             append(SpecContract.promptBlock(spec, request))
             append(SiteDesign.brief(request, seed))
-            append("\n\n").append(SiteDesign.CRAFT).append("\n\n").append(SiteDesign.LUXURY)
+            append("\n\n").append(SiteDesign.CRAFT).append("\n\n").append(SiteDesign.LUXURY).append("\n\n").append(SiteDesign.NOT_A_BLOG)
             append(mediaText)
         }
     }
@@ -141,7 +141,7 @@ object SiteGen {
         val media = try { SiteMedia.list(ctx) } catch (e: Throwable) { emptyList() }
         val isEdit = !baseHtml.isNullOrBlank()
         val userItems = try { SiteMediaStore.items() } catch (e: Throwable) { emptyList() }   // v7.12: pictures / videos the owner picked from the gallery
-        val wantAi = !isEdit && userItems.isEmpty() && SiteMedia.wantsAiPictures(fullRequest)
+        val wantAi = !isEdit && userItems.isEmpty() && MediaIntent.wantsImages(fullRequest)   // v7.111: AI pictures by default (only "bina photo / sirf text" opts out); before, the words photo/image had to be spoken, else the model drew crude SVG boxes
         val mediaText = SiteMedia.describe(media) + SiteMedia.userBlock(userItems) +
             (if (wantAi) SiteMedia.promptBlock(true, MediaIntent.wantsVideo(fullRequest)) else "") +
             (if (isEdit) "Keep every NOVA_IMG:<text> and NOVA_USER_MEDIA:<id> value exactly as written.\n" else "")

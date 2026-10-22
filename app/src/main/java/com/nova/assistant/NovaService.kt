@@ -4265,10 +4265,13 @@ class NovaService : Service() {
         var anySent = false
         val done = ArrayList<String>()
         val failed = ArrayList<String>()
+        val why = ArrayList<String>()   // v7.111: the real reason per person, so the chat says what went wrong
         for ((label, aliases) in listOf("Papa" to BatteryRules.PAPA, "Mummy" to BatteryRules.MUMMY)) {
             var contact: CR? = null
-            for (a in aliases) { val c = resolveContact(a); if (c.err == null) { contact = c; break } }
-            if (contact == null) { failed.add(label); continue }
+            var lastErr = ""
+            // v7.111: allowRetry=false - a background SOS must never leave a "say the name again" question hanging in the chat
+            for (a in aliases) { val c = resolveContact(a, allowRetry = false); if (c.err == null) { contact = c; break } else lastErr = c.err.msg }
+            if (contact == null) { failed.add(label); why.add(label + ": " + lastErr.take(120)); continue }
             val latch = java.util.concurrent.CountDownLatch(1)
             val ok = AtomicBoolean(false)
             NovaAccessibilityService.armSend(text) { r -> ok.set(r); latch.countDown() }
@@ -4277,11 +4280,14 @@ class NovaService : Service() {
             if (pkg != null) intent.setPackage(pkg)
             val r = launch(intent, pkg, "WhatsApp chat")
             if (r.ok) { try { latch.await(25, java.util.concurrent.TimeUnit.SECONDS) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) } }
-            if (ok.get()) { anySent = true; done.add(label) } else failed.add(label)
+            if (ok.get()) { anySent = true; done.add(label) } else {
+                failed.add(label)
+                why.add(label + ": " + (if (!r.ok) tr("WhatsApp khul nahi paya (", "WhatsApp did not open (") + r.msg.take(100) + ")" else tr("WhatsApp khula par Send nahi dab paya (25 sec)", "WhatsApp opened but Send was not pressed (25 s)")))
+            }
             try { Thread.sleep(1500) } catch (e: InterruptedException) { ErrLog.add("NovaService", e.toString()) }
         }
         val msg = (if (done.isNotEmpty()) tr("Battery $pct percent: ${done.joinToString(" aur ")} ko WhatsApp bhej diya. ", "Battery $pct percent: WhatsApp sent to ${done.joinToString(" and ")}. ") else "") +
-            (if (failed.isNotEmpty()) tr("${failed.joinToString(" aur ")} ko nahi bhej paya (contact 'Papa'/'Mummy' naam se save hai? WhatsApp khul raha hai?).", "Could not send to ${failed.joinToString(" and ")} (is the contact saved as Papa / Mummy? does WhatsApp open?).") else "")
+            (if (failed.isNotEmpty()) tr("${failed.joinToString(" aur ")} ko nahi bhej paya. Wajah: ${why.joinToString(" | ")}", "Could not send to ${failed.joinToString(" and ")}. Reason: ${why.joinToString(" | ")}") else "")
         h.post { if (alive) say(msg) }
         return anySent
     }

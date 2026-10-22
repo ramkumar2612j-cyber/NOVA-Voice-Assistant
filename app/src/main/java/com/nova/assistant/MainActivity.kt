@@ -286,9 +286,14 @@ class MainActivity : Activity() {
     override fun onPause() {
         NovaService.uiVisible = false
         runJs(NativeSmooth.backgroundJs(true))   // v7.38 PART 3: the page pauses its CSS animations / effects
-        try { web.onPause() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
+        // v7.111: web.onPause() moved to onStop() - pausing the WebView here blanked the Recents thumbnail (white/black blocks)
         AutoTest.stop()   // Part 10: the 5-second feature watcher sleeps while the screen is closed
         super.onPause()
+    }
+
+    override fun onStop() {
+        try { web.onPause() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
+        super.onStop()
     }
 
     // ---- v7.38 PART 3: memory pressure -> the page lowers its effects level (NovaPerf), nothing is killed or restarted ----
