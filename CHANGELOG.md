@@ -1,3 +1,56 @@
+## v7.110 - PART 7/8 bada local brain (owner picks) + show / clear what NOVA learned, versionName 7.110
+- ADDED BrainChoiceRules (pure): RAM tiers (3B >= 8 GB, 1.5B >= 4 GB), option states, refusal rules (owner tap, RAM, storage, internet, Wi-Fi).
+- ADDED OfflinePack.OWNER_PICK (Qwen2.5-3B, tap only; NOT in MODELS, so the automatic pack loop never downloads it); byId finds it, tryOrder tries it first.
+- ADDED BrainChoice (Android, verified installOne, single flight, cancel), LearnedMemory (summary + clearAll of Playbook / Site / Capability stores), CapabilityLearningStore.clear().
+- ADDED bridge getBrainChoice / startBrainInstall / cancelBrainInstall / getLearnedSummary / clearJobLearning; Settings card "BADA BRAIN + NOVA NE KYA SEEKHA" (two-tap download, confirm before clear, honest 3 / 3); MADAD topic brainlearn.
+- Tests: BrainChoiceRulesTest (7), test_part7_brain_learned_contract (26), test_part7_render (20 headless). Older contract tests accept 7.110 / code 37.
+- Unchanged: 5-model automatic pack download (ExtCfg.autoModels), HARD DENY, protected screens.
+- NOT RUN: Kotlin compile, JUnit, GitHub Actions, phone. test_part20_contract and test_part4_fx_render fail on the untouched v7.109 zip too.
+
+## v7.109 - PART 6/8 learning + playbook update (site / blocker memory), versionName 7.109
+- NEW SiteLearningRules.kt (pure) + SiteLearningStore.kt: per owner-named HOST (<= 24 chars, never a path / query, bank / payment hosts never stored) and per job KIND, counters only: jobs that worked, which blocker ended the others (password / code / CAPTCHA wall, missing app, other) and route switches used. Newest 16 notes kept, old counters halve after 40.
+- NovaService (try/catch, ErrLog "NovaSiteLearning"): a short SITE MEMORY hint is added to the next job of the same kind / site (e.g. "a password wall stopped this site before: do every other step first, tell the owner early; do not retry the login"). Recorded once per job; login-wall NEEDS_OWNER and missing-app dead end set the blocker; CANCELLED and a plain "need your help" are not counted.
+- CapabilityLearningRules: new LOGIN gap for the Part 5 stop messages (password / code / CAPTCHA) with its own guidance. Old gaps unchanged.
+- Tests: SiteLearningRulesTest (14), test_part6_site_learning_contract (24 static checks). Older contract tests now accept 7.109 / code 36.
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.108 - PART 5/8 saved-login jobs (Gmail / Chrome), versionName 7.108
+- NEW LoginRules.kt (pure): detects password / code-or-phone-approval / CAPTCHA walls (mailbox text about OTPs is not a wall) and the account chooser; account-security taps (remove/delete account, recovery, 2-step, passkey, backup codes) denied in AgentRules.check; login rules added to mail/login/Google/Chrome jobs.
+- NovaService (try/catch): wall hint on the first step, then after 3 consecutive steps NEEDS_OWNER with the exact thing the owner must do; never types or stores a password/OTP, never solves a CAPTCHA, never fakes success. Chrome password-autofill taps stay blocked by the HARD DENY list (stated limit).
+- Tests: LoginRulesTest (8), test_part5_login_contract (17 PASS); 147/148 static tests PASS, only pre-existing test_part20_contract fails.
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.107 - PART 4/8 website operator (any URL), versionName 7.107
+- NEW WebOperatorRules.kt (pure): addresses from the owner's job (https only, no credentials/ports/IPs/localhost), bank/payment/HARD-DENY hosts denied, secret boxes (password/OTP/card/UPI PIN) never typed into, page text that gives orders to an AI is flagged as untrusted data.
+- NovaService (try/catch): named site opens in Chrome on a fresh job, denied site refused honestly, open_app can open a fixed or owner-named host through the existing openAppOrSite, WEB SAFETY note on injection text (max 3). AgentRules.check: typing into a password/code box is denied. Nothing stored (no URL, page text, typed text); no install.
+- Tests: WebOperatorRulesTest (9), test_part4_website_operator_contract (21 PASS); 146/147 static tests PASS, only pre-existing test_part20_contract fails.
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.106 - PART 3/8 alternatives engine (route switching inside one job), versionName 7.106
+- NEW AlternativesRules.kt (pure): ordered candidate routes per task kind (app labels / site hosts), `next(...)` skips tried routes, orders by playbook score, max 4 switches per job, never a denied/protected label. Hint only: the model still emits the action and AgentRules.check vets it.
+- NovaService hooks (try/catch): open_app FAILED, 3 failed taps in a row, existing stuck path -> `ROUTE SWITCH: <label> did not work; try <next>` in history + chat note; fixed hosts open through the existing openAppOrSite; no route left -> honest FAILED, never fake success; ledger progress line gets only a switch count. GENERIC jobs unchanged. Nothing is installed.
+- PlaybookStore.entries() (read-only). Tests: AlternativesRulesTest (12), test_part3_alternatives_contract (29 PASS); 145/146 static tests PASS, only pre-existing test_part20_contract fails.
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.105 - PART 2/8 playbook store (route memory), versionName 7.105
+- NEW PlaybookRules.kt (pure) + PlaybookStore.kt: per coarse task kind, which app route worked/failed (success credits all apps opened, failure charges the last one; prune, cap 5 routes/kind, decay); only a sanitised app label + counters are stored. Hint is added to the agent task; it never overrides the owner or safety.
+- 4 small try/catch hooks in NovaService (agentRun, agentDo open_app, agentFinish, per-job reset). NEEDS_OWNER/CANCELLED are neutral. v7.103 learning and Part 1 changes untouched.
+- Tests: PlaybookRulesTest (7), test_part2_playbook_contract (16 PASS); suite passes from project root except pre-existing test_part20_contract.
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.104 - PART 1/8 approval audit: no per-task yes/no, versionName 7.104
+- Audit: agent risky-tap and message/call confirmations were already default-off (skipRiskyConfirm / skipOrderConfirm). Remaining gaps fixed: connector WRITE actions now run at once via new `ExtCfg.skipConnectorConfirm` (default ON, old strict yes/no kept as the OFF path); planner prompt no longer demands spoken approval for messages/forms/sign-ins.
+- Unchanged on purpose: HARD DENY list (pay/buy/order/password/otp...), protected screens, one-time connect/disconnect/WRITE-permission prompts.
+- Tests: NEW test_part1_approval_contract (11 PASS); all 144 static tests run from project root pass except test_part20_contract, which also fails on v7.103 (pre-existing).
+- NOT RUN: Kotlin compile, Gradle/JUnit, APK, phone.
+
+## v7.103 - bounded capability-gap learning + recovery-first agent (source upgrade)
+- Added CapabilityLearningRules.kt and private CapabilityLearningStore.kt. When an agent task ends FAILED / NEEDS_OWNER, NOVA records only a coarse blocker category (accessibility, provider/quota, network, screen, stuck, missing app, permission, timeout or unknown); it does not store raw failure text, prompts, screen contents, voice, task details or keys.
+- Next agent tasks receive bounded guidance based on previous blocker patterns. The agent is explicitly told to identify prerequisites, finish safe independent steps, try one materially different safe route before giving up, verify the result, and report the exact blocker honestly.
+- Existing per-action safety checks, protected-screen handling, confirmation gates, step/time caps, and manual-only safe resume are unchanged. This is adaptive recovery guidance, not autonomous code-writing or automatic permission/key installation.
+- Tests: capability-learning static contract PASS; pure Kotlin rules compile PASS; existing agent contract, agent plan, agent restore, agent task ledger, security, self-improve, Vosk packaging, and Android runtime structural guards PASS.
+- NOT RUN: full Android Gradle build/JUnit, GitHub Actions, real phone, live provider/network, wake word, voice, calls, WhatsApp or background-service testing. This ZIP is a source upgrade, not a certified APK.
+
 ## v7.99 - OWNER FIRST: the AI does not talk over you (WhatsApp / Instagram), versionName 7.99
 - Owner request: when a message arrives and the owner answers / has seen it, the AI must not chat; the AI should look at the owner's last messages.
 - NEW ReplyPresenceRules.kt (pure, unit-tested). (1) The AI waits 25 s before sending. If the owner opens or swipes the chat notification, or the app cancels it (read in the app / on another device), the pending AI reply is dropped (history line "Aapne message dekh liya"). (2) If the owner's own line is the newest in the notification, the AI stays out of that person's chat for 15 min; after "seen" for 3 min. NOVA's own reply echoing back as a notification update is ignored (10 s). (3) The recent chat lines of the notification (incl. what the OWNER wrote) go to the AI as read-only context; secrets are dropped. A newer message from the same chat replaces the waiting one.
@@ -853,3 +906,13 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - ErrLog.addOnce (same source + message kept once). 76 empty `catch` blocks that hid real failures now log "quiet:<File>" via addOnce (17 files). The 106 cleanup-type ones (stop / release / close / unregister ...) stay silent on purpose. ErrLogTest +1.
 - Thread.sleep audit (NovaService, 26): all run on worker threads, interrupt is handled or caught by the outer catch (audioLoop catch Throwable), so no change. torch / volume sleeps are short (<=1 s).
 - NOT DONE on purpose: NovaService split (7,300 lines, private members everywhere: not safe without a compiler). NOT RUN: compile, JUnit, phone.
+
+## v7.104 - v7.110 (8-part "do any online job" plan, all add-only; compile + JUnit + phone NOT RUN)
+- v7.104 P1 approval audit: no per-task approval for safe jobs; risky actions still need a spoken local "yes"; HARD DENY words and protected screens unchanged.
+- v7.105 P2 playbook: PlaybookRules / PlaybookStore (what route worked per kind of job, coarse labels only).
+- v7.106 P3 alternatives engine: AlternativesRules (other safe routes when one is blocked).
+- v7.107 P4 website operator: WebOperatorRules (step plan for sites, untrusted page text, NEEDS_OWNER for CAPTCHA / OTP).
+- v7.108 P5 saved-login jobs: LoginRules (uses accounts already logged in; never types or stores passwords).
+- v7.109 P6 site / blocker learning: SiteLearningRules / SiteLearningStore, Gap.LOGIN.
+- v7.110 P7 bigger brain, owner picks: BrainChoiceRules, BrainChoice, OfflinePack.OWNER_PICK (Qwen2.5-3B, tap only, not in the automatic pack loop), LearnedMemory (show + clear Playbook / Site / Capability), CapabilityLearningStore.clear(), Settings card "BADA BRAIN + NOVA NE KYA SEEKHA", MADAD topic brainlearn, bridge getBrainChoice / startBrainInstall / cancelBrainInstall / getLearnedSummary / clearJobLearning.
+- Open decision: 1.5B and other pack models still auto-download on Wi-Fi + charging when ExtCfg.autoModels is ON (v6.96); only the 3B is tap-only.

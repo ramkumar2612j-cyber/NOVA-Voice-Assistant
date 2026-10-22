@@ -2137,6 +2137,26 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun setStopPowersOff(on: Boolean): String { ExtCfg.setStopPowersOff(this@MainActivity, on); return "ok" }
 
+        // ---- v7.110 PART 7: BADA BRAIN card (owner-tap download) + what NOVA learned (show / clear all three stores) ----
+        @JavascriptInterface
+        fun getBrainChoice(): String = BrainChoice.stateJson(this@MainActivity)
+
+        /** Starts ONE bigger offline brain download. Only the card's confirmed button calls this. Answers "started" or a short reason; the end comes through window.onBrainInstall(ok, text). */
+        @JavascriptInterface
+        fun startBrainInstall(id: String): String = BrainChoice.start(this@MainActivity, id.take(24)) { ok, msg ->
+            runJs("window.onBrainInstall&&onBrainInstall(" + ok + "," + org.json.JSONObject.quote(msg.take(120)) + ")")
+        }
+
+        @JavascriptInterface
+        fun cancelBrainInstall(): String { BrainChoice.cancel(); return "ok" }
+
+        @JavascriptInterface
+        fun getLearnedSummary(): String = LearnedMemory.summary(this@MainActivity)
+
+        /** Clears playbook + site + capability learning (NOT the older LearnStore: that one keeps its own clearLearned). Returns the number of stores cleared ("3" = all). */
+        @JavascriptInterface
+        fun clearJobLearning(): String = LearnedMemory.clearAll(this@MainActivity).toString()
+
         // ---- v7.69 PART 18: safe mode after repeated crashes ----
         @JavascriptInterface
         fun getSafeMode(): Boolean = CrashGuardStore.isSafe(this@MainActivity)

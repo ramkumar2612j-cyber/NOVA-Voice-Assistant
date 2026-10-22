@@ -50,7 +50,15 @@ object OfflinePack {
         Model("deepseek-r1-15b", "DeepSeek-R1 Distill 1.5B", "DeepSeek", "CN", "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "q4_k_m\\.gguf$", T_DEEPSEEK, 5000, 800 * MB, 1600 * MB)
     )
 
-    fun byId(id: String): Model? = MODELS.firstOrNull { it.id == id }
+    /**
+     * v7.110 PART 7: brains that are NEVER downloaded by the automatic pack loop (they are not in [MODELS], so [toDownload] and
+     * [runnable] ignore them). The owner starts them with a tap (BrainChoice). Qwen2.5-3B-Instruct Q4_K_M is about 2 GB.
+     */
+    val OWNER_PICK: List<Model> = listOf(
+        Model("qwen25-3b", "Qwen2.5 3B", "Alibaba", "CN", "Qwen/Qwen2.5-3B-Instruct-GGUF", "q4_k_m\\.gguf$", T_CHATML, 6000, 1500 * MB, 2600 * MB)
+    )
+
+    fun byId(id: String): Model? = MODELS.firstOrNull { it.id == id } ?: OWNER_PICK.firstOrNull { it.id == id }
 
     /** A file picked from the repo list. */
     class PackFile(val path: String, val size: Long, val sha256: String)
@@ -102,7 +110,8 @@ object OfflinePack {
 
     /** Installed models in try-order. [installed] = id -> path of files that exist. */
     fun tryOrder(installed: Map<String, String>): List<Pair<Model, String>> =
-        MODELS.mapNotNull { m -> installed[m.id]?.let { Pair(m, it) } }
+        OWNER_PICK.mapNotNull { m -> installed[m.id]?.let { Pair(m, it) } } +   // v7.110: an owner-picked bigger brain is tried first
+            MODELS.mapNotNull { m -> installed[m.id]?.let { Pair(m, it) } }
 
     /** One short status sentence for the self-test log. */
     fun statusLine(installed: Set<String>, totalRamMb: Long): String {

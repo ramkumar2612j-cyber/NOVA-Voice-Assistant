@@ -13,7 +13,7 @@ MAP={'call':'Call karna','whatsapp':'WhatsApp / WhatsApp Business','alarm':'Alar
 'recording':'Background audio recording','live':'Mausam','questions':'Sawal ka jawab','wabiz':'WhatsApp Business watch',
 'autoreply':'Auto reply','connectors':"CONN('github'",'routines':'Routines','lockguard':'Lock guard','teach':'Teach once',
 'powerguide':'Background me chalte rehna','gmail':'Gmail','agent':'Agent: doosre app me kaam','screenalert':'Screen alert',
-'watchmic':'Watch mic','quiet':'Chup aur Quiet','offlineai':'Phone AI','leads':'Business leads','limits':'API limits',
+'watchmic':'Watch mic','quiet':'Chup aur Quiet','offlineai':'Phone AI','brainlearn':'Phone AI','leads':'Business leads','limits':'API limits',
 'persona':'Jarvis andaaz','callanswer':'Call uthana / kaatna','calendar':'Aaj ka schedule (calendar)','analysis':'Photo / video ANALYSE karna','roundabout':'Ghuma ke bole kaam','featurestatus':'Apne aap test','photoedit':'Photo edit (professional','sitemedia':'Website ke liye apni photo','chathistory':'Meri chats (history','batterysos':'Battery kam: yaad','waitsec':'Bolne ke baad kitna rukna','musicplay':'Gaana chalana (Spotify','media':'Media: Share karke bhejna','frames':'Video se frames nikalna','switches':'Settings ke 3 switch','safemode':'Safe mode (crash ke baad)'}
 bad=[]
 for t in topics:

@@ -108,6 +108,12 @@ object ExtCfg {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("skip_order_confirm", true)
     } catch (e: Exception) { true }
 
+    /** v7.104 PART 1 owner request: no yes/no before a connector WRITE action (GitHub, Vercel, ...). Default ON = never ask per task.
+     *  The one-time WRITE permission per connector (voice "<name> write on") and connect/disconnect still ask: that is setup, not a task. */
+    fun skipConnectorConfirm(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("skip_connector_confirm", true)
+    } catch (e: Exception) { true }
+
     private const val FREE_CHAIN = "free_chain"
     private const val FREE_KEYLESS = "free_keyless"
 
