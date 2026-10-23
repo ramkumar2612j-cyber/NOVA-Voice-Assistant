@@ -49,7 +49,7 @@ jobs:
         run: gradle --no-daemon testDebugUnitTest assembleDebug
       - name: Show APK version
         run: |
-          echo "### NOVA v6.97 built, versionCode $NOVA_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "### NOVA v7.113 built, versionCode $NOVA_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4

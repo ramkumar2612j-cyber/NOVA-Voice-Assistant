@@ -1,4 +1,4 @@
-## v7.113 - hang / battery fix + car-horn false wake (versionName stays 7.110: older contract tests pin it)
+## v7.113 - hang / battery fix + car-horn false wake (versionName 7.113)
 - CHANGED ui.html: GRAPHICS QUALITY default = SMOOTH (one-time migration of a stored AUTO; SHARP kept). In SMOOTH the 7 looping animations use a ~333 ms timer instead of requestAnimationFrame (0 rAF wake-ups/s, was ~300), timers < 600 ms run at 600 ms, the v7.37 perf governor stays idle. Measured headless (4x CPU throttle): effects ON 43 % main-thread, SMOOTH before 6.2 %, SMOOTH now 1.2 %.
 - ADDED Logic.wakeVerified + NovaService: wake recognizer setWords(true); only a verified FINAL result wakes (word conf >= 0.75, length 0.18-1.10 s). Stops car horns / beeps forced into "nova" by the 3-entry grammar. Wake is about 0.3-0.5 s later.
 - Tests: HornGuardTest (7), test_v7113_smooth_default.py; 4 older UI tests now choose AUTO explicitly. kotlinc compile 0 errors, JUnit 1538 OK, run_all_checks 156/156 PASS.
