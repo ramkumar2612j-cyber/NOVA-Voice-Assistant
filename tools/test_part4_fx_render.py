@@ -22,7 +22,7 @@ with sync_playwright() as p:
         return pg.evaluate('(function(i){var c=document.getElementById(i),x=c.getContext("2d"),d=x.getImageData(0,0,c.width,c.height).data,n=0;for(var k=3;k<d.length;k+=16)if(d[k]>8)n++;return n})("%s")' % id)
     for (w, h) in [(320, 640), (360, 700), (412, 800), (800, 900)]:
         ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2)
-        pg = ctx.new_page(); pg.add_init_script(BR)
+        pg = ctx.new_page(); pg.add_init_script('try{localStorage.setItem("nova_q_mig1","1");localStorage.setItem("nova_q","auto")}catch(e){}'); pg.add_init_script(BR)
         pg.on('pageerror', lambda e: bad.append('js error: ' + str(e)[:150]))
         pg.goto('file://' + os.path.abspath(UI))
         try: pg.wait_for_function('document.body.classList.contains("ready")', timeout=25000)
@@ -78,7 +78,7 @@ with sync_playwright() as p:
         ctx.close()
     # reduced motion: still draws, stars do not move
     ctx = b.new_context(viewport={'width': 360, 'height': 700}, device_scale_factor=2, reduced_motion='reduce')
-    pg = ctx.new_page(); pg.add_init_script(BR); pg.on('pageerror', lambda e: bad.append('js error: ' + str(e)[:150]))
+    pg = ctx.new_page(); pg.add_init_script('try{localStorage.setItem("nova_q_mig1","1");localStorage.setItem("nova_q","auto")}catch(e){}'); pg.add_init_script(BR); pg.on('pageerror', lambda e: bad.append('js error: ' + str(e)[:150]))
     pg.goto('file://' + os.path.abspath(UI)); pg.wait_for_function('document.body.classList.contains("ready")', timeout=25000)
     pg.evaluate('window.__forceLow=false;document.documentElement.classList.remove("lowfx")'); pg.wait_for_timeout(1200)
     if count(pg, 'p4_core') < 200 or count(pg, 'p4_stars') < 20: bad.append('reduced-motion: canvases empty')

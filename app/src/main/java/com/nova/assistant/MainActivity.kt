@@ -2198,6 +2198,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun setHomeCity(city: String): String = ExtCfg.setHomeCity(this@MainActivity, city.take(80))
 
+        @JavascriptInterface
+        fun getSosNumber(who: String): String = ExtCfg.sosNumber(this@MainActivity, who.take(10))
+
+        /** v7.111: returns the cleaned number that was saved ("" when it was not a valid number). */
+        @JavascriptInterface
+        fun setSosNumber(who: String, number: String): String = ExtCfg.setSosNumber(this@MainActivity, who.take(10), number.take(40))
+
         /** One JSON object: switches, the 5 browsers with REAL call counts / state, savings counters, whether the on-device AI is installed. */
         @JavascriptInterface
         fun getBrowserStatus(): String = try {

@@ -45,7 +45,7 @@ def runtime():
         pg = ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
         init = FAKE + "window.__fakeTier=%s;" % json.dumps(tier)
-        if q: init += "try{localStorage.setItem('nova_q',%s)}catch(e){}" % json.dumps(q)
+        init += "try{localStorage.setItem('nova_q_mig1','1');localStorage.setItem('nova_q',%s)}catch(e){}" % json.dumps(q or 'auto')   # v7.113: default is SMOOTH now
         if stored: init += "try{localStorage.setItem('nova_perf',%s)}catch(e){}" % json.dumps(json.dumps(stored))
         pg.add_init_script(init)
         pg.goto(url); pg.wait_for_function("window.NovaPerf", timeout=20000)

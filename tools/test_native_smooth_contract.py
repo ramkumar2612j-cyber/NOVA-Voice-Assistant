@@ -35,7 +35,7 @@ def runtime():
     FAKE = "window.Android=new Proxy({},{get:function(t,k){return function(){return k==='getTier'?'high':''}}});"
     def page():
         ctx = b.new_context(viewport={'width': 412, 'height': 800}); pg = ctx.new_page(); errs = []
-        pg.on('pageerror', lambda e: errs.append(str(e))); pg.add_init_script(FAKE)
+        pg.on('pageerror', lambda e: errs.append(str(e))); pg.add_init_script('try{localStorage.setItem("nova_q_mig1","1");localStorage.setItem("nova_q","auto")}catch(e){}'); pg.add_init_script(FAKE)
         pg.goto('file://' + os.path.abspath(UI)); pg.wait_for_function("!!(window.NovaPerf&&window.novaNative)", timeout=60000)
         pg.evaluate("NovaPerf._halt()"); return ctx, pg, errs
     def chk(c, m):

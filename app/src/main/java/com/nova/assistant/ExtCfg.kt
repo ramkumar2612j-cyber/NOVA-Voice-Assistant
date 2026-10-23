@@ -248,6 +248,20 @@ object ExtCfg {
         try { ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("home_city", clean).apply() } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
         return clean
     }
+    /** v7.111: the owner types Papa's / Mummy's number once in Settings; the battery SOS uses it first (no contact search). who = "papa" or "mummy". */
+    fun sosNumber(ctx: Context, who: String): String = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("sos_" + who, "") ?: ""
+    } catch (e: Exception) { "" }
+
+    /** Keeps digits and one leading +, 7 to 15 digits; anything else clears the number. Returns the saved value ("" = cleared). */
+    fun setSosNumber(ctx: Context, who: String, raw: String): String {
+        if (who != "papa" && who != "mummy") return ""
+        val t = raw.trim()
+        val digits = t.filter { it.isDigit() }
+        val clean = if (digits.length in 7..15) (if (t.startsWith("+")) "+" else "") + digits else ""
+        try { ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("sos_" + who, clean).apply() } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+        return clean
+    }
     private const val STOP_OFF = "stop_powers_off"   // v7.39 PART 4
 
     /** v7.39 PART 4: does the floating card's STOP button also switch NOVA off? Default NO: STOP only stops talking / the job. PART 17 adds the Settings switch. */

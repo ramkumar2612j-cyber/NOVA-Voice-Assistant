@@ -41,3 +41,7 @@ Parts 1-8 now ALSO compiled (kotlinc 2.0.21, 0 errors) and JUnit 1528/1528 PASS,
 
 ## UPDATE 22 Oct 2026 night (owner phone feedback)
 See bottom of `PART_STATUS_v7_110_ALL8_VERIFIED.md`. Added AccessHintRules (accessibility ON-but-not-connected wording). Still open, need owner data: TV false wake, 'samajh nahi aaya' after wake (check keys / Hindi pack in the notification), UI lag, website quality.
+
+
+## UPDATE 23 Oct 2026 (v7.113)
+See `PART_STATUS_v7_113_SMOOTH_DEFAULT.md` and CHANGELOG v7.113: SMOOTH is the default graphics quality, loops wake ~0 times/s in SMOOTH, car-horn false wake guarded (`Logic.wakeVerified`). versionName stays 7.110. Open: owner phone result for hang / battery / horn; tune thresholds from it.

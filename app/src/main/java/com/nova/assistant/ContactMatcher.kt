@@ -47,6 +47,8 @@ object ContactMatcher {
         val scored = merged.values.mapNotNull { (id, group) ->
             val name = group.first().displayName
             val nameBasic = basic(name)
+            // v7.111: a name made only of emoji / fancy-font letters becomes "" here, and "" is "contained" in every query -> it matched everybody
+            if (nameBasic.isBlank()) return@mapNotNull null
             val qFold = fold(q)
             val nFold = fold(nameBasic)
             val qt = q.split(" ").filter { it.isNotBlank() }
@@ -58,7 +60,7 @@ object ContactMatcher {
                 qt.isNotEmpty() && qt == nt -> 0.94
                 qt.isNotEmpty() && qt.all { it in nt } -> 0.89
                 q in nameBasic || nameBasic in q -> 0.83
-                qt.any { token -> nt.any { it.startsWith(token) || token.startsWith(it) } } -> 0.78
+                qt.any { token -> nt.any { it.startsWith(token) || (it.length >= 2 && token.startsWith(it)) } } -> 0.78   // v7.111: a one-letter name part ("P", "M") is no match for every word that starts with it
                 else -> {
                     val compactQ = qFold.replace(" ", "")
                     val compactN = nFold.replace(" ", "")

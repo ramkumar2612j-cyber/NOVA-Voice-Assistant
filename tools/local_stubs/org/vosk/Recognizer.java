@@ -9,5 +9,6 @@ public class Recognizer {
     public String getPartialResult() { return ""; }
     public String getFinalResult() { return ""; }
     public void reset() {}
+    public void setWords(boolean b) {}
     public void close() {}
 }

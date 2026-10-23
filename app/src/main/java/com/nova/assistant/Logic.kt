@@ -102,6 +102,32 @@ object Logic {
         return !(t.isNotEmpty() && t[0] == "[unk]") || isFinal
     }
 
+    // v7.113 horn / traffic guard. A grammar-limited recognizer ("nova", "hey nova", "[unk]") is FORCED to pick one of those, so a car horn,
+    // a clap or a TV beep often comes out as "nova". With setWords(true) the final result carries a confidence and the start/end of each word.
+    // A real spoken "nova" is short and confident; a horn mapped to "nova" is low-confidence or far too long. No word data = cannot judge = allowed.
+    const val WAKE_MIN_CONF = 0.75
+    const val WAKE_MIN_WORD_S = 0.18
+    const val WAKE_MAX_WORD_S = 1.10
+
+    private fun numAfter(obj: String, key: String): Double? =
+        Regex("\"" + key + "\"\\s*:\\s*(-?[0-9.]+(?:[eE][-+]?[0-9]+)?)").find(obj)?.groupValues?.get(1)?.toDoubleOrNull()
+
+    fun wakeVerified(json: String, wake: String): Boolean {
+        var judged = false
+        for (m in Regex("\\{[^{}]*\\}").findAll(json)) {
+            val o = m.value
+            val w = Regex("\"word\"\\s*:\\s*\"([^\"]*)\"").find(o)?.groupValues?.get(1) ?: continue
+            if (w != wake) continue
+            val conf = numAfter(o, "conf") ?: continue
+            val st = numAfter(o, "start") ?: continue
+            val en = numAfter(o, "end") ?: continue
+            judged = true
+            val dur = en - st
+            if (conf >= WAKE_MIN_CONF && dur >= WAKE_MIN_WORD_S && dur <= WAKE_MAX_WORD_S) return true
+        }
+        return !judged
+    }
+
     // ---------------------------------------------------------------- strict wake: only a real "nova" wakes NOVA
 
     const val WAKE_CONFIRM_HITS = 4          // v6.55 (was 2): the wake word must stay in this many consecutive recognizer results (~0.4 s); a final result still counts at once

@@ -23,7 +23,7 @@ var cr=CanvasRenderingContext2D.prototype.clearRect;CanvasRenderingContext2D.pro
 def boot(b, q, w=360, h=700):
     ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1)
     pg = ctx.new_page()
-    pg.add_init_script('try{localStorage.setItem("nova_q","%s")}catch(e){}' % q if q else '')
+    pg.add_init_script('try{localStorage.setItem("nova_q_mig1","1");localStorage.setItem("nova_q","%s")}catch(e){}' % (q or 'auto'))   # v7.113: default is SMOOTH now, so 'AUTO' must be chosen explicitly
     pg.add_init_script(BR); pg.add_init_script(COUNT)
     pg.on('pageerror', lambda e: bad.append('%s js error: %s' % (q, str(e)[:150])))
     pg.goto('file://' + os.path.abspath(UI))

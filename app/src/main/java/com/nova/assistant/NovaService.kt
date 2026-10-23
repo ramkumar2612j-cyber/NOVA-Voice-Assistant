@@ -984,6 +984,7 @@ class NovaService : Service() {
             curWake = wakeWord
             Logic.setWake(wakeWord)          // a custom wake word must never stay inside the command text
             val wk = Recognizer(md, RATE.toFloat(), Logic.wakeGrammar(wakeWord))
+            try { wk.setWords(true) } catch (t: Throwable) { }   // v7.113: word confidence + length so a horn / beep is not taken for "nova"
             wake = wk
             val cmModel = loadCommandModel()   // en-in for commands; wake word and vocabulary stay on model-en
             cmdModel = cmModel
@@ -1230,7 +1231,10 @@ class NovaService : Service() {
                         if (wakeNow && (peak < maxOf(1100.0, noise * 3.5) * WakeAdapt.scale(wakeMiss, wakeMissAt, System.currentTimeMillis()) || System.currentTimeMillis() - lastCaptureEnd < Logic.WAKE_COOLDOWN_MS)) {
                             wk.reset()                 // too faint or too soon: a false wake (TV, room noise, echo of our voice)
                             wakeHits = 0
-                        } else if (wakeNow && Logic.wakeConfirmed(wakeHits, done)) {
+                        } else if (wakeNow && done && !Logic.wakeVerified(txt, wakeWord)) {
+                            wk.reset()                 // v7.113: low confidence or wrong length: a horn, clap or beep, not the spoken word
+                            wakeHits = 0
+                        } else if (wakeNow && done && Logic.wakeConfirmed(wakeHits, done)) {   // v7.113: only a verified FINAL result wakes (a long partial "nova" was how a horn got through)
                             wakeHits = 0
                             wakeCount++
                             followCount = 0
@@ -4269,8 +4273,10 @@ class NovaService : Service() {
         for ((label, aliases) in listOf("Papa" to BatteryRules.PAPA, "Mummy" to BatteryRules.MUMMY)) {
             var contact: CR? = null
             var lastErr = ""
+            val savedNo = ExtCfg.sosNumber(this, label.lowercase())   // v7.111: the number typed in Settings wins over any contact search
+            if (savedNo.isNotBlank()) contact = CR(label, savedNo, null)
             // v7.111: allowRetry=false - a background SOS must never leave a "say the name again" question hanging in the chat
-            for (a in aliases) { val c = resolveContact(a, allowRetry = false); if (c.err == null) { contact = c; break } else lastErr = c.err.msg }
+            if (contact == null) for (a in aliases) { val c = resolveContact(a, allowRetry = false); if (c.err == null) { contact = c; break } else lastErr = c.err.msg }
             if (contact == null) { failed.add(label); why.add(label + ": " + lastErr.take(120)); continue }
             val latch = java.util.concurrent.CountDownLatch(1)
             val ok = AtomicBoolean(false)
