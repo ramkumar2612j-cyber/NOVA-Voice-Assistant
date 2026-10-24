@@ -283,6 +283,156 @@ class NovaAccessibilityService : AccessibilityService() {
         }
 
 
+        // ------------------------------------------------------------------ v7.114 REEL helpers (used only by ReelRunner)
+        // Short, bounded actions on the video app that is in front. Every one refuses protected apps (Control.blocked), never reads or types into password fields,
+        // never waits more than a few seconds, and returns a Ctl so the runner can say honestly what worked.
+
+        /** The window of the app in front: NOVA's own window is skipped (the owner talks to NOVA while the reel is on top). */
+        private fun reelRoot(): AccessibilityNodeInfo? {
+            val s = instance ?: return null
+            var root = s.rootInActiveWindow
+            if (root == null || root.packageName?.toString() == s.packageName) { val alt = otherAppRoot(s); if (alt != null) root = alt }
+            return root
+        }
+
+        /** Package name of the app in front (NOVA skipped), or null. */
+        fun reelPackage(): String? = try { reelRoot()?.packageName?.toString() } catch (e: Exception) { null }
+
+        /** Visible node whose description or text IS one of [labels] (case-insensitive, trimmed). First match in tree order. */
+        private fun reelFind(root: AccessibilityNodeInfo?, labels: List<String>, depth: Int = 0): AccessibilityNodeInfo? {
+            if (root == null || depth > 30) return null
+            try {
+                if (!root.isVisibleToUser) return null
+                if (!root.isPassword) {
+                    val d = root.contentDescription?.toString()?.trim()?.lowercase()
+                    val tx = root.text?.toString()?.trim()?.lowercase()
+                    if ((!d.isNullOrEmpty() && d in labels) || (!tx.isNullOrEmpty() && tx in labels)) return root
+                }
+                for (i in 0 until root.childCount) { val r = reelFind(root.getChild(i), labels, depth + 1); if (r != null) return r }
+            } catch (e: Exception) { /* node went away while walking */ }
+            return null
+        }
+
+        /** True when a visible node with exactly one of these labels exists ("unlike", "liked" ...). */
+        fun reelHas(labels: List<String>): Boolean = try { reelFind(reelRoot(), labels.map { it.lowercase() }) != null } catch (e: Exception) { false }
+
+        /** Click the first visible node that is exactly one of [labels]. code: ok, no_acc, no_window, blocked, not_found, failed. */
+        fun reelTap(labels: List<String>): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            val root = reelRoot() ?: return Ctl(false, "no_window")
+            if (Control.blocked(root.packageName?.toString(), s.packageName, "tap")) return Ctl(false, "blocked")
+            val n = reelFind(root, labels.map { it.lowercase() }) ?: return Ctl(false, "not_found")
+            return if (s.clickNode(n)) Ctl(true, "ok") else Ctl(false, "failed")
+        }
+
+        /** Visible text lines of the app in front (for checks like "is my comment on the screen"). Password fields are never read. */
+        fun reelLines(): List<String> {
+            val root = reelRoot() ?: return emptyList()
+            val s = instance ?: return emptyList()
+            if (Control.blocked(root.packageName?.toString(), s.packageName, "tap")) return emptyList()
+            val out = ArrayList<String>()
+            try { collect(root, 0, out, false) } catch (e: Exception) { /* ignore */ }
+            return out
+        }
+
+        /** Click the first visible, NOT editable node whose description or text CONTAINS one of [parts] (profile grid tiles, a name in a share list). */
+        fun reelTapContains(parts: List<String>): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            val root = reelRoot() ?: return Ctl(false, "no_window")
+            if (Control.blocked(root.packageName?.toString(), s.packageName, "tap")) return Ctl(false, "blocked")
+            val low = parts.map { it.lowercase() }.filter { it.isNotEmpty() }
+            var found: AccessibilityNodeInfo? = null
+            fun walk(n: AccessibilityNodeInfo?, depth: Int) {
+                if (n == null || depth > 30 || found != null) return
+                try {
+                    if (!n.isVisibleToUser) return
+                    if (!n.isPassword && !n.isEditable) {
+                        val d = n.contentDescription?.toString()?.lowercase() ?: ""
+                        val tx = n.text?.toString()?.lowercase() ?: ""
+                        if (low.any { d.contains(it) || tx.contains(it) }) { found = n; return }
+                    }
+                    for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
+                } catch (e: Exception) { /* ignore */ }
+            }
+            walk(root, 0)
+            val n = found ?: return Ctl(false, "not_found")
+            return if (s.clickNode(n)) Ctl(true, "ok") else Ctl(false, "failed")
+        }
+
+        /** True when a visible text box (comment / search) is open. Password boxes do not count. */
+        fun reelHasEditable(): Boolean {
+            val root = reelRoot() ?: return false
+            var yes = false
+            fun walk(n: AccessibilityNodeInfo?, depth: Int) {
+                if (n == null || depth > 30 || yes) return
+                try {
+                    if (!n.isVisibleToUser) return
+                    if (n.isEditable && !n.isPassword) { yes = true; return }
+                    for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
+                } catch (e: Exception) { /* ignore */ }
+            }
+            walk(root, 0)
+            return yes
+        }
+
+        private fun reelGesture(x1: Float, y1: Float, x2: Float, y2: Float, ms: Long, taps: Int = 1): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            val dm = s.resources.displayMetrics
+            val b = GestureDescription.Builder()
+            for (k in 0 until taps) {
+                val p = Path()
+                p.moveTo(x1 * dm.widthPixels, y1 * dm.heightPixels)
+                if (x1 != x2 || y1 != y2) p.lineTo(x2 * dm.widthPixels, y2 * dm.heightPixels)
+                b.addStroke(GestureDescription.StrokeDescription(p, k * 120L, ms))
+            }
+            val latch = CountDownLatch(1)
+            var done = false
+            val accepted = s.dispatchGesture(b.build(), object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(gestureDescription: GestureDescription?) { done = true; latch.countDown() }
+                override fun onCancelled(gestureDescription: GestureDescription?) { latch.countDown() }
+            }, null)
+            if (!accepted) return Ctl(false, "failed")
+            try { latch.await(2000, TimeUnit.MILLISECONDS) } catch (e: InterruptedException) { ErrLog.add("NovaAccessibilityService", e.toString()) }
+            return if (done) Ctl(true, "ok") else Ctl(false, "failed")
+        }
+
+        /** Next reel (finger moves up) or previous reel (finger moves down). A quick swipe so the pager really moves. */
+        fun reelSwipe(next: Boolean): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            if (Control.blocked(reelPackage(), s.packageName, "scroll")) return Ctl(false, "blocked")
+            return if (next) reelGesture(0.5f, 0.80f, 0.5f, 0.25f, 180) else reelGesture(0.5f, 0.30f, 0.5f, 0.78f, 180)
+        }
+
+        /** Double tap in the middle of the video = like (the app's own gesture). Used when the heart button cannot be found. */
+        fun reelDoubleTap(): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            if (Control.blocked(reelPackage(), s.packageName, "tap")) return Ctl(false, "blocked")
+            return reelGesture(0.5f, 0.42f, 0.5f, 0.42f, 40, taps = 2)
+        }
+
+        /** Type [text] into the visible comment / search box (the one whose hint or description says "comment" / "search" first, else the first editable). */
+        fun reelType(text: String, hints: List<String>): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            val root = reelRoot() ?: return Ctl(false, "no_window")
+            if (Control.blocked(root.packageName?.toString(), s.packageName, "type")) return Ctl(false, "blocked")
+            val boxes = ArrayList<AccessibilityNodeInfo>()
+            fun walk(n: AccessibilityNodeInfo?, depth: Int) {
+                if (n == null || depth > 30 || boxes.size > 8) return
+                try {
+                    if (!n.isVisibleToUser) return
+                    if (n.isEditable && !n.isPassword) boxes.add(n)
+                    for (i in 0 until n.childCount) walk(n.getChild(i), depth + 1)
+                } catch (e: Exception) { /* ignore */ }
+            }
+            walk(root, 0)
+            if (boxes.isEmpty()) return Ctl(false, "no_focus")
+            val pick = boxes.firstOrNull { b ->
+                val h = ((b.hintText?.toString() ?: "") + " " + (b.contentDescription?.toString() ?: "") + " " + (b.text?.toString() ?: "")).lowercase()
+                hints.any { h.contains(it) }
+            } ?: boxes[0]
+            return setTextChecked(pick, Control.cleanTyped(text))
+        }
+
         // ------------------------------------------------------------------ task agent (v28)
         // Items of the last agentSnapshot(), so a later tap-by-index hits the same node. Worker thread only.
         private val agentRefs = ArrayList<AccessibilityNodeInfo>()

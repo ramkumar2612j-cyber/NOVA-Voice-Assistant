@@ -336,6 +336,49 @@ html.lowfx #sk_l .vc{content-visibility:auto;contain-intrinsic-size:auto 130px}
 <div id="uc"><div class="ucb" id="ucb"></div></div>
 <div id="panel">
 <h2>SETTINGS</h2>
+<div class="box" id="fam_box"><label style="margin-top:0">PAPA / MUMMY AUR KHAAS LOGON KE NUMBER</label>
+<small>Number yahan ek baar daalo, NOVA ke andar save ho jata hai. Phir "papa ko call karo" ya "mummy ko whatsapp bhejo" seedha isi number par jayega (contacts ki permission ya khoj ke bina). Battery 5% par bhi inhi par message jata hai. Bolkar bhi save ho sakta hai: "papa ka number 98765 43210 save karo".</small>
+<label for="fam_p">PAPA KA NUMBER</label>
+<input id="fam_p" type="text" inputmode="tel" maxlength="16" placeholder="jaise 9876543210" autocomplete="off">
+<label for="fam_m">MUMMY KA NUMBER</label>
+<input id="fam_m" type="text" inputmode="tel" maxlength="16" placeholder="jaise 9876543210" autocomplete="off">
+<label for="fam_n">AUR KISI KA NAAM + NUMBER (jaise Didi, Rahul)</label>
+<input id="fam_n" type="text" maxlength="24" placeholder="naam" autocomplete="off">
+<input id="fam_t" type="text" inputmode="tel" maxlength="16" placeholder="number" autocomplete="off">
+<div class="row"><button class="sm" id="fam_add">SAVE KARO</button></div>
+<div id="fam_l"></div>
+<small id="fam_s"></small>
+</div>
+<script id="pt19_family">(function(){try{
+var $=function(i){return document.getElementById(i)};
+var P=$('fam_p'),M=$('fam_m'),N=$('fam_n'),T=$('fam_t'),L=$('fam_l'),S=$('fam_s'),A=$('fam_add');
+if(!P||!M||!L)return;
+function say(m){if(S)S.textContent=m}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var count=0;
+function render(o){
+  if(document.activeElement!==P)P.value=o.papa||'';
+  if(document.activeElement!==M)M.value=o.mummy||'';
+  L.innerHTML='';count=(o.others||[]).length;
+  (o.others||[]).forEach(function(e){
+    var d=document.createElement('div');d.className='row';
+    var sp=document.createElement('span');sp.style.flex='1';sp.innerHTML=esc(e.label)+' &middot; '+esc(e.number);
+    var b=document.createElement('button');b.className='sm';b.textContent='HATAO';
+    b.onclick=function(){try{Android.setFamilyNumber(e.label,'')}catch(x){}load();say(e.label+' hata diya.')};
+    d.appendChild(sp);d.appendChild(b);L.appendChild(d)})}
+function load(){try{render(JSON.parse(Android.getFamilyJson()||'{}'))}catch(e){}}
+function one(el,who,label){return function(){try{var raw=el.value,r=Android.setFamilyNumber(who,raw);
+  if(r){el.value=r;say(label+' ka number save ho gaya.')}else if(String(raw).trim()===''){say(label+' ka number hata diya.')}else{say('Number sahi nahi laga (7 se 15 ank). Dobara daalo.')}}catch(e){}}}
+P.onchange=one(P,'papa','Papa');M.onchange=one(M,'mummy','Mummy');
+if(A)A.onclick=function(){try{
+  var nm=(N.value||'').trim(),no=(T.value||'').trim();
+  if(!nm&&!no){say('Naam aur number daalo.');return}
+  if(count>=12){say('List full hai (12 log). Ek hatao.');return}
+  var r=Android.setFamilyNumber(nm,no);
+  if(r){N.value='';T.value='';load();say(nm+' ka number save ho gaya.')}else{say('Naam (sirf akshar, 2 se 24) aur number (7 se 15 ank) sahi daalo.')}
+}catch(e){}};
+load();setTimeout(load,1500);setTimeout(load,4000);
+}catch(e){}})();</script>
 <div class="box" id="fcc"><label style="margin-top:0">SAARE FEATURES <span id="fcc_n"></span></label><small>Har feature ki asli sthiti (ON/OFF) aur uska option ek jagah. Button dabao: ya to Android ki sahi setting khulegi, ya neeche wala option chamkega.</small><div id="fcc_l"></div></div>
 <div class="box" id="wb_box"><!-- BROWSERS-UI -->
 <small>NOVA in 5 free web sources se asli jawab laata hai. Sirf chhota topic / shehar / currency bheja jaata hai, poora vaakya ya yaad nahi. Live cheez (mausam, khabar, rate) kabhi AI se banwa kar nahi di jaati: na mile to "abhi nahi mila" bolta hai.</small>
@@ -4438,11 +4481,12 @@ window.addEventListener('error',function(e){try{L('js_error',(e&&e.message?e.mes
    every JS function Kotlin calls exists, the key elements and the new scripts exist, and answers with Android.verifyPage(json). Read-only: it clicks nothing and reads no typed text. */
 (function(){try{
 var d=document;
-var BRIDGE=["getSosNumber", "setSosNumber", "getBrainChoice", "startBrainInstall", "cancelBrainInstall", "getLearnedSummary", "clearJobLearning", "actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow", "tradeAnalyse", "tradeCard", "tradeOpenMt5", "tradePractice", "tradeResetPractice", "tradeSendDemo", "tradeSendReal", "tradeSetBalance", "tradeSetRisk", "tradeSetSymbols", "tradeSettle", "tradeSetFilters"];
+var BRIDGE=["getFamilyJson", "setFamilyNumber", "getSosNumber", "setSosNumber", "getBrainChoice", "startBrainInstall", "cancelBrainInstall", "getLearnedSummary", "clearJobLearning", "actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow", "tradeAnalyse", "tradeCard", "tradeOpenMt5", "tradePractice", "tradeResetPractice", "tradeSendDemo", "tradeSendReal", "tradeSetBalance", "tradeSetRisk", "tradeSetSymbols", "tradeSettle", "tradeSetFilters"];
 var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMediaIntake", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup", "onChatPhotoGo", "onChatPhotoNo", "onTradeAnalysis", "onTradeSent", "onTradeSettled"];
 var IDS=['clog','c_in','c_send','c_thw','c_thumb','c_auto','p4_core','p4_stars','btn','autoT','c_imode','chatb','st','p6_board','p6_dock'];
-var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify','p6_home','p7_motion','pt8_chat','pt9_persona','pt10_wire','pt11_media','pt12_frames','pt13_analyse','pt13d_chat','pt14_laser','pt17_switches','pt7_brain_learned','pt18_safe'];
+var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify','p6_home','p7_motion','pt8_chat','pt9_persona','pt10_wire','pt11_media','pt12_frames','pt13_analyse','pt13d_chat','pt14_laser','pt17_switches','pt7_brain_learned','pt18_safe','pt19_family'];
 window.p6Verify=function(){try{
+  if(d.readyState!=='complete')return null;   // v7.114: a half-parsed page (slow phone) is not a bug: answer only after the whole page loaded
   var mb=[],mc=[],mi=[],ms=[];
   for(var i=0;i<BRIDGE.length;i++){var ok=false;try{ok=(typeof Android!=='undefined')&&typeof Android[BRIDGE[i]]==='function'}catch(e){}if(!ok)mb.push(BRIDGE[i])}
   for(i=0;i<CB.length;i++){if(typeof window[CB[i]]!=='function')mc.push(CB[i])}
@@ -4452,7 +4496,7 @@ window.p6Verify=function(){try{
   if(typeof Android!=='undefined'&&typeof Android.verifyPage==='function')Android.verifyPage(JSON.stringify(r));
   return r
 }catch(e){return null}};
-setTimeout(function(){try{window.p6Verify()}catch(e){}},3500);   // v7.100: the page pushes its answer once by itself, so Kotlin never waits for a paused WebView
+(function(){var n=0;function go(){try{if(d.readyState!=='complete'&&n++<40){setTimeout(go,1500);return}setTimeout(function(){try{window.p6Verify()}catch(e){}},1500)}catch(e){}}setTimeout(go,3500)})();   // v7.100: the page pushes its answer once by itself, so Kotlin never waits for a paused WebView
 var rep='';
 function box(){var b=d.getElementById('p6_box');if(b)return b;var a=d.getElementById('autoT');if(!a||!a.parentNode)return null;
   b=d.createElement('div');b.id='p6_box';b.className='status';b.style.cssText='display:none;cursor:pointer';

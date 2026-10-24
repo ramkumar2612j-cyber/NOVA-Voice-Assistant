@@ -70,6 +70,8 @@ class NovaService : Service() {
         private val NO_FOLLOW_KINDS = setOf("stop", "sleep", "agent", "image", "site", "learn", "publish", "screen_end", "rec")
         const val ACTION_REC_STOP = "com.nova.assistant.REC_STOP"   // PART 6A: the STOP button of the recording notification
         @Volatile var running = false
+        /** v7.114: the notification listener asks the running service to act on a watched friend's new post. false = not started (service off, busy, phone locked). */
+        fun reelWatchFire(p: ReelRules.Plan): Boolean = instance?.reelFromWatch(p) ?: false
         /** v6.74 (Part 5): why the last start failed / the last fatal text / the TextToSpeech init code, for the status rows (see VoiceDiagnosis). */
         @Volatile var startFailure: VoiceDiagnosis.StartFailure = VoiceDiagnosis.StartFailure.NONE
         @Volatile var lastFatal: String = ""
@@ -429,7 +431,7 @@ class NovaService : Service() {
             it.onSilentToggle = { cfg.silentMode = !cfg.silentMode; cfg.silentMode }
             it.onStop = {
                 try { FrameExtractor.cancel() } catch (e: Throwable) { }   // v7.51 PART 12: STOP also ends a frame extraction
-                try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1: STOP also ends a running analysis
+                try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; reelCancel = true; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1: STOP also ends a running analysis
                 if (SafeStop.hudStop(ExtCfg.stopPowersOff(this)) == SafeStop.HudStop.SOFT) { softStop() } else {   // v7.39 PART 4: STOP only stops; the old power-off path below runs only when the owner asked for it
                 // A deliberate STOP never confirms a pending call/message. Destroying the service
                 // cancels the agent token and releases speech + microphone through onDestroy().
@@ -652,7 +654,7 @@ class NovaService : Service() {
     /** STOP that only stops: talking, the running job, waiting confirmations, the follow-up listen window and a half-heard command. Service, microphone and wake word stay ON. Any thread. */
     fun softStop() {
         try { FrameExtractor.cancel() } catch (e: Throwable) { }   // v7.51 PART 12
-        try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1
+        try { AnalysisPipeline.cancel() } catch (e: Throwable) { }; reelCancel = true; movieScanCancel = true; movieFrames = emptyList()   // v7.53 PART 13B-1
         stopSpeaking()
         dropHeard = true
         followWindow = false
@@ -2348,6 +2350,22 @@ class NovaService : Service() {
         if (trReq != null) {
             lastTurnLocal = true; lastKind = "trade_analysis"
             return runTradeAnalysis(trReq)
+        }
+        // v7.114: "papa ka number 98... save karo" (saved inside NOVA, used by "papa ko call karo")
+        val famSave = if (text.isBlank()) null else FamilyContacts.parseSave(text)
+        if (famSave != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return saveFamilyByVoice(famSave)
+        }
+        // v7.114: reels / Instagram friend: "reel scroll karo", "agli reel", "is reel ko like karo", "rahul_sharma ki 5 reels pe like aur comment karo", "jaise hi post kare ..."
+        if (text.isNotBlank() && ReelRules.isWatchOff(text)) {
+            lastTurnLocal = true; lastKind = "screen"
+            return if (ReelRunner.clearWatch(this)) tr("Theek hai, friend ki post par kaam band kar diya.", "OK, I stopped watching for that friend's posts.") else tr("Koi watch chalu nahi tha.", "No watch was on.")
+        }
+        val reelPlan = if (text.isBlank()) null else ReelRules.parse(text, ReelRunner.isVideoApp(try { NovaAccessibilityService.reelPackage() } catch (e: Throwable) { null }))
+        if (reelPlan != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return startReelPlan(reelPlan)
         }
         val psReq = if (text.isBlank()) null else ProfileSearchRules.parse(text)   // v7.89: "nova instagram par rahul_sharma search karo" (name / username only, never a face)
         if (psReq != null) {
@@ -6167,6 +6185,8 @@ class NovaService : Service() {
             val d = q.filter { it.isDigit() || it == '+' }
             return CR(d, d, null)
         }
+        // v7.114: a number saved inside NOVA (Papa / Mummy / the people added in Settings) wins: no Contacts permission, no search, no "which contact" question
+        try { FamilyContacts.lookup(this, q)?.let { return CR(it.label, it.number, null) } } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
         if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             if (uiVisible && permRequest != null) { // preserve existing Android permission path
                 permRequest?.invoke("contacts")
@@ -6903,6 +6923,79 @@ class NovaService : Service() {
         return if (r.ok) ProfileSearchRules.startedText(req, en) else ProfileSearchRules.failedText(en)
     }
 
+    // ------------------------------------------------------------------ v7.114 REEL / INSTAGRAM FRIEND jobs + saved family numbers
+    @Volatile private var reelCancel = false
+    @Volatile private var reelRunning = false
+
+    private fun saveFamilyByVoice(r: FamilyContacts.SaveReq): String {
+        val en = cfg.lang == "en"
+        if (FamilyContacts.isFull(this, r.name)) return FamilyContacts.fullText(en)
+        val saved = FamilyContacts.set(this, r.name, r.number)
+        return if (saved.isEmpty()) FamilyContacts.refusedText(en) else FamilyContacts.savedText(r.name, saved, en)
+    }
+
+    /** What to say / do for a reel sentence. Worker thread. Returns the reply at once; the real work runs on its own thread and speaks the result. */
+    private fun startReelPlan(p: ReelRules.Plan): String {
+        val en = cfg.lang == "en"
+        if (p.friendAsked) return ReelRules.needFriendText(en)
+        if (p.shareAsked) return ReelRules.needShareNameText(en)
+        if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) return ReelRules.noAccText(en)
+        if (lockQuiet()) return ReelRules.lockedText(en)
+        if (p.watch) {
+            val q = ReelRules.confirmQuestion(p, en)
+            pending = Pending(q, System.currentTimeMillis(), null) {
+                ReelRunner.saveWatch(this, p)
+                ReelRules.watchSavedText(p, en)
+            }
+            return q
+        }
+        if (reelRunning) return ReelRules.busyText(en)
+        if (p.needsConfirm) {
+            val q = ReelRules.confirmQuestion(p, en)
+            pending = Pending(q, System.currentTimeMillis(), null) { launchReel(p, true) }
+            return q
+        }
+        return launchReel(p, false)
+    }
+
+    /** Starts the run on a worker thread. fromWatch = started by a friend's post notification (nothing is spoken at the start). */
+    private fun launchReel(p: ReelRules.Plan, announce: Boolean): String {
+        val en = cfg.lang == "en"
+        if (reelRunning) return ReelRules.busyText(en)
+        reelRunning = true; reelCancel = false
+        videoQuietUntil = System.currentTimeMillis() + QuickScan.QUIET_FOLLOW_MS
+        val host = object : ReelRunner.Host {
+            override fun en(): Boolean = cfg.lang == "en"
+            override fun cancelled(): Boolean = reelCancel || !alive
+            override fun locked(): Boolean = lockQuiet()
+            override fun openProfile(url: String): Boolean = launch(ReelRunner.profileIntent(url), "com.instagram.android", "Instagram").ok
+            override fun progress(text: String) { h.post { if (alive) emit("sys", text) } }
+        }
+        Thread {
+            try {
+                val r = ReelRunner.run(p, host)
+                val msg = if (p.scrollOnly && !r.stopped && r.reason.isEmpty()) "" else ReelRules.resultText(r.items, r.likes, r.saves, r.comments, r.shares, p, r.stopped, r.reason, en)
+                val fail = r.items == 0 && r.reason.isNotEmpty()
+                val line = if (fail) r.reason else msg
+                if (line.isNotBlank()) h.post { if (alive) say(line) }
+            } catch (e: Throwable) {
+                ErrLog.add("reel", e.javaClass.simpleName)
+                h.post { if (alive) say(tr("Reel ka kaam beech me ruk gaya.", "The reel job stopped half way.")) }
+            } finally { reelRunning = false; videoQuietUntil = System.currentTimeMillis() + 2000L }
+        }.start()
+        return if (p.scrollOnly) ReelRules.startedScrollText(p, en) else ReelRules.startedText(p, en)
+    }
+
+    /** A watched friend posted (Instagram notification): run the saved plan on that post. Called from the notification listener thread. */
+    fun reelFromWatch(p: ReelRules.Plan): Boolean {
+        if (!alive || reelRunning || lockQuiet()) return false
+        Thread {
+            try { Thread.sleep(3500) } catch (e: InterruptedException) { return@Thread }
+            if (alive && !reelRunning && !lockQuiet()) launchReel(p, false)
+        }.start()
+        return true
+    }
+
     private fun startMovieScan(): String {
         val en = cfg.lang == "en"
         if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
@@ -6948,13 +7041,13 @@ class NovaService : Service() {
                         movieStage = ""
                         if (d.kind != "CANCELLED" && !movieScanCancel) {
                             val line = when (d.kind) {
-                                "OK" -> MovieGuessRules.resultText(d.outcome, en)
+                                "OK" -> MovieGuessRules.resultText(d.outcome, en, d.vision)
                                 "REFUSED" -> MovieGuessRules.privateText(en)
                                 "NO_AI" -> MovieGuessRules.noAiText(en)
                                 "UNREADABLE" -> MovieGuessRules.unreadableText(en)
                                 else -> MovieGuessRules.failedText(d.kind, en, try { OfflineJobQueue.hasInternet(this) } catch (e: Exception) { false })
                             }
-                            val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en) else line
+                            val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en, d.vision) else line
                             val ok = d.kind == "OK"
                             deliverMovie(line, said, if (ok) MovieGuessRules.card(d.outcome, en) else "", if (ok) MovieGuessRules.historyLine(d.outcome) else "")
                             if (ok && d.outcome != null && ScreenVideoRules.shouldPopup(d.outcome)) showMoviePopup(d.outcome, ScreenVideoRules.Kind.MOVIE)   // v7.76: popup browser

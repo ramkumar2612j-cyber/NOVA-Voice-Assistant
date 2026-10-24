@@ -33,7 +33,7 @@ object MovieGuessRules {
         "You help a phone assistant find the NAME OF THE MOVIE / SERIES / ANIME that is playing in a video or reel, from a few screen frames.\n" +
         "1. Use ONLY visible evidence: text written on the screen (caption, title card, watermark, @page name, audio / song name, hashtag, subtitles) and what the scene shows.\n" +
         "2. NEVER identify a real person from a face or body. Never give an actor, singer or any person's name as the answer. A person's name may only be quoted inside text_seen if it is written on the screen.\n" +
-        "3. candidates = at most " + MAX_CANDIDATES + " possible titles, best first. Give a title only when the evidence points to it; an empty list is a good answer when you do not know. Never invent.\n" +
+        "3. candidates = at most " + MAX_CANDIDATES + " possible titles, best first. Give a title when the evidence points to it. A famous scene, a line of dialogue or subtitle, the set / costumes / action style, the film's look (anime, Bollywood, Hollywood, South Indian, web series) or a poster-like frame IS evidence: when you think you recognise the work from that, give your best 1-3 guesses with basis \"scene\" even if you are not sure (the owner is told it is a guess). Use an empty list only when nothing in the frames points to any work. Never invent a title from nothing.\n" +
         "   Each candidate: title (the work's name, no person name), year (4 digits or empty), basis (\"text\" if the title or a clear hint is written on the screen, \"scene\" if only the scene suggests it, \"both\"), evidence (at most " + MAX_EVIDENCE + " short lines about what you saw).\n" +
         "4. text_seen = readable text copied exactly. scene = one short line about what the scene shows (no person names).\n" +
         "5. If the frames show a bank, payment, password, OTP or ID screen set safety to private and keep every other field empty. Otherwise safety is ok.\n" +
@@ -144,10 +144,10 @@ object MovieGuessRules {
     private fun name(o: Outcome): String = if (o.year.isEmpty()) o.title else "${o.title} (${o.year})"
 
     /** Chat text: name, confidence, evidence, numbered sources. Never a person name, never "pakka" unless HIGH. */
-    fun resultText(o: Outcome?, en: Boolean): String {
+    fun resultText(o: Outcome?, en: Boolean, v: Vision? = null): String {
         if (o == null) return t(en,
             "Is screen se movie ka naam nahi nikla: koi saaf likha naam ya pehchaan wala scene nahi mila. Koi andaza nahi lagaunga.",
-            "I could not get a movie name from this screen: no clearly written name or recognisable scene. I will not guess.")
+            "I could not get a movie name from this screen: no clearly written name or recognisable scene. I will not guess.") + seenText(v, en)
         val head = when (o.level) {
             Level.HIGH -> t(en, "Ye movie lagti hai: ${name(o)}. Bharosa: high.", "This looks like: ${name(o)}. Confidence: high.")
             Level.MEDIUM -> t(en, "Shayad ye hai: ${name(o)}. Bharosa: medium.", "Possibly: ${name(o)}. Confidence: medium.")
@@ -183,9 +183,21 @@ object MovieGuessRules {
     fun historyLine(o: Outcome?): String =
         if (o == null) "movie scan: no name" else "movie scan: " + name(o).take(60) + " | " + o.level.name + " | " + o.sources.size + " src"
 
+    /** v7.114: when no name came out, still tell the owner what WAS seen (scene + written text), so he can search it himself. Never a person name (parseVision already drops those). */
+    fun seenText(v: Vision?, en: Boolean): String {
+        if (v == null) return ""
+        val sb = StringBuilder()
+        if (v.scene.isNotBlank()) sb.append("\n").append(t(en, "Scene me dikha: ", "The scene shows: ")).append(v.scene)
+        val txt = v.textSeen.take(4).joinToString(" | ")
+        if (txt.isNotBlank()) sb.append("\n").append(t(en, "Screen par likha tha: ", "Text on screen: ")).append(txt)
+        if (sb.isNotEmpty()) sb.append("\n").append(t(en, "Is caption / hashtag ko Google ya YouTube par daalke bhi dhundh sakte ho.", "You can also search this caption / hashtag on Google or YouTube."))
+        return sb.toString()
+    }
+
     /** Short spoken line (no addresses). */
-    fun speech(o: Outcome?, en: Boolean): String = when {
-        o == null -> t(en, "Is screen se movie ka naam nahi nikla.", "I could not get a movie name from this screen.")
+    fun speech(o: Outcome?, en: Boolean, v: Vision? = null): String = when {
+        o == null -> t(en, "Is screen se movie ka naam nahi nikla.", "I could not get a movie name from this screen.") +
+            (if (v != null && v.scene.isNotBlank()) t(en, " Scene me dikha: ", " The scene shows: ") + v.scene.take(120) else "")
         o.level == Level.HIGH -> t(en, "Ye movie lagti hai ${name(o)}. Bharosa high.", "This looks like ${name(o)}. Confidence high.")
         o.level == Level.MEDIUM -> t(en, "Shayad ${name(o)}. Bharosa medium.", "Possibly ${name(o)}. Confidence medium.")
         else -> t(en, "Andaza ${name(o)} hai, par verify nahi hua.", "My guess is ${name(o)}, but it is not verified.")

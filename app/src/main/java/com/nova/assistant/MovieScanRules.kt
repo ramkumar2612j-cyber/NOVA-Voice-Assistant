@@ -34,6 +34,11 @@ object MovieScanRules {
         "achi", "achhi", "acchi", "best", "top", "naya", "nayi", "new", "list", "banao", "bana", "likho", "review", "rating", "ratings", "release", "kab"
     )
     private val SCREEN = setOf("screen", "skrin", "display")
+    /** v7.114: "btao / batao movie name kya hai": a tell-me word counts as a question word, but only together with a "this one / on screen" word (a bare "movie batao" is a recommendation). */
+    private val TELL = setOf("btao", "batao", "bata", "bta", "bataiye", "bataye", "btana", "batana", "bolo", "boliye", "pata", "pehchan", "pehchano")
+    private val DEICTIC = setOf("ye", "yeh", "is", "iss", "isse", "iska", "iski", "iske", "yahan", "yaha", "abhi", "reel", "reels", "video", "clip", "screen", "chal", "wali", "wala", "jo", "isme", "ismein")
+    /** "dekhu / dekhna" = "which movie should I WATCH" (recommendation). "dekho / dekh / dekhiye" next to "ye / is / reel" = "LOOK at this" (the scan). */
+    private val WATCH_FUTURE = setOf("dekhu", "dekhun", "dekhe", "dekhna", "dekhni", "dekhne", "dekhte", "dekhenge", "dekhege", "dekhoon", "dekhta", "dekhti", "watch")
 
     private fun words(text: String?): List<String> =
         (text ?: "").lowercase().replace(Regex("[^\\p{L}\\p{N}\\p{M} ]"), " ").split(' ').filter { it.isNotEmpty() }
@@ -44,10 +49,13 @@ object MovieScanRules {
         if (w.isEmpty() || w.size > MAX_WORDS) return Ask.NONE
         val s = w.toSet()
         if (s.none { it in TITLE }) return Ask.NONE
-        if (s.none { it in WHICH }) return Ask.NONE
+        val deictic = s.any { it in DEICTIC }
+        if (s.none { it in WHICH } && !(deictic && s.any { it in TELL })) return Ask.NONE
         if (s.any { it in PEOPLE }) return Ask.NONE
         if (s.any { it in SHARED }) return Ask.NONE
-        if (w.any { it in NOT_ASK || it.startsWith("dekh") }) return Ask.NONE
+        if (w.any { it in NOT_ASK || it in WATCH_FUTURE }) return Ask.NONE
+        val isQuestion = s.any { it == "kya" || it == "kyaa" || it == "hai" || it == "h" || it == "he" || it == "hain" || it == "ha" }
+        if (!deictic && !isQuestion && w.any { it.startsWith("dekh") }) return Ask.NONE   // v7.114: "dekho, ye movie ka naam batao / dekho btao movie name kya h" is a scan; "konsi movie dekho" is not
         // "kaun hai" with a title word but no which-title phrase ("movie me kaun hai") is a people question
         val joined = w.joinToString(" ")
         if (joined.contains("kaun hai") || joined.contains("kon hai") || joined.contains("koun hai")) return Ask.NONE

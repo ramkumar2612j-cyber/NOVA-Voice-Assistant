@@ -1,3 +1,12 @@
+## v7.114 - reel / Instagram friend jobs, saved Papa-Mummy numbers, movie-name fix, lag fix (versionName 7.114)
+- ADDED ReelRules + ReelRunner: "reel scroll karo", "agli / pichli reel", "10 reel scroll karo har reel 5 second", "reels scroll karte raho" (STOP ends it); "is reel ko like / save / comment karo <text> / share karo <naam> ko"; "rahul_sharma ki id pe jao uski 5 reels pe like aur comment karo". Comments capped at 10, shares at 5 per run, comment / share / watch are read back and need "haan". Stops on "try again later". Each action is checked on screen; a missing button is reported, not counted.
+- ADDED friend watch: "rahul_sharma jaise hi post kare to like aur comment kar do" saves a watch (7 days, 20 runs); the Instagram notification opens the post and the plan runs. "watch band karo" clears it.
+- ADDED FamilyContacts: Papa / Mummy / up to 12 more people saved inside NOVA (Settings top card + by voice "papa ka number ... save karo"); call / WhatsApp / SMS use them before any contact search. Papa / Mummy are the same numbers the battery SOS uses.
+- FIXED movie name: "dekho btao movie name kya h" / "ye movie ka naam batao" were skipped because of the word "dekho" / "batao"; the vision prompt now allows best guesses from a known scene / dialogue (never from a face); with no name the scene + on-screen text are shown.
+- FIXED lag: MainActivity no longer forces the highest screen refresh rate (90 / 120 Hz).
+- Tests: ReelRulesTest (24), FamilyContactsTest (7), MovieScanRulesTest (+2). Kotlin compile 0 errors, JUnit 1571 OK, run_all_checks 156/156.
+- NOT RUN: GitHub Actions, APK, phone. Instagram button names (Like / Comment / Share / Save / Post) are matched in English; a different app language or a new Instagram layout may need a tweak.
+
 ## v7.113 - hang / battery fix + car-horn false wake (versionName 7.113)
 - CHANGED ui.html: GRAPHICS QUALITY default = SMOOTH (one-time migration of a stored AUTO; SHARP kept). In SMOOTH the 7 looping animations use a ~333 ms timer instead of requestAnimationFrame (0 rAF wake-ups/s, was ~300), timers < 600 ms run at 600 ms, the v7.37 perf governor stays idle. Measured headless (4x CPU throttle): effects ON 43 % main-thread, SMOOTH before 6.2 %, SMOOTH now 1.2 %.
 - ADDED Logic.wakeVerified + NovaService: wake recognizer setWords(true); only a verified FINAL result wakes (word conf >= 0.75, length 0.18-1.10 s). Stops car horns / beeps forced into "nova" by the 3-entry grammar. Wake is about 0.3-0.5 s later.

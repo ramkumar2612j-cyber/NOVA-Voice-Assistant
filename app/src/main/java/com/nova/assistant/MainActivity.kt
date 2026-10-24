@@ -179,7 +179,9 @@ class MainActivity : Activity() {
 
     /** Smoothness: use the phone's highest refresh rate (90/120 Hz) while NOVA is on screen. */
     @Suppress("DEPRECATION")
+    /** v7.114: NO LONGER forces the highest refresh rate (90 / 120 Hz). With the animated page that made the phone hang and drain the battery; Android now picks the rate itself. */
     private fun boostRefresh() {
+        if (true) return
         try {
             val modes = windowManager.defaultDisplay.supportedModes
             var best: android.view.Display.Mode? = null
@@ -2197,6 +2199,14 @@ class MainActivity : Activity() {
         /** Returns the cleaned city that was saved. */
         @JavascriptInterface
         fun setHomeCity(city: String): String = ExtCfg.setHomeCity(this@MainActivity, city.take(80))
+
+        /** v7.114: Papa, Mummy and the other saved people as JSON {"papa","mummy","others":[{"label","number"}]}. */
+        @JavascriptInterface
+        fun getFamilyJson(): String = try { FamilyContacts.json(this@MainActivity) } catch (e: Throwable) { "{}" }
+
+        /** v7.114: saves (or, with a blank number, removes) one person. Returns the cleaned saved number, "" = refused / removed. */
+        @JavascriptInterface
+        fun setFamilyNumber(name: String, number: String): String = try { FamilyContacts.set(this@MainActivity, name.take(40), number.take(40)) } catch (e: Throwable) { "" }
 
         @JavascriptInterface
         fun getSosNumber(who: String): String = ExtCfg.sosNumber(this@MainActivity, who.take(10))

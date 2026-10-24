@@ -53,4 +53,14 @@ class MovieScanRulesTest {
         assertTrue(MovieScanRules.mentionsScreen("screen par ye kon si movie hai"))
         assertFalse(MovieScanRules.mentionsScreen("ye kon si movie hai"))
     }
+
+    // v7.114: the owner's real sentences ("dekho ... btao movie name kya h") used to fall through to the normal AI
+    @Test fun tellMeAndLookWordsMatchWhenAboutThisScreen() {
+        for (s in listOf("dekho btao movie name kya h", "nova dekho ye movie ka naam batao", "ye movie ka name bta", "is reel ki movie batao", "dekh ye film kaun si hai", "isme konsi movie hai"))
+            assertEquals(s, MovieScanRules.Ask.MOVIE, MovieScanRules.parse(s))
+    }
+    @Test fun recommendationsStillDoNotMatch() {
+        for (s in listOf("koi movie batao", "achi movie batao", "konsi movie dekhu", "konsi movie dekho", "movie dekhna hai batao", "new movie ka naam batao release kab"))
+            assertEquals(s, MovieScanRules.Ask.NONE, MovieScanRules.parse(s))
+    }
 }

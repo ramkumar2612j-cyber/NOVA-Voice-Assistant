@@ -134,6 +134,7 @@ class NovaNotificationService : NotificationListenerService() {
             try { handleLock(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "lock: $e") }
             try { if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "biz: $e") }
             try { if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "gmail: $e") }
+            try { if (sbn.packageName == "com.instagram.android") ReelRunner.onNotification(this, sbn) { p -> NovaService.reelWatchFire(p) } } catch (e: Throwable) { ErrLog.add("NotifListener", "reelwatch: $e") }   // v7.114: a watched friend posted
             if (!Driving.enabled && !MessageMode.enabled) return
             val pkg = sbn.packageName ?: return
             if (pkg == packageName || pkg !in Driving.APPS || (MessageMode.enabled && !MessageMode.isSelected(this, pkg) && !Driving.enabled)) return
