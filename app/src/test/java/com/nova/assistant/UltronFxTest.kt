@@ -60,4 +60,20 @@ class UltronFxTest {
         assertEquals(0x1234, s[0].toInt())
         assertEquals(-1, s[1].toInt())
     }
+
+    @Test fun pitchShiftMakesTheVoiceDeeper() {
+        val rate = 16000
+        val x = FloatArray(rate / 2) { sin(2.0 * PI * 200.0 * it / rate).toFloat() * 0.5f }
+        val y = UltronFx.pitchShift(x, 0.7f, rate)
+        fun crossings(a: FloatArray): Int { var c = 0; for (i in 3000 until a.size) if (a[i - 1] <= 0f && a[i] > 0f) c++; return c }
+        assertEquals(x.size, y.size)
+        assertTrue(crossings(y) < crossings(x))
+    }
+
+    @Test fun strongerAmountGoesDeeper() {
+        val rate = 16000
+        val x = FloatArray(rate / 2) { sin(2.0 * PI * 200.0 * it / rate).toFloat() * 0.5f }
+        fun crossings(a: FloatArray): Int { var c = 0; for (i in 3000 until a.size) if (a[i - 1] <= 0f && a[i] > 0f) c++; return c }
+        assertTrue(crossings(UltronFx.pitchShift(x, 0.72f, rate)) < crossings(UltronFx.pitchShift(x, 0.94f, rate)))
+    }
 }

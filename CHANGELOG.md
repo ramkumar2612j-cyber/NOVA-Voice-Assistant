@@ -1,3 +1,10 @@
+## v7.123 Ultron voice made much stronger (lite series; versionName stays 7.114)
+- The v7.120 effect was too weak (14 ms double + 55 Hz ring = almost no change). UltronFx.process now: real pitch shift down (two-tap harmonizer, amount 0.2..1.0 = -5%..-28%), an octave-down dark layer, 70 Hz metal ring, bass body, 7 ms metallic comb, hall echo, soft clip. The strength slider scales every layer.
+- TTS base pitch 0.9 (was 0.82; the shift does the rest). Free, offline, no real person's voice is copied. Fallback to the normal voice on any failure is unchanged.
+- Checked: numeric Python port (200 Hz tone -> 188 / 158 / 144 Hz at amount 0.2 / 0.75 / 1.0, dark layer 124 Hz, silence stays silent). NOT COMPILED, NOT HEARD on a phone.
+- Tests: UltronFxTest + 2 (pitchShiftMakesTheVoiceDeeper, strongerAmountGoesDeeper).
+- Home screen: ULTRON chip is back in the dock (the Ultron skin had hidden the old button).
+
 ## v7.122 Idle popup + POPUP button (lite series; versionName stays 7.114)
 - NEW idle popup "How can I help you today?" with VOICE / MESSAGE / MORE (NovaHud state "idle", hit ids 11/12/13). VOICE = same as the wake word, MESSAGE = the typing box, MORE = the three-dots menu. Closes itself after 20 s if untouched; never opens while NOVA is busy or listening.
 - Entry points: POPUP button on the notification, POPUP chip in the home dock (ui.html), Android.showPopup() bridge (MainActivity -> NovaService.ACTION_SHOW_POPUP).

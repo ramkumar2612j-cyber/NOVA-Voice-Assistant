@@ -4,5 +4,5 @@ State: Ultron app UI done and seen in a browser. NovaHud.kt popup (listen/think/
 To do, in order:
 1. Check if this sandbox can run gradle / kotlinc. If yes: gradle testDebugUnitTest assembleDebug and fix every error. If no: owner pushes the zip to https://github.com/skfashion142/NOVA-Voice-Assistant and runs https://github.com/skfashion142/NOVA-Voice-Assistant/actions > "Build and Test APK"; fix from the red lines.
 2. Owner installs the APK and tests: idle popup (notification POPUP button or home POPUP chip: VOICE / MESSAGE / MORE, auto-close 20 s), listen / think / speaking, SILENT, STOP, X, 3-dots (SILENT, CHAT, CHHOTA, BAND), HAAN/NAHI, minimize, typing box, long reply. Fix layout from screenshots.
-3. Pending from v7.120: Ultron voice build + slider tuning on the phone.
+3. Ultron voice (UltronFx.kt rewritten in v7.123, never heard): owner listens with ULTRON ON, SILENT OFF; tune slider / constants (pitch ratio 1-0.28*a, sub layer 0.62, ring 70 Hz, comb 7 ms) from the owner's feedback. Owner asked for the most robotic Ultron sound possible, free, no real person's voice cloned.
 4. Report PASS / FAIL / NOT TESTED per item. Deliver full ZIP + next prompt.

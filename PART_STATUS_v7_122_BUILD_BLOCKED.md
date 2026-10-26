@@ -18,3 +18,8 @@ Sandbox: dl.google.com, Maven Central, services.gradle.org = HTTP 403, so Gradle
 1. Push zip to GitHub, run Actions "Build and Test APK", send red lines of the failed step.
 2. Phone test list: idle popup (VOICE / MESSAGE / MORE / auto-close), listen / think / speaking, SILENT, STOP, X, dots menu, HAAN/NAHI, minimize, typing box, long reply.
 3. v7.120 Ultron voice: build + slider tuning.
+
+## Added later in v7.122/v7.123
+- Ultron voice rewritten (UltronFx.kt): pitch shift down + octave-down layer + metal ring + bass + comb + echo; slider scales all. Numeric port check PASS (200 Hz -> 188/158/144 Hz). NOT COMPILED, NOT HEARD on phone: owner must listen, then tune slider.
+- ULTRON chip back in the home dock.
+- Owner reported "Ultron voice not heard / not robotic" with the switch ON: the old effect was too weak.
