@@ -2,9 +2,14 @@ package com.nova.assistant
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RadialGradient
 import android.graphics.RectF
@@ -148,6 +153,8 @@ class NovaHud(private val ctx: Context) {
     /** Text typed in the popup's chat box; returns "sent", "busy" or "off" (wired to NovaService.typed). */
     @Volatile var onTyped: ((String) -> String)? = null
     @Volatile var silentOn: Boolean = false
+    /** v7.122: VOICE chip of the idle popup (the service starts listening, same as the wake word). */
+    @Volatile var onIdleVoice: (() -> Unit)? = null
     @Volatile private var askOn = false
     private var chat: android.widget.LinearLayout? = null
     private var shownAt = 0L
@@ -156,9 +163,30 @@ class NovaHud(private val ctx: Context) {
     companion object {
         fun canShow(ctx: Context): Boolean = Settings.canDrawOverlays(ctx)
         const val MIN_VISIBLE_MS = 2500L
+
+        /** v7.121: the round Ultron head (assets/ultron_head.jpg) at [px] pixels, or null if the file cannot be read. */
+        fun avatarBitmap(ctx: Context, px: Int): Bitmap? {
+            return try {
+                val src = ctx.assets.open("ultron_head.jpg").use { BitmapFactory.decodeStream(it) } ?: return null
+                val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+                val p = Paint(Paint.ANTI_ALIAS_FLAG)
+                p.shader = BitmapShader(Bitmap.createScaledBitmap(src, px, px, true), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+                Canvas(out).drawCircle(px / 2f, px / 2f, px / 2f, p)
+                out
+            } catch (e: Throwable) { null }
+        }
     }
 
     val isShown: Boolean get() = view != null
+
+    /** v7.122: idle popup "How can I help you today?" with VOICE / MESSAGE / MORE. */
+    fun showIdle() {
+        show("idle")
+        view?.heard = ""
+        view?.reply = ""
+        view?.invalidate()
+    }
+    fun isIdle(): Boolean = view?.state == "idle"
     fun visibleForMs(): Long = if (view == null) 0L else System.currentTimeMillis() - shownAt
 
     /** state: "listen", "think", "reply". */
@@ -191,6 +219,7 @@ class NovaHud(private val ctx: Context) {
         lp.y = (44 * ctx.resources.displayMetrics.density).toInt()
         nv.onDismissTap = { hide(true) }
         nv.onChatTap = { openChat() }
+        nv.onIdleVoice = { nv.changeState("listen"); onIdleVoice?.invoke() }
         nv.onAnswerTap = { yes -> onAnswer?.invoke(yes) }
         nv.onStop = { onStop?.invoke() }
         nv.onSilentToggle = { onSilentToggle?.invoke() ?: nv.silentOn }
@@ -263,19 +292,27 @@ class NovaHud(private val ctx: Context) {
         if (!canShow(ctx)) return
         if (chat != null) { closeChat(); return }
         val d = ctx.resources.displayMetrics.density
-        val boxW = minOf(ctx.resources.displayMetrics.widthPixels - 24 * d, 296 * d).toInt()
+        val boxW = minOf(ctx.resources.displayMetrics.widthPixels - 24 * d, 332 * d).toInt()
         val row = android.widget.LinearLayout(ctx)
         row.orientation = android.widget.LinearLayout.HORIZONTAL
         row.gravity = Gravity.CENTER_VERTICAL
         row.setPadding((14 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
         val bg = android.graphics.drawable.GradientDrawable()
         bg.setColor(0xF20A1236.toInt())
-        bg.colors = intArrayOf(0xF2101C44.toInt(), 0xF20A1030.toInt(), 0xF2160C38.toInt())   // v7.44: same glass gradient as the pill
-        bg.cornerRadius = 24 * d
+        bg.colors = intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt())   // v7.121: same dark neon glass as the Ultron card
+        bg.cornerRadius = 18 * d
         bg.setStroke((1.5f * d).toInt(), 0xFF27E1FF.toInt())
         row.background = bg
+        val face = avatarBitmap(ctx, (36 * d).toInt())
+        if (face != null) {
+            val iv = android.widget.ImageView(ctx)
+            iv.setImageBitmap(face)
+            val ilp = android.widget.LinearLayout.LayoutParams((36 * d).toInt(), (36 * d).toInt())
+            ilp.rightMargin = (8 * d).toInt()
+            row.addView(iv, ilp)
+        }
         val et = android.widget.EditText(ctx)
-        et.hint = "NOVA se likho\u2026"
+        et.hint = "Type a message\u2026"
         et.setHintTextColor(0xFF7F95BC.toInt())
         et.setTextColor(0xFFEAF2FF.toInt())
         et.textSize = 15f
@@ -307,7 +344,7 @@ class NovaHud(private val ctx: Context) {
             val r = try { onTyped?.invoke(text) } catch (e: Throwable) { null }
             if (r == "busy") { view?.let { it.reply = "NOVA abhi kaam kar raha hai, thoda ruko"; it.invalidate() } }
         }
-        val send = pill("SEND", 0xFF2F5FD0.toInt(), (62 * d).toInt())
+        val send = pill("SEND", 0xFF1B6DFF.toInt(), (62 * d).toInt())
         send.setOnClickListener { doSend() }
         val close = pill("\u2715", 0xFF3A4B7A.toInt(), (40 * d).toInt())
         close.setOnClickListener { closeChat() }
@@ -324,7 +361,7 @@ class NovaHud(private val ctx: Context) {
             PixelFormat.TRANSLUCENT
         )
         lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-        lp.y = (176 * d).toInt()
+        lp.y = (270 * d).toInt()
         lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         try {
             wm.addView(row, lp)
@@ -367,8 +404,8 @@ class NovaHud(private val ctx: Context) {
 private class HudView(ctx: Context) : View(ctx) {
     private val d = ctx.resources.displayMetrics.density
     private val margin = 10f * d                      // room around the card for the glow
-    private val cardW = (minOf(ctx.resources.displayMetrics.widthPixels - 24 * d, 296 * d)).toInt()
-    private val cardH = (148f * d).toInt()
+    private val cardW = (minOf(ctx.resources.displayMetrics.widthPixels - 24 * d, 332 * d)).toInt()
+    private val cardH = (214f * d).toInt()
     private val fullViewW = cardW + (2 * margin).toInt()
     private val fullViewH = cardH + (2 * margin).toInt()
     private val miniViewW = minOf(fullViewW, (minOf(ctx.resources.displayMetrics.widthPixels - 8 * d, 194 * d)).toInt())
@@ -393,9 +430,15 @@ private class HudView(ctx: Context) : View(ctx) {
     private val btnNo = RectF()
     private val btnStop = RectF()
     private val btnSilent = RectF()
+    private val btnX = RectF()                      // v7.121: close X in the card corner
+    private val btnMain = RectF()                   // v7.121: big SILENT (listen/think) or STOP (speaking) button
     private val btnPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val btnText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 14f * d; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
     var onMinimizeTap: (() -> Unit)? = null
+    var onIdleVoice: (() -> Unit)? = null            // v7.122: VOICE chip of the idle popup
+    private val iVoice = RectF()
+    private val iMsg = RectF()
+    private val iMore = RectF()
     var onChatTap: (() -> Unit)? = null              // CHAT item of the three-dots menu (NovaHud opens the typing box)
     private var menuOpen = false                      // three-dots menu: SILENT / CHAT / CHHOTA KARO / BAND KARO
     private val btnDots = RectF()
@@ -440,12 +483,22 @@ private class HudView(ctx: Context) : View(ctx) {
     private val shock = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val rect = RectF()
     private val oval = RectF()
+    // v7.121 ULTRON look
+    private val cpath = Path()
+    private val bpath = Path()
+    private val spPath = Path()
+    private val iconP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.9f * d; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND; color = 0xFFFFFFFF.toInt() }
+    private val avatarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val avatarMatrix = Matrix()
+    private var avatarShader: BitmapShader? = null
+    private val avatar: Bitmap? by lazy { try { ctx.assets.open("ultron_head.jpg").use { BitmapFactory.decodeStream(it) } } catch (e: Throwable) { null } }
+    private val redC = 0xFFFF2B3D.toInt()
     private var fillShader: LinearGradient? = null
     private var borderShader: LinearGradient? = null
     private var barShader: LinearGradient? = null
 
     private fun replyOn(): Boolean = reply.isNotBlank()
-    private fun pillH(): Float = (54f + (if (replyOn()) 38f else 0f) + (if (askMode) 54f else 0f)) * d
+    private fun pillH(): Float = (204f + (if (replyOn()) 38f else 0f) + (if (askMode) 54f else 0f)) * d
     private fun menuH(): Float = (2 * 40f + 3 * 8f) * d
     private fun contentH(): Int = (2 * margin + pillH() + (if (menuOpen) 8f * d + menuH() else 0f)).toInt()
 
@@ -474,9 +527,31 @@ private class HudView(ctx: Context) : View(ctx) {
         val left = margin
         val top = margin
         val right = w - margin
-        val rowCy = top + 27f * d
-        btnDots.set(right - 8f * d - 32f * d, rowCy - 16f * d, right - 8f * d, rowCy + 16f * d)
-        btnStop.set(btnDots.left - 6f * d - 58f * d, rowCy - 15f * d, btnDots.left - 6f * d, rowCy + 15f * d)
+        val rowCy = top + 32f * d
+        btnX.set(right - 12f * d - 30f * d, rowCy - 15f * d, right - 12f * d, rowCy + 15f * d)
+        btnDots.set(btnX.left - 6f * d - 30f * d, rowCy - 15f * d, btnX.left - 6f * d, rowCy + 15f * d)
+        val pb = top + pillH()
+        val mainBottom = pb - 14f * d - (if (askMode) 54f * d else 0f)
+        val mainTop = mainBottom - 44f * d
+        val cxm = (left + right) / 2f
+        if (state == "idle") {
+            val ipad = 14f * d
+            val igap = 8f * d
+            val iw3 = (right - left - 2f * ipad - 2f * igap) / 3f
+            iVoice.set(left + ipad, mainTop, left + ipad + iw3, mainBottom)
+            iMsg.set(iVoice.right + igap, mainTop, iVoice.right + igap + iw3, mainBottom)
+            iMore.set(iMsg.right + igap, mainTop, iMsg.right + igap + iw3, mainBottom)
+            btnMain.setEmpty()
+            btnStop.setEmpty()
+        } else if (state == "listen" || state == "think") {
+            val gw = 176f * d + 10f * d + 44f * d
+            val gl = cxm - gw / 2f
+            btnMain.set(gl, mainTop, gl + 176f * d, mainBottom)
+            btnStop.set(btnMain.right + 10f * d, mainTop, btnMain.right + 10f * d + 44f * d, mainBottom)
+        } else {
+            btnMain.set(cxm - 100f * d, mainTop, cxm + 100f * d, mainBottom)
+            btnStop.setEmpty()
+        }
         val pillBottom = top + pillH()
         val bh = 44f * d   // 44dp touch target
         val gap = 10f * d
@@ -492,7 +567,7 @@ private class HudView(ctx: Context) : View(ctx) {
         mClose.set(mChat.left, mMin.top, mChat.right, mMin.bottom)
     }
 
-    /** 3 STOP, 4 SILENT, 5 three dots, 6 CHAT, 1 minimise, 2 close, 7 HAAN, 8 NAHI, 0 = nothing. */
+    /** 3 STOP, 4 SILENT (menu), 10 SILENT (big button), 9 close X, 5 three dots, 6 CHAT, 1 minimise, 2 close, 7 HAAN, 8 NAHI, 0 = nothing. */
     private fun hitControl(x: Float, y: Float): Int {
         layoutRects(width.toFloat())
         fun inside(r: RectF, px: Float, py: Float) = x >= r.left - px && x <= r.right + px && y >= r.top - py && y <= r.bottom + py
@@ -506,12 +581,21 @@ private class HudView(ctx: Context) : View(ctx) {
             if (inside(mMin, 0f, 0f)) return 1
             if (inside(mClose, 0f, 0f)) return 2
         }
-        if (inside(btnStop, 4f * d, 7f * d)) return 3
-        if (inside(btnDots, 6f * d, 6f * d)) return 5
+        if (inside(btnX, 4f * d, 4f * d)) return 9
+        if (inside(btnDots, 4f * d, 4f * d)) return 5
+        if (state == "idle") {
+            if (inside(iVoice, 0f, 0f)) return 11
+            if (inside(iMsg, 0f, 0f)) return 12
+            if (inside(iMore, 0f, 0f)) return 13
+            return 0
+        }
+        val quiet = state == "listen" || state == "think"
+        if (quiet && inside(btnStop, 2f * d, 2f * d)) return 3
+        if (inside(btnMain, 0f, 0f)) return if (quiet) 10 else 3
         return 0
     }
 
-    fun changeState(s: String) { state = s; invalidate() }
+    fun changeState(s: String) { state = s; fillShader = null; invalidate() }
 
     /** Collapse to a small animated NOVA chip; tapping the chip restores the full card. */
     fun toggleMinimized() {
@@ -560,6 +644,11 @@ private class HudView(ctx: Context) : View(ctx) {
                 if (id != 0 && id == pressed) {
                     when (id) {
                         3 -> onStop?.invoke()
+                        9 -> onDismissTap?.invoke()
+                        11 -> onIdleVoice?.invoke()
+                        12 -> { closeMenu(); onChatTap?.invoke() }
+                        13 -> toggleMenu()
+                        10 -> { onSilentToggle?.invoke()?.let { silentOn = it; invalidate() } }
                         4 -> { onSilentToggle?.invoke()?.let { silentOn = it; invalidate() } }
                         5 -> toggleMenu()
                         6 -> { closeMenu(); onChatTap?.invoke() }
@@ -626,9 +715,9 @@ private class HudView(ctx: Context) : View(ctx) {
     }
 
     private fun stateColor(): Int = when (state) {
-        "think" -> violet
-        "listen" -> cyan
-        else -> blue
+        "think" -> 0xFF35A8FF.toInt()
+        "listen", "idle" -> cyan
+        else -> redC
     }
 
     override fun onDraw(c: Canvas) {
@@ -647,7 +736,6 @@ private class HudView(ctx: Context) : View(ctx) {
         val right = w - margin
         layoutRects(w)
         val pillBottom = top + pillH()
-        val radius = 22f * d
 
         val sc = 0.78f + 0.22f * HudMath.springEase(t)
         val expand = 0.92f + 0.08f * (1f - modeProgress.coerceIn(0f, 1f))
@@ -656,118 +744,271 @@ private class HudView(ctx: Context) : View(ctx) {
         c.scale(sc * expand, sc * expand, w / 2f, top + (pillBottom - top) / 2f)
         val layer = c.saveLayerAlpha(0f, 0f, w, h, (255 * e).toInt().coerceIn(0, 255))
 
-        // glass pill
+        // v7.121 ULTRON card: cut-corner glass in the state colour (cyan = listen / think, red = speaking)
+        val sColor = stateColor()
+        val speaking = state != "listen" && state != "think" && state != "idle"
+        val cut = 16f * d
+        chamfer(left, top, right, pillBottom, cut)
         val fs = fillShader ?: LinearGradient(0f, top, 0f, pillBottom,
-            intArrayOf(0xF2101C44.toInt(), 0xF20A1030.toInt(), 0xF2160C38.toInt()), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
+            if (speaking) intArrayOf(0xF2300A16.toInt(), 0xF2180610.toInt(), 0xF2220812.toInt())
+            else intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt()),
+            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
         ).also { fillShader = it }
         fill.shader = fs
-        rect.set(left, top, right, pillBottom)
-        c.drawRoundRect(rect, radius, radius, fill)
+        c.drawPath(cpath, fill)
 
-        // glowing gradient border: three soft outer strokes + one crisp line
         val gl = HudMath.glowLevel(now, state)
-        val bs = borderShader ?: LinearGradient(left, top, right, pillBottom,
-            intArrayOf(cyan, blue, violet), null, Shader.TileMode.CLAMP
-        ).also { borderShader = it }
-        border.shader = bs
+        border.shader = null
+        border.color = sColor
         for (k in 3 downTo 1) {
             border.strokeWidth = (1.5f + k * 2.6f) * d
             border.alpha = (28 * gl * (4 - k)).toInt().coerceIn(0, 255)
-            c.drawRoundRect(rect, radius, radius, border)
+            c.drawPath(cpath, border)
         }
-        border.strokeWidth = 1.5f * d
-        border.alpha = (150 + 100 * gl).toInt().coerceIn(0, 255)
-        c.drawRoundRect(rect, radius, radius, border)
+        border.strokeWidth = 1.6f * d
+        border.alpha = (170 + 85 * gl).toInt().coerceIn(0, 255)
+        c.drawPath(cpath, border)
 
-        // small orb
-        val r = 16f * d
-        val ocx = left + 14f * d + r
-        val ocy = top + 27f * d
-        val sColor = stateColor()
-        halo.shader = RadialGradient(ocx, ocy, r * 2.0f, intArrayOf((sColor and 0x00FFFFFF) or 0x66000000, (sColor and 0x00FFFFFF)), null, Shader.TileMode.CLAMP)
-        c.drawCircle(ocx, ocy, r * 2.0f, halo)
-        if (state == "listen") {
-            for (k in 0 until 3) {
-                val p = ((now % 1800L) / 1800f + k / 3f) % 1f
-                val ra = (190 * HudMath.rippleAlpha(p)).toInt().coerceIn(0, 255)
-                ring.color = (sColor and 0x00FFFFFF) or (ra shl 24)
-                c.drawCircle(ocx, ocy, r * (0.9f + (0.7f + 0.7f * smooth) * p), ring)
-            }
-        }
-        orbFill.shader = RadialGradient(ocx - r * 0.25f, ocy - r * 0.3f, r,
-            intArrayOf(0xFF1B2C6B.toInt(), 0xFF070D27.toInt()), null, Shader.TileMode.CLAMP)
-        c.drawCircle(ocx, ocy, r * 0.82f, orbFill)
-        val spin = (now % (if (state == "think") 900L else 2600L)) / (if (state == "think") 900f else 2600f) * 360f
-        oval.set(ocx - r, ocy - r, ocx + r, ocy + r)
-        arc.color = cyan
-        c.drawArc(oval, spin, 110f, false, arc)
-        arc.color = violet
-        c.drawArc(oval, -spin * 0.7f + 180f, 110f, false, arc)
-        if (state == "think") {
-            for (k in 0 until 3) {
-                val a = Math.toRadians((spin * 1.3f + k * 120f).toDouble())
-                dot.color = HudMath.mix(cyan, violet, k / 2f)
-                c.drawCircle(ocx + (Math.cos(a) * r * 0.42f).toFloat(), ocy + (Math.sin(a) * r * 0.42f).toFloat(), 2.2f * d, dot)
-            }
+        // Ultron head (round) with a state-colour ring
+        val r = 22f * d
+        val ocx = left + 16f * d + r
+        val ocy = top + 32f * d
+        halo.shader = RadialGradient(ocx, ocy, r * 1.9f, intArrayOf((sColor and 0x00FFFFFF) or 0x66000000, (sColor and 0x00FFFFFF)), null, Shader.TileMode.CLAMP)
+        c.drawCircle(ocx, ocy, r * 1.9f, halo)
+        val bm = avatar
+        if (bm != null && bm.width > 0) {
+            val sh = avatarShader ?: BitmapShader(bm, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { avatarShader = it }
+            val k = (2f * r) / bm.width.toFloat()
+            avatarMatrix.reset()
+            avatarMatrix.postScale(k, k)
+            avatarMatrix.postTranslate(ocx - r, ocy - r)
+            sh.setLocalMatrix(avatarMatrix)
+            avatarPaint.shader = sh
+            c.drawCircle(ocx, ocy, r, avatarPaint)
         } else {
-            for (k in 0 until 5) {
-                val v = HudMath.barHeight(k * 5, HudMath.BARS, smooth, now, state)
-                val bh = (3f + v * 11f) * d
-                bar.shader = null
-                bar.color = HudMath.mix(cyan, violet, k / 4f)
-                val bx = ocx + (k - 2) * 4.2f * d
-                rect.set(bx - 1.2f * d, ocy - bh / 2f, bx + 1.2f * d, ocy + bh / 2f)
-                c.drawRoundRect(rect, 1.2f * d, 1.2f * d, bar)
-            }
+            orbFill.shader = RadialGradient(ocx - r * 0.25f, ocy - r * 0.3f, r,
+                intArrayOf(0xFF1B2C6B.toInt(), 0xFF070D27.toInt()), null, Shader.TileMode.CLAMP)
+            c.drawCircle(ocx, ocy, r * 0.9f, orbFill)
         }
+        ring.color = sColor
+        ring.strokeWidth = 2f * d
+        c.drawCircle(ocx, ocy, r, ring)
+        ring.strokeWidth = 1.6f * d
 
-        // status + live text
-        title.textSize = 14.5f * d
-        title.color = 0xFFFFFFFF.toInt()
-        sub.textSize = 11f * d
-        sub.color = 0xFF9FB4D6.toInt()
+        // texts: NOVA, state title, live line
         val tx = ocx + r + 12f * d
-        val textW = btnStop.left - 10f * d - tx
+        val textW = btnDots.left - 8f * d - tx
+        sub.textSize = 10.5f * d
+        sub.color = sColor
+        sub.letterSpacing = 0.35f
+        c.drawText("NOVA", tx, ocy - 14f * d, sub)
+        sub.letterSpacing = 0f
+        title.textSize = 17f * d
+        title.color = 0xFFFFFFFF.toInt()
         val head = when (state) {
-            "listen" -> "Listening\u2026"
+            "listen" -> "I\u2019m listening\u2026"
             "think" -> "Thinking\u2026"
-            else -> "NOVA"
+            "idle" -> "Hello"
+            else -> "Speaking\u2026"
         }
-        c.drawText(TextUtils.ellipsize(head, title, textW, TextUtils.TruncateAt.END).toString(), tx, ocy - 3f * d, title)
+        c.drawText(TextUtils.ellipsize(head, title, textW, TextUtils.TruncateAt.END).toString(), tx, ocy + 4f * d, title)
+        sub.textSize = 12f * d
+        sub.color = 0xFFA9BCD9.toInt()
         val line = heard.removePrefix("\uD83C\uDFA4").trim().ifBlank {
-            when (state) { "listen" -> "Speak now"; "think" -> "Working on your request"; else -> "More than an assistant" }
+            when (state) { "listen" -> "Speak now"; "think" -> "Analyzing your request"; "idle" -> "Ready when you are"; else -> "I\u2019m talking now" }
         }
-        c.drawText(TextUtils.ellipsize(line, sub, textW, TextUtils.TruncateAt.END).toString(), tx, ocy + 13f * d, sub)
+        c.drawText(TextUtils.ellipsize(line, sub, textW, TextUtils.TruncateAt.END).toString(), tx, ocy + 21f * d, sub)
 
-        // STOP (always visible) and the three dots
-        val stopSaved = c.save()
-        if (pressedControl == 3) c.scale(0.92f, 0.92f, btnStop.centerX(), btnStop.centerY())
-        btnPaint.style = Paint.Style.FILL
-        btnPaint.color = 0xFFB52F48.toInt()
-        c.drawRoundRect(btnStop, 15f * d, 15f * d, btnPaint)
-        btnText.textSize = 11f * d
-        c.drawText("STOP", btnStop.centerX(), btnStop.centerY() - (btnText.descent() + btnText.ascent()) / 2f, btnText)
-        btnText.textSize = 14f * d
-        c.restoreToCount(stopSaved)
+        // close X and three dots (top right)
+        val xSaved = c.save()
+        if (pressedControl == 9) c.scale(0.9f, 0.9f, btnX.centerX(), btnX.centerY())
+        controlFill.color = 0xCC061230.toInt()
+        controlFill.alpha = 230
+        c.drawRoundRect(btnX, 9f * d, 9f * d, controlFill)
+        controlStroke.color = sColor
+        controlStroke.alpha = 230
+        controlStroke.strokeWidth = 1.3f * d
+        c.drawRoundRect(btnX, 9f * d, 9f * d, controlStroke)
+        val xr = 5f * d
+        c.drawLine(btnX.centerX() - xr, btnX.centerY() - xr, btnX.centerX() + xr, btnX.centerY() + xr, controlLine)
+        c.drawLine(btnX.centerX() + xr, btnX.centerY() - xr, btnX.centerX() - xr, btnX.centerY() + xr, controlLine)
+        c.restoreToCount(xSaved)
         val dotsSaved = c.save()
         if (pressedControl == 5) c.scale(0.9f, 0.9f, btnDots.centerX(), btnDots.centerY())
-        controlFill.color = if (menuOpen || pressedControl == 5) 0xCC2873B8.toInt() else 0x88304A8D.toInt()
+        controlFill.color = if (menuOpen || pressedControl == 5) 0xCC2873B8.toInt() else 0xCC061230.toInt()
         controlFill.alpha = 230
-        c.drawRoundRect(btnDots, 11f * d, 11f * d, controlFill)
-        controlStroke.alpha = 220
-        controlStroke.strokeWidth = 1.2f * d
-        c.drawRoundRect(btnDots, 11f * d, 11f * d, controlStroke)
+        c.drawRoundRect(btnDots, 9f * d, 9f * d, controlFill)
+        c.drawRoundRect(btnDots, 9f * d, 9f * d, controlStroke)
         dot.shader = null
         dot.color = 0xFFEAF7FF.toInt()
         for (k in -1..1) c.drawCircle(btnDots.centerX(), btnDots.centerY() + k * 5.5f * d, 1.9f * d, dot)
         c.restoreToCount(dotsSaved)
+        controlStroke.color = 0xAA8CEBFF.toInt()   // back to the colour the minimised chip uses
 
-        // reply (a second row only while there is something to read)
+        // centre visual
+        val vcx = (left + right) / 2f
+        val vcy = top + 104f * d
+        val cr = 30f * d
+        if (state == "idle") {
+            halo.shader = RadialGradient(vcx, vcy, cr * 2.6f, intArrayOf((sColor and 0x00FFFFFF) or 0x33000000, (sColor and 0x00FFFFFF)), null, Shader.TileMode.CLAMP)
+            c.drawCircle(vcx, vcy, cr * 2.6f, halo)
+            title.textSize = 19f * d
+            title.color = 0xFFFFFFFF.toInt()
+            val ilay = build("How can I help you today?", title, (right - left - 48f * d).toInt(), 2)
+            val isv = c.save()
+            c.translate(left + 24f * d, vcy - ilay.height / 2f)
+            ilay.draw(c)
+            c.restoreToCount(isv)
+        } else if (state == "think") {
+            val gr = 22f * d
+            iconP.color = 0xFF6EC8FF.toInt()
+            iconP.strokeWidth = 1.4f * d
+            halo.shader = RadialGradient(vcx, vcy, gr * 2.4f, intArrayOf(0x4435A8FF, 0x0035A8FF), null, Shader.TileMode.CLAMP)
+            c.drawCircle(vcx, vcy, gr * 2.4f, halo)
+            c.drawCircle(vcx, vcy, gr, iconP)
+            oval.set(vcx - gr, vcy - gr * 0.38f, vcx + gr, vcy + gr * 0.38f)
+            c.drawOval(oval, iconP)
+            val rot = (now % 4000L) / 4000f
+            val mwid = gr * abs(cos(rot * 6.2831855f))
+            oval.set(vcx - mwid - 1f, vcy - gr, vcx + mwid + 1f, vcy + gr)
+            c.drawOval(oval, iconP)
+            val os = c.save()
+            c.rotate(-14f, vcx, vcy)
+            iconP.color = redC
+            iconP.strokeWidth = 2f * d
+            val orx = gr * 1.9f
+            val ory = 11f * d
+            oval.set(vcx - orx, vcy - ory, vcx + orx, vcy + ory)
+            c.drawOval(oval, iconP)
+            val oa = ((now % 1800L) / 1800f) * 6.2831855f
+            dot.shader = null
+            dot.color = redC
+            c.drawCircle(vcx + cos(oa) * orx, vcy + sin(oa) * ory, 3f * d, dot)
+            c.restoreToCount(os)
+            iconP.color = 0xFFFFFFFF.toInt()
+            iconP.strokeWidth = 1.9f * d
+        } else {
+            halo.shader = RadialGradient(vcx, vcy, cr * 2.2f, intArrayOf((sColor and 0x00FFFFFF) or 0x55000000, (sColor and 0x00FFFFFF)), null, Shader.TileMode.CLAMP)
+            c.drawCircle(vcx, vcy, cr * 2.2f, halo)
+            for (k in 0 until 2) {
+                val p = ((now % 2000L) / 2000f + k * 0.5f) % 1f
+                val ra = (170 * HudMath.rippleAlpha(p)).toInt().coerceIn(0, 255)
+                ring.color = (sColor and 0x00FFFFFF) or (ra shl 24)
+                c.drawCircle(vcx, vcy, cr * (1f + 0.55f * p * (0.6f + smooth)), ring)
+            }
+            // side waveforms
+            for (side in 0..1) for (i in 0 until 11) {
+                val v = if (speaking) 0.3f + 0.7f * (0.5f + 0.5f * sin(now / 130f + i * 0.8f + side * 1.7f))
+                        else HudMath.barHeight(i * 2, HudMath.BARS, smooth, now, state)
+                val bh = (5f + v * 44f * (1f - i * 0.05f)) * d
+                val bx = if (side == 0) vcx - cr - 16f * d - i * 6f * d else vcx + cr + 16f * d + i * 6f * d
+                bar.shader = null
+                bar.color = sColor
+                bar.alpha = (255 * (1f - i * 0.045f)).toInt().coerceIn(0, 255)
+                rect.set(bx - 1.3f * d, vcy - bh / 2f, bx + 1.3f * d, vcy + bh / 2f)
+                c.drawRoundRect(rect, 1.3f * d, 1.3f * d, bar)
+            }
+            orbFill.shader = RadialGradient(vcx, vcy, cr,
+                if (speaking) intArrayOf(0xFF3A0A16.toInt(), 0xFF14040A.toInt()) else intArrayOf(0xFF0B1B45.toInt(), 0xFF050A1E.toInt()),
+                null, Shader.TileMode.CLAMP)
+            c.drawCircle(vcx, vcy, cr, orbFill)
+            ring.color = sColor
+            ring.strokeWidth = 2.2f * d
+            c.drawCircle(vcx, vcy, cr, ring)
+            ring.strokeWidth = 1.2f * d
+            ring.alpha = 110
+            c.drawCircle(vcx, vcy, cr + 8f * d, ring)
+            ring.strokeWidth = 1.6f * d
+            iconP.color = 0xFFFFFFFF.toInt()
+            if (speaking) {
+                for (k in 0 until 5) {
+                    val v = 0.35f + 0.65f * (0.5f + 0.5f * sin(now / 110f + k * 1.3f))
+                    val hh = (6f + v * 20f) * d * (if (k == 2) 1f else 0.8f)
+                    val bx = vcx + (k - 2) * 7f * d
+                    bar.color = 0xFFFFFFFF.toInt()
+                    bar.alpha = 255
+                    rect.set(bx - 1.6f * d, vcy - hh / 2f, bx + 1.6f * d, vcy + hh / 2f)
+                    c.drawRoundRect(rect, 1.6f * d, 1.6f * d, bar)
+                }
+            } else {
+                // microphone
+                rect.set(vcx - 6f * d, vcy - 15f * d, vcx + 6f * d, vcy + 3f * d)
+                c.drawRoundRect(rect, 6f * d, 6f * d, iconP)
+                oval.set(vcx - 11f * d, vcy - 10f * d, vcx + 11f * d, vcy + 10f * d)
+                c.drawArc(oval, 20f, 140f, false, iconP)
+                c.drawLine(vcx, vcy + 10f * d, vcx, vcy + 16f * d, iconP)
+                c.drawLine(vcx - 5f * d, vcy + 16f * d, vcx + 5f * d, vcy + 16f * d, iconP)
+            }
+        }
+
+        // reply text (a row only while there is something to read)
         if (replyOn()) {
             body.textSize = 12.5f * d
-            val lay = build(reply, body, (right - left - 28f * d).toInt(), 2)
-            c.save(); c.translate(left + 14f * d, top + 52f * d); lay.draw(c); c.restore()
+            val lay = build(reply, body, (right - left - 32f * d).toInt(), 2)
+            c.save(); c.translate(left + 16f * d, top + 148f * d); lay.draw(c); c.restore()
         }
+
+        // big button: SILENT (listen / think) or STOP (speaking); the idle popup has its own three chips instead
+        if (state != "idle") {
+        val mid = if (speaking) 3 else 10
+        val mSaved = c.save()
+        if (pressedControl == mid) c.scale(0.95f, 0.95f, btnMain.centerX(), btnMain.centerY())
+        hexPath(btnMain, 16f * d)
+        val silentGreen = !speaking && silentOn
+        btnPaint.style = Paint.Style.FILL
+        btnPaint.shader = LinearGradient(0f, btnMain.top, 0f, btnMain.bottom,
+            if (speaking) intArrayOf(0xFF5A0A18.toInt(), 0xFF2A0610.toInt()) else intArrayOf(0xFF0F2A66.toInt(), 0xFF081840.toInt()),
+            null, Shader.TileMode.CLAMP)
+        c.drawPath(bpath, btnPaint)
+        btnPaint.shader = null
+        border.color = if (silentGreen) 0xFF16B58A.toInt() else sColor
+        border.strokeWidth = 1.8f * d
+        border.alpha = 255
+        c.drawPath(bpath, border)
+        val label = if (speaking) "STOP" else if (silentOn) "SILENT ON" else "SILENT"
+        btnText.textSize = 14f * d
+        btnText.letterSpacing = 0.12f
+        val tw = btnText.measureText(label)
+        val iw = 18f * d
+        val sx = btnMain.centerX() - (iw + 9f * d + tw) / 2f
+        val icx = sx + iw / 2f
+        val icy = btnMain.centerY()
+        if (speaking) {
+            btnPaint.color = 0xFFFFFFFF.toInt()
+            rect.set(icx - 7f * d, icy - 7f * d, icx + 7f * d, icy + 7f * d)
+            c.drawRoundRect(rect, 2f * d, 2f * d, btnPaint)
+        } else {
+            iconP.color = 0xFFFFFFFF.toInt()
+            spPath.reset()
+            spPath.moveTo(icx - 8f * d, icy - 3f * d)
+            spPath.lineTo(icx - 4f * d, icy - 3f * d)
+            spPath.lineTo(icx + 1f * d, icy - 7f * d)
+            spPath.lineTo(icx + 1f * d, icy + 7f * d)
+            spPath.lineTo(icx - 4f * d, icy + 3f * d)
+            spPath.lineTo(icx - 8f * d, icy + 3f * d)
+            spPath.close()
+            c.drawPath(spPath, iconP)
+            c.drawLine(icx - 9f * d, icy - 8f * d, icx + 9f * d, icy + 8f * d, iconP)
+        }
+        c.drawText(label, sx + iw + 9f * d + tw / 2f, icy - (btnText.descent() + btnText.ascent()) / 2f, btnText)
+        btnText.letterSpacing = 0f
+        c.restoreToCount(mSaved)
+
+        // small red STOP square (listen / think): work can always be cancelled
+        if (!speaking) {
+            val stSaved = c.save()
+            if (pressedControl == 3) c.scale(0.92f, 0.92f, btnStop.centerX(), btnStop.centerY())
+            btnPaint.style = Paint.Style.FILL
+            btnPaint.color = 0xFFB52F48.toInt()
+            c.drawRoundRect(btnStop, 12f * d, 12f * d, btnPaint)
+            btnPaint.color = 0xFFFFFFFF.toInt()
+            rect.set(btnStop.centerX() - 6f * d, btnStop.centerY() - 6f * d, btnStop.centerX() + 6f * d, btnStop.centerY() + 6f * d)
+            c.drawRoundRect(rect, 1.5f * d, 1.5f * d, btnPaint)
+            c.restoreToCount(stSaved)
+        }
+
+        }
+        if (state == "idle") drawIdleChips(c, sColor)
 
         // HAAN / NAHI (only while NOVA waits for a yes/no)
         if (askMode) {
@@ -801,23 +1042,77 @@ private class HudView(ctx: Context) : View(ctx) {
         // opening light: border flash + a light band sweeping across the glass + one shock ring (only while opening)
         if (entering && t < 1f) {
             val fl = HudMath.entryFlash(t)
-            rect.set(left, top, right, pillBottom)
+            chamfer(left, top, right, pillBottom, cut)
+            border.color = sColor
             border.strokeWidth = 3.2f * d
             border.alpha = (255 * fl).toInt().coerceIn(0, 255)
-            c.drawRoundRect(rect, radius, radius, border)
+            c.drawPath(cpath, border)
             val sx = left + (right - left) * (-0.25f + 1.5f * t)
             sweep.shader = LinearGradient(sx - 70f * d, top, sx + 70f * d, pillBottom,
                 intArrayOf(0x00FFFFFF, 0x66CFF4FF, 0x00FFFFFF), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
-            c.drawRoundRect(rect, radius, radius, sweep)
+            c.drawPath(cpath, sweep)
             sweep.shader = null
             val g = margin * 0.9f * t
-            rect.set(left - g, top - g, right + g, pillBottom + g)
-            shock.color = (cyan and 0x00FFFFFF) or ((190 * (1f - t)).toInt().coerceIn(0, 255) shl 24)
+            chamfer(left - g, top - g, right + g, pillBottom + g, cut + g)
+            shock.color = (sColor and 0x00FFFFFF) or ((190 * (1f - t)).toInt().coerceIn(0, 255) shl 24)
             shock.strokeWidth = 1.6f * d
-            c.drawRoundRect(rect, radius + g, radius + g, shock)
+            c.drawPath(cpath, shock)
         }
         c.restoreToCount(layer)
         c.restoreToCount(sv)
+    }
+
+    /** v7.122: VOICE / MESSAGE / MORE chips of the idle popup. */
+    private fun drawIdleChips(c: Canvas, sColor: Int) {
+        val labels = arrayOf("VOICE", "MESSAGE", "MORE")
+        val rects = arrayOf(iVoice, iMsg, iMore)
+        val ids = intArrayOf(11, 12, 13)
+        for (n in 0 until 3) {
+            val r = rects[n]
+            val sv = c.save()
+            if (pressedControl == ids[n]) c.scale(0.95f, 0.95f, r.centerX(), r.centerY())
+            hexPath(r, 10f * d)
+            btnPaint.style = Paint.Style.FILL
+            btnPaint.shader = LinearGradient(0f, r.top, 0f, r.bottom, intArrayOf(0xFF0F2A66.toInt(), 0xFF081840.toInt()), null, Shader.TileMode.CLAMP)
+            c.drawPath(bpath, btnPaint)
+            btnPaint.shader = null
+            border.color = sColor
+            border.strokeWidth = 1.6f * d
+            border.alpha = 255
+            c.drawPath(bpath, border)
+            btnText.textSize = 12f * d
+            btnText.letterSpacing = 0.08f
+            c.drawText(labels[n], r.centerX(), r.centerY() - (btnText.descent() + btnText.ascent()) / 2f, btnText)
+            btnText.letterSpacing = 0f
+            btnText.textSize = 14f * d
+            c.restoreToCount(sv)
+        }
+    }
+
+    /** v7.121: cut-corner (octagon) outline of a card into [cpath]. */
+    private fun chamfer(l: Float, t0: Float, r: Float, b: Float, cut: Float) {
+        cpath.reset()
+        cpath.moveTo(l + cut, t0)
+        cpath.lineTo(r - cut, t0)
+        cpath.lineTo(r, t0 + cut)
+        cpath.lineTo(r, b - cut)
+        cpath.lineTo(r - cut, b)
+        cpath.lineTo(l + cut, b)
+        cpath.lineTo(l, b - cut)
+        cpath.lineTo(l, t0 + cut)
+        cpath.close()
+    }
+
+    /** v7.121: pointed-side button outline of [r] into [bpath]. */
+    private fun hexPath(r: RectF, tip: Float) {
+        bpath.reset()
+        bpath.moveTo(r.left + tip, r.top)
+        bpath.lineTo(r.right - tip, r.top)
+        bpath.lineTo(r.right, r.centerY())
+        bpath.lineTo(r.right - tip, r.bottom)
+        bpath.lineTo(r.left + tip, r.bottom)
+        bpath.lineTo(r.left, r.centerY())
+        bpath.close()
     }
 
     private fun drawChip(c: Canvas, r: RectF, label: String, color: Int, id: Int) {

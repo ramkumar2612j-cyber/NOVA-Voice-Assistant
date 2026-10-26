@@ -1,3 +1,7 @@
+> **LATEST (v7.116):** `PART_STATUS_v7_116_UI_COMPLETION.md` (kya check hua, kya UI me jodha), `NEXT_ACCOUNT_PROMPT_v7_116.md`, `CHANGELOG.md` (top). Kotlin ab sandbox me compile + JUnit hua; GitHub Actions / APK / phone abhi NOT RUN.
+
+> **LATEST (v7.115):** sabse naye docs: `CHANGELOG.md` (top), `PART_STATUS_v7_115_WAKE_HEAR_SITE.md`, `NEXT_ACCOUNT_PROMPT_v7_115.md`. Features ki list: `docs/FEATURES_v7_115.md`. Neeche ki purani lines history ke liye waise hi hain (add-only). Build / APK / phone abhi NOT RUN.
+
 # NOVA — Local-First Android Voice Assistant
 
 > **LATEST (v7.72, Part 20 FINAL):** README ke neeche "FINAL v7.72" section aur `OWNER_SETUP_AND_APK_STEPS.md` (section G) + `OWNER_PHONE_TEST_LIST_v7_72.md` sabse naye hain. Neeche ki purani lines (Version 6.88 wali table waghera) history ke liye waise hi rakhi hain - add-only rule.

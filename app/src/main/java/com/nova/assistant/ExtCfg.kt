@@ -114,6 +114,14 @@ object ExtCfg {
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean("skip_connector_confirm", true)
     } catch (e: Exception) { true }
 
+    /** v7.116 UI: the three "no yes/no" switches had a getter but no setter and no Settings control. Same keys and same defaults (true = never ask) as the getters above. */
+    fun setSkipRiskyConfirm(ctx: Context, on: Boolean) = putBool(ctx, "skip_risky_confirm", on)
+    fun setSkipOrderConfirm(ctx: Context, on: Boolean) = putBool(ctx, "skip_order_confirm", on)
+    fun setSkipConnectorConfirm(ctx: Context, on: Boolean) = putBool(ctx, "skip_connector_confirm", on)
+    private fun putBool(ctx: Context, key: String, on: Boolean) {
+        try { ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(key, on).apply() } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
     private const val FREE_CHAIN = "free_chain"
     private const val FREE_KEYLESS = "free_keyless"
 

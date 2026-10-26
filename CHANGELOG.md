@@ -1,3 +1,49 @@
+## v7.122 Idle popup + POPUP button (lite series; versionName stays 7.114)
+- NEW idle popup "How can I help you today?" with VOICE / MESSAGE / MORE (NovaHud state "idle", hit ids 11/12/13). VOICE = same as the wake word, MESSAGE = the typing box, MORE = the three-dots menu. Closes itself after 20 s if untouched; never opens while NOVA is busy or listening.
+- Entry points: POPUP button on the notification, POPUP chip in the home dock (ui.html), Android.showPopup() bridge (MainActivity -> NovaService.ACTION_SHOW_POPUP).
+- Additive only: the listen / think / speaking card is unchanged (the big SILENT/STOP block is only skipped while state = idle).
+- NOT COMPILED, NOT PHONE TESTED (sandbox has no Gradle / Android SDK: dl.google.com and Maven return 403). Static read only.
+
+## v7.120 Ultron voice (lite series; versionName stays 7.114)
+- NEW optional "ULTRON" switch + "Ultron strength" slider in Settings. OFF by default; OFF = the old voice exactly as before.
+- How: NOVA's own TTS is written to a file, processed by UltronFx (doubled wobble layer + light 55 Hz ring mod + 75 ms echo + soft clip), then played by UltronPlayer. Free, offline, no API key, no cloning of any real person's voice.
+- Safety: any failure (synth error, bad WAV, player error, text over 700 chars) falls back to the normal voice. STOP button, new reply and service shutdown all stop the Ultron audio.
+- LIMITS hidden from the UI (owner request): bottom LIMITS tab, the LIMITS screen and the Skills-list entry are gone from view. Nothing deleted in Kotlin: ApiUsage counting and the getApiUsage bridge still run.
+- Chat now shows ONE combined live limit line (sum of remaining / total over all services that have a key AND a published limit; "LIVE" when Groq headers are in, else "is phone ki ginti"). Refreshes every 2.5 s while chat is open.
+- UI: ULTRON button also on the main screen (next to SILENT), same switch as Settings.
+- Files: UltronFx.kt, UltronPlayer.kt, Cfg.kt, NovaService.kt (speak/listener/stop), MainActivity.kt (4 bridge methods), assets/ui.html, UltronFxTest.kt.
+- NOT built / NOT phone tested in this session (no Gradle, no internet in the sandbox). Owner must build, listen and tune the slider.
+
+## v7.119 Part B (lite series; versionName stays 7.114)
+- CHANGED (no behaviour change): the mic loop no longer makes a new array for every 100 ms chunk (`pre.add(buf.copyOf(n))`). New pure `PreRollRing` (5 reused slots, oldest dropped) replaces the ArrayList; WakeGateRules.replayCount semantics (replay all but the newest) are untouched. Readers use `lengthAt` because reused arrays can be longer than the chunk.
+- Tests: PreRollRingTest (10 JUnit), tools/test_v7119_partb_contract.py. OWNER_PHONE_TEST_LIST_v7_119.md added.
+- RUN in sandbox: kotlinc 1.9.24 compile of PreRollRing + WakeGateRules + both tests = 0 errors; PreRollRingTest + WakeGateRulesTest = 18/18 (tiny Kotlin JUnit stub, not real JUnit).
+- NOT RUN: full-project compile result (see PART_STATUS_v7_119_PART_B.md), real JUnit, GitHub Actions, phone.
+
+## v7.119 Part A (lite series; versionName stays 7.114)
+- CHANGED (no behaviour change): the v7.117 wake gate moved out of NovaService into pure `WakeGateRules` (voice / isOpen / extend / replayCount / closing). Same numbers: 300 / noise*1.8, 2 s hold, replay all but the newest pre-roll chunk, one reset when the gate closes.
+- Tests: WakeGateRulesTest (8 JUnit), tools/test_v7119_gate_contract.py (also checks v7.118 content-visibility).
+- NOT RUN: Kotlin compile, JUnit, GitHub Actions, phone.
+
+## v7.116 - UI completion + feature check (versionName stays 7.114 on purpose, old contract tests pin it)
+- CHECKED first: v7.115 (never compiled before) compiles with 0 errors (kotlinc 1.9.24 + android-34 jar), JUnit 1590/1590, run_all_checks 158/158, headless UI monkey-click of every button in every view = 0 JS errors, every `Android.x` call in ui.html has a bridge method.
+- FIXED (UI): HOME "PROFILE SEARCH" chip used an icon name that did not exist in its icon table (`<path d="undefined">`, console error on every start). Icon added + fallback so a missing icon can never print undefined again.
+- FIXED (race): ReelRunner start was check-then-set on a volatile flag; a friend-watch thread and a spoken command could both start a run. Now under one lock (`reelLock`).
+- ADDED to SKILLS (were voice-only, now visible with real status chips + example lines): Reels / Instagram, Instagram friend + Friend watch, Family numbers (status from the saved numbers), Website operator (any site), saved-login jobs, alternative routes, what NOVA learned (opens the BADA BRAIN card), offline website template, movie name, TV / horn false-wake guard, "samajh nahi aaya" guard. SKILLS: 104 -> 116 cards.
+- ADDED to MADAD (HelpGuide.kt + CAPS, equal): reels, familynum, webjobs (58 -> 61). They are PRIORITY topics because the older `media` topic also owns the key "reel".
+- ADDED Settings card POOCHNA AUR SUNNA: 4 switches that had a getter in ExtCfg but NO control anywhere: busy-listen (v7.73), ask "haan" first before risky taps / ordinary orders / connector WRITE (v6.38 / v6.32 / v7.104). Defaults unchanged (never ask, busy-listen ON); the card only lets the owner turn asking back ON. New bridge getAskPrefs / setAskPref, ExtCfg setSkip*Confirm. HARD DENY and protected screens are unaffected.
+- Tests: UiCompletion116Test (5 JUnit), tools/test_v7116_ui_completion.py (static + headless render), test_part6_skills_contract map extended.
+- NOT RUN: GitHub Actions, APK, phone. Instagram button names (English) and all phone-side behaviour are still unverified.
+
+## v7.115 - TV false wake guard, silent false wake, offline website fallback (versionName stays 7.114)
+- ADDED WakeGuardRules (pure): a wake result with more than 7 words (people / TV talking) is rejected; every false wake in a row raises the needed "nova" confidence by 0.05 (0.75 -> max 0.92, fades after 10 quiet minutes like WakeAdapt); "[unk] nova" needs 0.85. Sits between Logic.wakeVerified and Logic.wakeConfirmed in the NovaService wake loop. Old guards unchanged.
+- ADDED HearFailRules (pure): after the wake word, an unreadable capture shorter than 1.2 s is a false wake and NOVA sleeps silently (no spoken "samajh nahi aaya"); a real try that cannot be read twice in a row, with no Groq key and no Hindi pack, makes NOVA say ONCE what is missing (again at most every 30 min). Otherwise the old "dobara bolo" line.
+- ADDED SiteOffline (pure): a complete one-page site (6 themes: food / beauty / fitness / tech / shop / general, whole-word keyword pick) that needs no AI. SiteGen uses it when NO provider answered a NEW site, or when the AI page is a stub (< SiteQuality.MIN_LEN). An EDIT is never replaced by the template. Passes SiteQuality.check (checked with a Python port of the same regexes).
+- Tests: WakeGuardRulesTest (8), HearFailRulesTest (6), SiteOfflineTest (5), tools/test_v7115_contract.py.
+- LAG (measured, not guessed): headless chromium, SMOOTH, 4x CPU throttle, idle 10 s: 2.7 bridge calls/s, 0 long tasks, so the idle UI is NOT the lag. Real finding: getFeatureStatus -> NovaService.testState -> TextToSpeech.isLanguageAvailable is a binder call to the TTS engine on the JS thread every ~5 s; now cached 30 s. (SecureStore decrypts were already cached since v6.33, checked.) This lowers jank risk, it does not prove the owner's lag is gone: lag while NOVA is listening / speaking still needs a phone report.
+- NOT RUN: Kotlin compile (no kotlinc in the sandbox), JUnit, GitHub Actions, APK, phone. New Kotlin was written add-only and never compiled: if build.yml fails, fix from the log FIRST.
+- NOT CHANGED on purpose: ChatStore / VoiceFlowRules (contract tests and JUnit use them) and NovaAssist were NOT deleted. UI lag: v7.113 SMOOTH + v7.114 refresh-rate fix stay, no new evidence, nothing changed.
+
 ## v7.114 - reel / Instagram friend jobs, saved Papa-Mummy numbers, movie-name fix, lag fix (versionName 7.114)
 - ADDED ReelRules + ReelRunner: "reel scroll karo", "agli / pichli reel", "10 reel scroll karo har reel 5 second", "reels scroll karte raho" (STOP ends it); "is reel ko like / save / comment karo <text> / share karo <naam> ko"; "rahul_sharma ki id pe jao uski 5 reels pe like aur comment karo". Comments capped at 10, shares at 5 per run, comment / share / watch are read back and need "haan". Stops on "try again later". Each action is checked on screen; a missing button is reported, not counted.
 - ADDED friend watch: "rahul_sharma jaise hi post kare to like aur comment kar do" saves a watch (7 days, 20 runs); the Instagram notification opens the post and the plan runs. "watch band karo" clears it.
@@ -931,3 +977,5 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - v7.109 P6 site / blocker learning: SiteLearningRules / SiteLearningStore, Gap.LOGIN.
 - v7.110 P7 bigger brain, owner picks: BrainChoiceRules, BrainChoice, OfflinePack.OWNER_PICK (Qwen2.5-3B, tap only, not in the automatic pack loop), LearnedMemory (show + clear Playbook / Site / Capability), CapabilityLearningStore.clear(), Settings card "BADA BRAIN + NOVA NE KYA SEEKHA", MADAD topic brainlearn, bridge getBrainChoice / startBrainInstall / cancelBrainInstall / getLearnedSummary / clearJobLearning.
 - Open decision: 1.5B and other pack models still auto-download on Wi-Fi + charging when ExtCfg.autoModels is ON (v6.96); only the 3B is tap-only.
+- v7.117 (lite, Fix 1): Vosk wake recognizer runs only while a voice is present (+2 s, 0.4 s pre-roll replay); silent chunks cost no recognizer work. Not compiled, not phone-tested.
+- v7.118 (lite, Fix 2): chat messages use content-visibility:auto (off-screen messages are not painted, long chats scroll lighter). Screen timers/blur were already limited in SMOOTH by v7.113. Not phone-tested.

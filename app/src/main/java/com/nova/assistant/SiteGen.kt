@@ -130,6 +130,12 @@ object SiteGen {
         }
     }
 
+    /** v7.115: a complete page that needs no AI. The owner can edit it by voice afterwards. */
+    private fun offlineOut(subject: String, request: String): Out {
+        val html = SiteOffline.build(subject, request)
+        return Out(true, html, "AI ka jawab nahi aaya, isliye taiyaar design use hua. Naam, rang ya photo badalne ke liye bolo: isme badlav karo.", emptyList(), html, SiteQuality.check(html))
+    }
+
     fun failMsg(): String = "Abhi website nahi ban payi. Thodi der baad dobara bolo"
 
     /** Build -> validate -> one targeted repair. Keeps the provider order and key-in-header behaviour.
@@ -155,7 +161,8 @@ object SiteGen {
         var quality: List<String> = emptyList()
         if (template == null) {
             val prompt = if (isEdit) improvePrompt(subject, fullRequest, baseHtml!!) + mediaText else userPrompt(subject, fullRequest, mediaText)
-            val candidate = requestHtml(ctx, SYSTEM, prompt, start) ?: return Out(false, "", failMsg())
+            val candidate = requestHtml(ctx, SYSTEM, prompt, start)
+                ?: if (isEdit) return Out(false, "", failMsg()) else return offlineOut(subject, fullRequest)   // v7.115: no AI answered a NEW site: the built-in page instead of nothing
             val first = (if (isEdit) emptyList() else SpecContract.check(spec, candidate)) + mediaProblems(candidate, media)
             var bestHtml = candidate
             var bestProblems = first
@@ -196,6 +203,11 @@ object SiteGen {
                         }
                     }
                 }
+            }
+            if (!isEdit && bestHtml.length < SiteQuality.MIN_LEN) {   // v7.115: the AI sent a stub: the built-in page is better than a stub
+                bestHtml = SiteOffline.build(subject, fullRequest)
+                bestProblems = emptyList()
+                quality = SiteQuality.check(bestHtml)
             }
             template = bestHtml
             problems = bestProblems

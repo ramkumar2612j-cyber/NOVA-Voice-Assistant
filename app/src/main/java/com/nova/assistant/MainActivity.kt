@@ -1127,6 +1127,25 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun getSilentMode(): Boolean = cfg.silentMode
 
+        /** v7.120: Ultron voice effect. amount = 0.2..1.0 */
+        @JavascriptInterface
+        fun getUltronVoice(): Boolean = cfg.ultronVoice
+
+        @JavascriptInterface
+        fun getUltronAmount(): Float = cfg.ultronAmount
+
+        @JavascriptInterface
+        fun setUltronVoice(on: Boolean): String {
+            cfg.ultronVoice = on
+            return if (on) "on" else "off"
+        }
+
+        @JavascriptInterface
+        fun setUltronAmount(v: Float): Float {
+            cfg.ultronAmount = v
+            return cfg.ultronAmount
+        }
+
         @JavascriptInterface
         fun sendText(t: String): String {
             // v7.0: a long website brief is kept whole (was cut at 500); every other typed sentence keeps the old 500 limit.
@@ -1253,6 +1272,10 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun wakeNow() { NovaService.instance?.wakeNow() }
+
+        /** v7.122: POPUP button on the main screen opens the idle popup (VOICE / MESSAGE / MORE) over the apps. */
+        @JavascriptInterface
+        fun showPopup() { try { startService(Intent(this@MainActivity, NovaService::class.java).setAction(NovaService.ACTION_SHOW_POPUP)) } catch (e: Throwable) { } }
 
         @JavascriptInterface
         fun selfTest(): String {
@@ -2143,6 +2166,31 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun setStopPowersOff(on: Boolean): String { ExtCfg.setStopPowersOff(this@MainActivity, on); return "ok" }
+
+        // ---- v7.116 UI: "yes/no pooch" switches + voice-while-busy. ASK = the opposite of the stored skip flag. Hard-blocked screens / HARD DENY words are NOT affected by any of these. ----
+        @JavascriptInterface
+        fun getAskPrefs(): String = try {
+            val o = org.json.JSONObject()
+            o.put("busy", ExtCfg.busyListen(this@MainActivity))
+            o.put("riskyAsk", !ExtCfg.skipRiskyConfirm(this@MainActivity))
+            o.put("orderAsk", !ExtCfg.skipOrderConfirm(this@MainActivity))
+            o.put("connectorAsk", !ExtCfg.skipConnectorConfirm(this@MainActivity))
+            o.toString()
+        } catch (e: Throwable) { "{}" }
+
+        @JavascriptInterface
+        fun setAskPref(key: String, on: Boolean): String {
+            try {
+                when (key.take(20)) {
+                    "busy" -> ExtCfg.setBusyListen(this@MainActivity, on)
+                    "riskyAsk" -> ExtCfg.setSkipRiskyConfirm(this@MainActivity, !on)
+                    "orderAsk" -> ExtCfg.setSkipOrderConfirm(this@MainActivity, !on)
+                    "connectorAsk" -> ExtCfg.setSkipConnectorConfirm(this@MainActivity, !on)
+                    else -> return "unknown"
+                }
+            } catch (e: Throwable) { return "error" }
+            return "ok"
+        }
 
         // ---- v7.110 PART 7: BADA BRAIN card (owner-tap download) + what NOVA learned (show / clear all three stores) ----
         @JavascriptInterface

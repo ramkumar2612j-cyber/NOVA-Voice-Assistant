@@ -69,6 +69,7 @@ class NovaService : Service() {
         private const val MAX_FOLLOW = 6   // v6.97-wip9: natural talk, up to 6 follow-up listens in a row without the wake word
         private val NO_FOLLOW_KINDS = setOf("stop", "sleep", "agent", "image", "site", "learn", "publish", "screen_end", "rec")
         const val ACTION_REC_STOP = "com.nova.assistant.REC_STOP"   // PART 6A: the STOP button of the recording notification
+        const val ACTION_SHOW_POPUP = "com.nova.assistant.SHOW_POPUP"   // v7.122: POPUP button of the NOVA notification -> idle popup
         @Volatile var running = false
         /** v7.114: the notification listener asks the running service to act on a watched friend's new post. false = not started (service off, busy, phone locked). */
         fun reelWatchFire(p: ReelRules.Plan): Boolean = instance?.reelFromWatch(p) ?: false
@@ -186,6 +187,10 @@ class NovaService : Service() {
     @Volatile private var lastKind = ""                      // kind of the command the last turn ran (decides spoken or silent reply)
     @Volatile private var historyAt = 0L                     // when the cloud chat memory was last used
     @Volatile private var cloudCoolUntil = 0L                // after a cloud failure the cloud is skipped until this time (AiRouter.cooldownMs)
+    @Volatile private var junkStreak = 0                      // v7.115: unreadable captures in a row (HearFailRules)
+    @Volatile private var hiVoiceVal = ""                      // v7.115: cached Hindi-voice check (testState)
+    @Volatile private var hiVoiceAt = 0L
+    @Volatile private var lastSetupHelpAt = 0L                // v7.115: when NOVA last explained the missing Groq key / Hindi pack
     @Volatile private var lastCloudFail = ""                 // Logic.failureKind of the last cloud failure, "" = no failure
     private val freeCooldowns = Cooldowns()                      // per-provider skip times of the free AI chain (part 1B)
     @Volatile private var geminiCoolUntil = 0L                   // Gemini alone is skipped until this time; the free chain still runs
@@ -219,6 +224,7 @@ class NovaService : Service() {
         if (i?.action == ACTION_REC_STOP) {   // PART 6A: STOP button on the notification (saving takes a moment, so not on the main thread)
             Thread { sys(stopRecording("button")) }.start()
         }
+        if (i?.action == ACTION_SHOW_POPUP) h.post { showIdlePopup() }   // v7.122
         return START_NOT_STICKY
     }
 
@@ -324,6 +330,19 @@ class NovaService : Service() {
         } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
     }
 
+    /** v7.122: idle popup "How can I help you today?" (VOICE / MESSAGE / MORE). Never while NOVA is busy; closes itself after 20 s if untouched. */
+    private fun showIdlePopup() {
+        val hd = hud ?: return
+        if (!alive || busy || listening) return
+        if (!NovaHud.canShow(this)) { overlayNudge(); return }
+        h.removeCallbacks(hudHide)
+        hd.showIdle()
+        h.postDelayed({
+            val x = hud
+            if (x != null && x.isIdle()) x.hide()
+        }, 20_000L)
+    }
+
     private fun hudMode(m: String) {
         val hd = hud ?: return
         when (m) {
@@ -427,6 +446,7 @@ class NovaService : Service() {
         hud = NovaHud(this).also {
             it.onAnswer = { yes -> answerPending(yes) }
             it.onTyped = { text -> typed(text) }
+            it.onIdleVoice = { wakeNow(); h.postDelayed(hudHide, 4000L) }   // v7.122: VOICE chip = same as the wake word
             it.silentOn = cfg.silentMode
             it.onSilentToggle = { cfg.silentMode = !cfg.silentMode; cfg.silentMode }
             it.onStop = {
@@ -571,6 +591,7 @@ class NovaService : Service() {
         dictTarget = null
         answerWindow = false
         history.clear()
+        try { UltronPlayer.stop() } catch (e: Throwable) { }
         try { tts?.stop(); tts?.shutdown() } catch (e: Exception) { }
         tts = null
         ttsReady = false
@@ -590,11 +611,11 @@ class NovaService : Service() {
                 cfg.applyVoice(t)
                 t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(id: String?) { if (id != null && id == curUtt) emit("mode", "speak") }   // v7.12: HUD speaking state
-                    override fun onDone(id: String?) { utteranceEnded(id, true) }
+                    override fun onDone(id: String?) { if (fxCallback(id, true)) return; utteranceEnded(id, true) }
                     @Deprecated("Deprecated in Java")
-                    override fun onError(id: String?) { utteranceEnded(id, false) }
-                    override fun onError(id: String?, errorCode: Int) { utteranceEnded(id, false) }
-                    override fun onStop(id: String?, interrupted: Boolean) { utteranceEnded(id, false) }
+                    override fun onError(id: String?) { if (fxCallback(id, false)) return; utteranceEnded(id, false) }
+                    override fun onError(id: String?, errorCode: Int) { if (fxCallback(id, false)) return; utteranceEnded(id, false) }
+                    override fun onStop(id: String?, interrupted: Boolean) { if (fxCallback(id, false)) return; utteranceEnded(id, false) }
                 })
                 ttsReady = true
             }
@@ -639,12 +660,83 @@ class NovaService : Service() {
         nextFollow = false
         ttsActive = true                                 // BEFORE speak(), so the loop can never hear our own voice
         ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + spoken.length * 90L)
+        UltronPlayer.stop()                                  // v7.120: a new reply always cuts the old Ultron audio
+        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return true
         val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
             ttsActive = false
             if (confirm) answerWindow = true
             return false
         }
+        return true
+    }
+
+    // ---- v7.120 ULTRON VOICE: TTS -> WAV file -> UltronFx -> AudioTrack. Any failure falls back to the normal voice. ----
+    @Volatile private var fxId = ""
+    @Volatile private var fxOk = false
+    @Volatile private var fxLatch: CountDownLatch? = null
+
+    /** true when the id was the Ultron synth file (its callbacks must NOT end the utterance). */
+    private fun fxCallback(id: String?, ok: Boolean): Boolean {
+        if (id == null || id != fxId) return false
+        fxOk = ok
+        fxLatch?.countDown()
+        return true
+    }
+
+    /** Starts the Ultron path on a worker thread. false = could not even start, caller speaks normally. */
+    private fun startUltron(t: TextToSpeech, spoken: String, id: String): Boolean {
+        val name = "fx$id"
+        val f = File(cacheDir, "ultron_$id.wav")
+        val latch = CountDownLatch(1)
+        try {
+            t.setPitch(UltronFx.PITCH)
+            t.setSpeechRate(minOf(cfg.rate, UltronFx.MAX_RATE))
+            fxOk = false
+            fxLatch = latch
+            fxId = name
+            f.delete()
+            val r = t.synthesizeToFile(spoken, android.os.Bundle(), f, name)
+            if (r != TextToSpeech.SUCCESS) { fxId = ""; cfg.applyVoice(t); return false }
+        } catch (e: Throwable) {
+            ErrLog.add("NovaService", "ultron start: $e")
+            fxId = ""
+            try { cfg.applyVoice(t) } catch (e2: Throwable) { }
+            return false
+        }
+        ttsDeadline += 8000L
+        val amount = cfg.ultronAmount
+        Thread {
+            var res = UltronPlayer.FAILED
+            try {
+                if (latch.await(20, TimeUnit.SECONDS) && fxOk && id == curUtt) {
+                    val w = WavPcm.parse(f.readBytes())
+                    if (w != null) {
+                        val fx = UltronFx.process(UltronFx.toShorts(w.pcm), w.rate, amount)
+                        if (id == curUtt) {
+                            emit("mode", "speak")
+                            res = UltronPlayer.play(fx, w.rate)
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                ErrLog.add("NovaService", "ultron play: $e")
+            } finally {
+                try { f.delete() } catch (e: Throwable) { }
+                if (fxId == name) fxId = ""
+            }
+            if (id != curUtt) return@Thread                     // a newer reply or STOP already took over
+            if (res == UltronPlayer.FAILED) {
+                // fall back: the normal voice speaks it, its own listener ends the utterance
+                try {
+                    cfg.applyVoice(t)
+                    val r2 = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                    if (r2 != TextToSpeech.SUCCESS) utteranceEnded(id, false)
+                } catch (e: Throwable) { utteranceEnded(id, false) }
+            } else {
+                utteranceEnded(id, res == UltronPlayer.DONE)
+            }
+        }.start()
         return true
     }
 
@@ -663,15 +755,25 @@ class NovaService : Service() {
         Thread { try { runCommand(Logic.Cmd("stop")) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }.start()
     }
 
-    fun stopSpeaking() { try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
+    fun stopSpeaking() { try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
 
     // ---- FIXTEST: hooks for Settings > SELF TEST. They only read state or run harmless local tools.
     fun testState(): String {
         val t = tts
         val hi = try {
-            if (t == null) "tts=none" else when (t.isLanguageAvailable(java.util.Locale("hi", "IN"))) {
-                TextToSpeech.LANG_AVAILABLE, TextToSpeech.LANG_COUNTRY_AVAILABLE, TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> "hindi_voice=ok"
-                else -> "hindi_voice=missing"
+            if (t == null) "tts=none" else {
+                // v7.115: isLanguageAvailable is a binder call to the TTS engine; the home page asks testState every few seconds on the JS thread, so the answer is kept 30 s
+                val nowMs = System.currentTimeMillis()
+                if (hiVoiceVal.isNotEmpty() && nowMs - hiVoiceAt in 0L..30_000L) hiVoiceVal
+                else {
+                    val v = when (t.isLanguageAvailable(java.util.Locale("hi", "IN"))) {
+                        TextToSpeech.LANG_AVAILABLE, TextToSpeech.LANG_COUNTRY_AVAILABLE, TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> "hindi_voice=ok"
+                        else -> "hindi_voice=missing"
+                    }
+                    hiVoiceVal = v
+                    hiVoiceAt = nowMs
+                    v
+                }
             }
         } catch (e: Exception) { "hindi_voice=unknown" }
         return "alive=" + alive + " ttsReady=" + ttsReady + " " + hi + " busy=" + busy
@@ -1039,10 +1141,12 @@ class NovaService : Service() {
             var micRecoverTries = 0   // wip15
             var peak = 0.0                    // loudest recent chunk: a wake word must be spoken, not just a faint sound
             var wakeHits = 0                  // consecutive recognizer results that contained the wake word
+            var wakeGateUntil = 0L            // v7.117 lite: Vosk wake listening runs only while a voice is present (+2 s), not on every silent chunk
+            var wakeGateWasOpen = false
             var wakeMiss = 0                  // v6.56: false wakes in a row (self-tuning, see WakeAdapt)
             var wakeMissAt = 0L
             var lastCaptureEnd = 0L           // cooldown against a second false wake right after a turn
-            val pre = ArrayList<ShortArray>() // last ~0.5 s of audio, so the first words after the wake word are not lost
+            val pre = PreRollRing(5, buf.size) // last ~0.5 s of audio (v7.119 B: 5 reused arrays, no allocation per chunk), so the first words after the wake word are not lost
 
             fun startCapture(answer: Boolean) {
                 h.removeCallbacks(sleepRun)    // awake now: no sleeping in the middle of a task
@@ -1062,14 +1166,17 @@ class NovaService : Service() {
                 lastSpeechBytes = 0
                 deferHudUntilSpeech = !answer
                 if (!answer) {                 // words spoken while the wake word was being recognised are kept
-                    for (c in pre) {
+                    for (pi in 0 until pre.size) {
+                        val c = pre.arrayAt(pi)
+                        val cn = pre.lengthAt(pi)
                         try {
-                            if (cm.acceptWaveForm(c, c.size)) {
+                            if (cm.acceptWaveForm(c, cn)) {
                                 val t = Logic.extractText(cm.getResult())
                                 if (t.isNotBlank()) cmdText.append(' ').append(t)
                             }
                         } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
-                        for (s in c) {
+                        for (si in 0 until cn) {
+                            val s = c[si]
                             pcm.write(s.toInt() and 0xff)
                             pcm.write((s.toInt() shr 8) and 0xff)
                         }
@@ -1202,8 +1309,7 @@ class NovaService : Service() {
                     if (ListenGuard.isVoice(rms, noise)) lastVoiceAt = System.currentTimeMillis()   // PART 4: people are talking nearby: no alerts over them
                     noise = ListenGuard.nextNoise(noise, rms)   // PART 4: the wake word itself must not raise the "speaking" threshold
                     peak = maxOf(rms, peak * 0.85)
-                    pre.add(buf.copyOf(n))
-                    while (pre.size > 5) pre.removeAt(0)
+                    pre.add(buf, n)   // v7.119 B: copy into a reused slot (oldest dropped at 5), no new array per chunk
                     val porc = pw
                     if (porc != null) {
                         // v6.56: Porcupine decides the wake. Same cooldown and a minimum loudness; any failure falls back to Vosk for good.
@@ -1226,15 +1332,30 @@ class NovaService : Service() {
                             startCapture(false)
                         }
                     } else {
-                        val done = wk.acceptWaveForm(buf, n)
-                        val txt = if (done) wk.getResult() else wk.getPartialResult()
-                        val wakeNow = Logic.heardWake(txt, wakeWord, done)   // v7.75: "[unk] nova" only on a final result
+                        // v7.117 lite: no voice = no Vosk work (big CPU/heat saving). The last ~0.4 s is replayed when a voice starts, so the wake word is not cut.
+                        val nowG = System.currentTimeMillis()
+                        var gateOpen = WakeGateRules.isOpen(nowG, wakeGateUntil)
+                        val voiceG = WakeGateRules.voice(rms, noise)   // v7.119: same rules as v7.117, now in WakeGateRules (unit tested)
+                        if (voiceG) {
+                            val replayN = WakeGateRules.replayCount(pre.size, gateOpen, true)
+                            for (gi in 0 until replayN) { try { wk.acceptWaveForm(pre.arrayAt(gi), pre.lengthAt(gi)) } catch (e: Exception) { } }
+                            wakeGateUntil = WakeGateRules.extend(nowG, wakeGateUntil, true)
+                            gateOpen = true
+                        }
+                        if (WakeGateRules.closing(gateOpen, wakeGateWasOpen)) { wk.reset(); wakeHits = 0 }
+                        wakeGateWasOpen = gateOpen
+                        val done = if (gateOpen) wk.acceptWaveForm(buf, n) else false
+                        val txt = if (!gateOpen) "" else if (done) wk.getResult() else wk.getPartialResult()
+                        val wakeNow = gateOpen && Logic.heardWake(txt, wakeWord, done)   // v7.75: "[unk] nova" only on a final result
                         wakeHits = Logic.nextWakeHits(wakeHits, wakeNow)
                         if (wakeNow && (peak < maxOf(1100.0, noise * 3.5) * WakeAdapt.scale(wakeMiss, wakeMissAt, System.currentTimeMillis()) || System.currentTimeMillis() - lastCaptureEnd < Logic.WAKE_COOLDOWN_MS)) {
                             wk.reset()                 // too faint or too soon: a false wake (TV, room noise, echo of our voice)
                             wakeHits = 0
                         } else if (wakeNow && done && !Logic.wakeVerified(txt, wakeWord)) {
                             wk.reset()                 // v7.113: low confidence or wrong length: a horn, clap or beep, not the spoken word
+                            wakeHits = 0
+                        } else if (wakeNow && done && !WakeGuardRules.allow(txt, wakeWord, WakeGuardRules.activeMisses(wakeMiss, wakeMissAt, System.currentTimeMillis()))) {
+                            wk.reset()                 // v7.115: long talk (TV / people) or a less sure "nova" after false wakes in a row
                             wakeHits = 0
                         } else if (wakeNow && done && Logic.wakeConfirmed(wakeHits, done)) {   // v7.113: only a verified FINAL result wakes (a long partial "nova" was how a horn got through)
                             wakeHits = 0
@@ -2149,12 +2270,23 @@ class NovaService : Service() {
 
     private fun recText(code: String, arg: String = ""): String = RecordRules.text(code, enLang(), arg)
 
-    private fun baseNotif(): Notification = Notification.Builder(this, "nova")
-        .setContentTitle(tr("NOVA active hai", "NOVA is active"))
-        .setContentText(tr("\"${cfg.wake}\" bolo, main sun raha hoon", "Say \"${cfg.wake}\", I am listening"))
-        .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-        .setOngoing(true)
-        .build()
+    private fun baseNotif(): Notification {
+        // v7.122: a POPUP button opens the idle popup (VOICE / MESSAGE / MORE) from the notification shade
+        val popPi = PendingIntent.getService(
+            this, 62, Intent(this, NovaService::class.java).setAction(ACTION_SHOW_POPUP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val popAct = Notification.Action.Builder(
+            android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_btn_speak_now), "POPUP", popPi
+        ).build()
+        return Notification.Builder(this, "nova")
+            .setContentTitle(tr("NOVA active hai", "NOVA is active"))
+            .setContentText(tr("\"${cfg.wake}\" bolo, main sun raha hoon", "Say \"${cfg.wake}\", I am listening"))
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setOngoing(true)
+            .addAction(popAct)
+            .build()
+    }
 
     private fun recNotif(): Notification {
         val pi = PendingIntent.getService(
@@ -2808,6 +2940,7 @@ class NovaService : Service() {
         }
         val said = if (groqText.isNotBlank()) groqText else text
         val junk = groqText.isBlank() && Logic.isJunk(text)       // noise / cough / TV: never sent to any model, never acted on
+        if (!junk) junkStreak = 0                                 // v7.115
         if (text.isNotBlank() && !junk) {                         // Layer 2: optional offline model (a translator only)
             val line = LocalBrains.ask(this, text)
             val mc = line?.let { Logic.classify(it) }
@@ -2833,7 +2966,16 @@ class NovaService : Service() {
                 val secs = "%.1f".format(pcm.size / (2.0 * RATE))
                 quietAlert("listen", tr("Awaaz samajh nahi aayi (audio $secs sec). Groq key: ${if (SecureStore.hasGroq(this)) "hai" else "nahi"}, Gemini key: ${if (SecureStore.hasKeys(this)) "hai" else "nahi"}, Hindi pack: ${if (HindiPack.ready(this)) "ready" else "abhi nahi" }. Key ya limit check karo.",
                     "Speech not understood (audio $secs s). Groq key: ${if (SecureStore.hasGroq(this)) "yes" else "no"}, Gemini key: ${if (SecureStore.hasKeys(this)) "yes" else "no"}, Hindi pack: ${if (HindiPack.ready(this)) "ready" else "not yet"}. Check keys or limits."))
-                return if (turnIsFollow) "" else tr("Samajh nahi aaya, dobara bolo", "I did not catch that, please say it again")   // v7.86: silent on a hands-free follow-up
+                junkStreak++   // v7.115: false wake (very short audio) sleeps silently; a real try that cannot be read explains the missing Groq key / Hindi pack once
+                val failAt = System.currentTimeMillis()
+                val failAct = HearFailRules.decide(pcm.size / (2.0 * RATE), junkStreak, SecureStore.hasGroq(this), HindiPack.ready(this), turnIsFollow, lastSetupHelpAt, failAt)
+                if (failAct == HearFailRules.Action.SLEEP) return ""
+                if (failAct == HearFailRules.Action.SETUP_HELP) {
+                    lastSetupHelpAt = failAt
+                    junkStreak = 0
+                    return tr(HearFailRules.helpText(false), HearFailRules.helpText(true))
+                }
+                return tr("Samajh nahi aaya, dobara bolo", "I did not catch that, please say it again")
             }
             val ans = Routing.run(steps, said, { cloudStep(pcm, said) }, { localAnswer(said, online, steps.contains(AiRouter.Step.CLOUD)) },
                 { ms -> cloudCoolUntil = System.currentTimeMillis() + ms })
@@ -3420,6 +3562,7 @@ class NovaService : Service() {
             cmdQ.clear(); queueEmit()   // v7.40: STOP also empties the command queue
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "Owner said stop") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
             agentOutcome = AgentTaskRules.State.CANCELLED
+            try { UltronPlayer.stop() } catch (e: Throwable) { }
             try { tts?.stop() } catch (e: Exception) { }
             ttsActive = false
             pending = null
@@ -6926,6 +7069,7 @@ class NovaService : Service() {
     // ------------------------------------------------------------------ v7.114 REEL / INSTAGRAM FRIEND jobs + saved family numbers
     @Volatile private var reelCancel = false
     @Volatile private var reelRunning = false
+    private val reelLock = Any()
 
     private fun saveFamilyByVoice(r: FamilyContacts.SaveReq): String {
         val en = cfg.lang == "en"
@@ -6961,8 +7105,11 @@ class NovaService : Service() {
     /** Starts the run on a worker thread. fromWatch = started by a friend's post notification (nothing is spoken at the start). */
     private fun launchReel(p: ReelRules.Plan, announce: Boolean): String {
         val en = cfg.lang == "en"
-        if (reelRunning) return ReelRules.busyText(en)
-        reelRunning = true; reelCancel = false
+        // v7.116: check-and-set under one lock (a friend-watch thread and a spoken command could both pass the plain check)
+        synchronized(reelLock) {
+            if (reelRunning) return ReelRules.busyText(en)
+            reelRunning = true; reelCancel = false
+        }
         videoQuietUntil = System.currentTimeMillis() + QuickScan.QUIET_FOLLOW_MS
         val host = object : ReelRunner.Host {
             override fun en(): Boolean = cfg.lang == "en"

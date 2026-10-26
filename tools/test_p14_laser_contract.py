@@ -9,7 +9,7 @@ def need(c, m):
     if not c: bad.append(m)
 need('<script id="pt14_laser">' in U and '<style id="pt14_laser_css">' in U, 'pt14 css + js blocks missing')
 need(U.rstrip().endswith('</body></html>'), 'ui.html must end with </body></html>')
-b = U[U.index('<style id="pt14_laser_css">'):U.rindex('</body></html>')]
+b = U[U.index('<style id="pt14_laser_css">'):U.index('</script>', U.index('<script id="pt14_laser">'))]   # v7.122: only the pt14 blocks (later add-only skins are not part of it)
 need('fetch(' not in b and 'XMLHttpRequest' not in b and 'c_in' not in b and 'm13_q' not in b and '.value' not in b, 'pt14: no network, no typed text read')
 need('innerHTML' not in b, 'pt14: textContent only')
 need('Android.analysisStatus' in b and 'Android.analysisCancel' in b, 'pt14 must use analysisStatus + analysisCancel only')

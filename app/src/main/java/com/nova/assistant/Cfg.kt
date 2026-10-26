@@ -53,6 +53,16 @@ class Cfg(ctx: Context) {
         get() = p.getBoolean("silentMode", false)
         set(v) { p.edit().putBoolean("silentMode", v).apply() }
 
+    /** v7.120: movie-style "Ultron" voice effect on NOVA's own spoken replies. Default OFF; OFF keeps the old voice exactly as before. */
+    var ultronVoice: Boolean
+        get() = p.getBoolean("ultronVoice", false)
+        set(v) { p.edit().putBoolean("ultronVoice", v).apply() }
+
+    /** v7.120: how strong the Ultron effect is (0.2 .. 1.0). */
+    var ultronAmount: Float
+        get() = UltronFx.clampAmount(p.getFloat("ultronAmount", UltronFx.DEFAULT_AMOUNT))
+        set(v) { p.edit().putFloat("ultronAmount", UltronFx.clampAmount(v)).apply() }
+
     /** Default OFF: NOVA never opens the mic by itself to ask "shall I remember this shortcut?" after a command. */
     var nudges: Boolean
         get() = p.getBoolean("nudges", false)

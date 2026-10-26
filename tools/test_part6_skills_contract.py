@@ -14,10 +14,11 @@ MAP={'call':'Call karna','whatsapp':'WhatsApp / WhatsApp Business','alarm':'Alar
 'autoreply':'Auto reply','connectors':"CONN('github'",'routines':'Routines','lockguard':'Lock guard','teach':'Teach once',
 'powerguide':'Background me chalte rehna','gmail':'Gmail','agent':'Agent: doosre app me kaam','screenalert':'Screen alert',
 'watchmic':'Watch mic','quiet':'Chup aur Quiet','offlineai':'Phone AI','brainlearn':'Phone AI','leads':'Business leads','limits':'API limits',
-'persona':'Jarvis andaaz','callanswer':'Call uthana / kaatna','calendar':'Aaj ka schedule (calendar)','analysis':'Photo / video ANALYSE karna','roundabout':'Ghuma ke bole kaam','featurestatus':'Apne aap test','photoedit':'Photo edit (professional','sitemedia':'Website ke liye apni photo','chathistory':'Meri chats (history','batterysos':'Battery kam: yaad','waitsec':'Bolne ke baad kitna rukna','musicplay':'Gaana chalana (Spotify','media':'Media: Share karke bhejna','frames':'Video se frames nikalna','switches':'Settings ke 3 switch','safemode':'Safe mode (crash ke baad)'}
+'persona':'Jarvis andaaz','callanswer':'Call uthana / kaatna','calendar':'Aaj ka schedule (calendar)','analysis':'Photo / video ANALYSE karna','roundabout':'Ghuma ke bole kaam','featurestatus':'Apne aap test','photoedit':'Photo edit (professional','sitemedia':'Website ke liye apni photo','chathistory':'Meri chats (history','batterysos':'Battery kam: yaad','waitsec':'Bolne ke baad kitna rukna','musicplay':'Gaana chalana (Spotify','media':'Media: Share karke bhejna','frames':'Video se frames nikalna','switches':'Settings ke 3 switch','safemode':'Safe mode (crash ke baad)','reels':'Reels / Instagram (scroll','familynum':'Family numbers (Papa','webjobs':'Koi bhi website par kaam (Website operator)'}
 bad=[]
 for t in topics:
     if t not in MAP: bad.append('help topic without mapping: '+t)
+    elif t == 'limits': pass   # v7.120: the LIMITS screen is hidden on purpose (owner request)
     elif MAP[t] not in REG: bad.append('help topic %s has no Skills entry (%s)'%(t,MAP[t]))
 for t in ['Photo edit (professional','Website ke liye apni photo','Gaana chalana (Spotify','Meri chats (history','Bolne ke baad kitna rukna','Battery kam: yaad']:
     if t not in REG: bad.append('missing new skill: '+t)

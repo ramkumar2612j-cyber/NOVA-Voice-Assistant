@@ -1,0 +1,8 @@
+Project: NOVA Voice Assistant (com.nova.assistant, Kotlin + WebView assets/ui.html). Source zip: NOVA-v7_122-ULTRON-UI.zip. Read PART_STATUS_v7_122_BUILD_BLOCKED.md, then PART_STATUS_v7_121_ULTRON_UI.md.
+Owner rules: short Hinglish, simple words, numbered steps. Owner uses only an Android phone: direct links, never PC commands; if something fails ask only for "the red lines of the failed step". Start with one line, keep a task list with % done, finish with: what changed, files, one next step. Do not make the owner re-explain. Additive only, never remove a feature. Never say "working" without proof: report PASS / FAIL / NOT TESTED.
+State: Ultron app UI done and seen in a browser. NovaHud.kt popup (listen/think/speaking + NEW idle popup VOICE/MESSAGE/MORE) written and statically reviewed but NEVER compiled and NEVER seen on a phone: the last sandbox had no Gradle/SDK (403). 4 stale Python guards were fixed in v7.122.
+To do, in order:
+1. Check if this sandbox can run gradle / kotlinc. If yes: gradle testDebugUnitTest assembleDebug and fix every error. If no: owner pushes the zip to https://github.com/skfashion142/NOVA-Voice-Assistant and runs https://github.com/skfashion142/NOVA-Voice-Assistant/actions > "Build and Test APK"; fix from the red lines.
+2. Owner installs the APK and tests: idle popup (notification POPUP button or home POPUP chip: VOICE / MESSAGE / MORE, auto-close 20 s), listen / think / speaking, SILENT, STOP, X, 3-dots (SILENT, CHAT, CHHOTA, BAND), HAAN/NAHI, minimize, typing box, long reply. Fix layout from screenshots.
+3. Pending from v7.120: Ultron voice build + slider tuning on the phone.
+4. Report PASS / FAIL / NOT TESTED per item. Deliver full ZIP + next prompt.

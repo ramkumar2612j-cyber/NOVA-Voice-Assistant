@@ -27,7 +27,7 @@ need('#tabs .tb em{font-size:7.5px' in ui, '320px CONNECT label rule missing')
 need('btnStop.set(' in hud and 'hitControl' in hud and 'inside(btnStop' in hud, 'STOP hit area is not the drawn rect')
 need('btnDots.set(' in hud and 'inside(btnDots' in hud, 'three dots hit area is not the drawn rect')
 need('val bh = 44f * d' in hud and 'onAnswerTap?.invoke(true)' in hud and 'onAnswerTap?.invoke(false)' in hud, 'HAAN/NAHI 44dp or callbacks missing')
-need('onStop?.invoke()' in hud and 'btnText.textSize = 11f * d' in hud, 'STOP callback/size missing')
+need('onStop?.invoke()' in hud and ('btnText.textSize = 11f * d' in hud or 'btnText.textSize = 14f * d' in hud), 'STOP callback/size missing')
 
 # 4. browser check
 if os.environ.get('NOVA_SKIP_BROWSER') == '1':
