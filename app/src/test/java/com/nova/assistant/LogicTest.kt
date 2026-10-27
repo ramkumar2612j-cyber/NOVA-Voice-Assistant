@@ -216,9 +216,9 @@ class LogicTest {
         assertEquals(cmd("monitor_on"), Logic.classify("screen monitoring on"))
         assertEquals(cmd("monitor_off"), Logic.classify("monitor off"))
         assertEquals(cmd("monitor_off"), Logic.classify("screen monitoring band"))
-        assertEquals(cmd("analyze"), Logic.classify("analyze screen"))
-        assertEquals(cmd("analyze"), Logic.classify("what is on my screen"))
-        assertEquals(cmd("analyze"), Logic.classify("read the screen"))
+        assertEquals("analyze", Logic.classify("analyze screen")?.kind)   // v7.128 fix: arg now carries the sentence
+        assertEquals("analyze", Logic.classify("what is on my screen")?.kind)   // v7.128 fix: arg now carries the sentence
+        assertEquals("analyze", Logic.classify("read the screen")?.kind)   // v7.128 fix: arg now carries the sentence
     }
 
     @Test fun classify_longOrUnknownGoesToCloudPath() {

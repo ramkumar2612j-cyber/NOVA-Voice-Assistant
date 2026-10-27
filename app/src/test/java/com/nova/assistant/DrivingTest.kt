@@ -67,7 +67,7 @@ class DrivingTest {
     }
 
     @Test fun existingCommandsUnaffected() {
-        assertEquals(cmd("analyze"), Logic.classify("read the screen"))
+        assertEquals("analyze", Logic.classify("read the screen")?.kind)   // v7.128 fix: arg now carries the sentence
         assertEquals(cmd("battery"), Logic.classify("battery"))
     }
 
