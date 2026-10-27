@@ -491,7 +491,7 @@ object Logic {
                 "dekh", "dekhna", "dikh", "dikha", "dikhao", "dikhta", "padh", "padho", "padhna", "batao", "bata", "kya", "likha",
                 "describe", "tell", "see") ||
                 (has("what") && has("on")))
-        ) return Cmd("analyze")
+        ) return Cmd("analyze", text)   // v7.124: the sentence goes along so "analyse karo" can read a movie playing in any app
         if (QuickScan.wantsLook(text)) return Cmd("analyze", text)   // v7.81 PART 4: "nova dekho batao kya chal raha hai" (no word "screen") = the same live scan
 
         if (!wantsSettings && size <= 6 && has("battery", "charging", "charge")) return Cmd("battery")

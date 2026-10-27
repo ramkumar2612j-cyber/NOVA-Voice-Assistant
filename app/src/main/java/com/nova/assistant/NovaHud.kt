@@ -489,6 +489,8 @@ private class HudView(ctx: Context) : View(ctx) {
     private val spPath = Path()
     private val iconP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.9f * d; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND; color = 0xFFFFFFFF.toInt() }
     private val avatarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val mouthCore = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }   // v7.126 Ultron mouth in the popup head
+    private val mouthGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF2B3D.toInt() }
     private val avatarMatrix = Matrix()
     private var avatarShader: BitmapShader? = null
     private val avatar: Bitmap? by lazy { try { ctx.assets.open("ultron_head.jpg").use { BitmapFactory.decodeStream(it) } } catch (e: Throwable) { null } }
@@ -785,6 +787,19 @@ private class HudView(ctx: Context) : View(ctx) {
             sh.setLocalMatrix(avatarMatrix)
             avatarPaint.shader = sh
             c.drawCircle(ocx, ocy, r, avatarPaint)
+            if (speaking) {
+                // v7.126: the mouth on the round head opens and closes while NOVA talks (mouth slot is at 50% / 74% of ultron_head.jpg)
+                val o = MouthMath.open(now)
+                val mx = ocx
+                val my = ocy + 0.476f * r
+                val hw = 0.13f * r
+                val hh = (0.03f + 0.11f * o) * r
+                oval.set(mx - hw * 1.5f, my - hh * 1.8f - d, mx + hw * 1.5f, my + hh * 1.8f + d)
+                mouthGlow.alpha = (90 + 100 * o).toInt().coerceIn(0, 255)
+                c.drawOval(oval, mouthGlow)
+                oval.set(mx - hw, my - hh, mx + hw, my + hh)
+                c.drawOval(oval, mouthCore)
+            }
         } else {
             orbFill.shader = RadialGradient(ocx - r * 0.25f, ocy - r * 0.3f, r,
                 intArrayOf(0xFF1B2C6B.toInt(), 0xFF070D27.toInt()), null, Shader.TileMode.CLAMP)

@@ -51,8 +51,25 @@ object ScreenVideoRules {
         return t.any { it == "reel" || it == "reels" || it == "shorts" } || (t.contains("chal") && (t.contains("raha") || t.contains("rahi")))
     }
 
+    private val BARE_FILLER = setOf("ye", "yeh", "is", "isko", "ise", "isse", "abhi", "screen", "karo", "kro", "kar", "karna", "do", "de", "dena", "please", "plz", "pls", "zara", "jara", "ek", "baar", "thoda", "ab", "now", "this", "it", "the", "movie", "film", "reel", "video", "ko", "ka", "ki", "h", "hai", "chalu", "start", "on")
+    /** v7.124: ONLY a bare "analyse karo / ye analyse karo / laser scan karo" (nothing else in the sentence) = read what is on the screen now. A longer sentence ("business plan analyse karo") stays a normal question. */
+    fun isBareAnalyse(text: String?): Boolean {
+        val t = tokens(text)
+        if (t.isEmpty() || t.size > 5) return false
+        return wantsAnalyse(text) && t.all { it in ANALYSE_WORDS || it in BARE_FILLER }
+    }
+
+    /** v7.124: a plain "analyse karo / analyze screen / scan karo" (popup or voice) with no video word: a movie may be playing in any player or browser, so the frames are read too. */
+    private val ANALYSE_WORDS = setOf("analyse", "analyze", "analysis", "analyes", "scan", "skan", "laser", "lazer")
+    fun wantsAnalyse(text: String?): Boolean {
+        val t = tokens(text)
+        if (t.isEmpty() || t.size > 8) return false
+        if (t.none { it in ANALYSE_WORDS }) return false
+        return t.none { it in setOf("share", "shared", "bheji", "bheja", "gallery", "file", "upload", "download", "qr", "barcode", "virus", "malware", "storage", "wifi", "bluetooth", "photo", "pdf", "band", "bandh", "off", "stop", "roko", "ruko", "cancel", "hatao", "trade", "gold", "chart", "market") }
+    }
+
     /** True when this first / refresh reading should be a video read instead of a one-screenshot UI read. */
-    fun useVideoMode(pkg: String?, spoken: String?): Boolean = isVideoApp(pkg) || wantsVideo(spoken)
+    fun useVideoMode(pkg: String?, spoken: String?): Boolean = isVideoApp(pkg) || wantsVideo(spoken) || wantsAnalyse(spoken)
 
     // ------------------------------------------------------------------ prompts
 

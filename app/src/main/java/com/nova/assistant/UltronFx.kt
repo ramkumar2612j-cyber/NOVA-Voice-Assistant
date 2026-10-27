@@ -8,7 +8,7 @@ import kotlin.math.tanh
 /**
  * v7.120: "Movie Ultron" style voice effect. Free, offline, pure Kotlin (no Android classes) so it is unit tested.
  * It works on the phone's own TTS audio (TextToSpeech.synthesizeToFile -> WavPcm) and does NOT clone any real person's voice.
- * Layers (v7.123): deeper pitch shift + octave-down dark layer + metal ring + bass + comb + hall echo + soft clip.
+ * Layers (v7.123/124): deeper pitch shift + true octave-down dark layer + metal ring + bass + harmonics of the bass (audible on phone speakers) + clear high band + comb + hall echo + level-then-soft-clip.
  * Not phone tested here: the owner must listen and tune the strength slider.
  */
 object UltronFx {
@@ -17,8 +17,8 @@ object UltronFx {
     const val DEFAULT_AMOUNT = 0.75f
 
     /** TTS settings used only for the Ultron path (calm, a little lower and slower; the normal voice settings are untouched). */
-    const val PITCH = 0.9f
-    const val MAX_RATE = 0.92f
+    const val PITCH = 0.8f              // v7.124c: darker base voice (was 0.9)
+    const val MAX_RATE = 0.84f           // v7.124c: a little slower, heavy and calm (was 0.92)
 
     fun clampAmount(v: Float): Float = if (v.isNaN()) DEFAULT_AMOUNT else v.coerceIn(MIN_AMOUNT, MAX_AMOUNT)
 
@@ -75,32 +75,55 @@ object UltronFx {
         val dry = FloatArray(total)
         for (i in 0 until n) dry[i] = pcm[i] / 32768f
 
-        val main = pitchShift(dry, 1f - 0.28f * a, rate)           // the voice itself, deeper
-        val sub = pitchShift(dry, 0.62f, rate)                     // the dark layer underneath
+        val main = pitchShift(dry, 1f - 0.34f * a, rate)           // the voice itself, deeper
+        val sub = pitchShift(dry, 0.5f, rate)                      // v7.124: a true octave down (was 0.62)
         val twoPi = 2.0 * PI
         val lpK = (twoPi * 250.0 / rate).toFloat().coerceIn(0.01f, 0.5f)
+        val hiK = (twoPi * 2200.0 / rate).toFloat().coerceIn(0.01f, 0.9f)
         var lp = 0f
+        var hl = 0f
         val mix = FloatArray(total)
         for (i in 0 until total) {
             val d = main[i]
             lp += lpK * (d - lp)                                    // bass body below ~250 Hz
-            val ring = d * sin(twoPi * 70.0 * i / rate).toFloat()   // 70 Hz metal ring (dhatu jhankar)
-            mix[i] = d + a * 0.40f * sub[i] + a * 0.35f * ring + a * 0.50f * lp
+            hl += hiK * (d - hl)                                    // v7.124: everything above ~2.2 kHz = the words (s, t, k) that keep it understandable
+            val air = d - hl
+            val ring = d * sin(twoPi * 60.0 * i / rate).toFloat()   // 70 Hz metal ring (dhatu jhankar)
+            // v7.124: phone speakers cannot play below ~300 Hz, so the deep body is also pushed through a soft clipper:
+            // its harmonics (2x, 3x) sit at 300-900 Hz where the speaker DOES play, and the voice sounds deep on a phone, not only on headphones.
+            val bassHarm = tanh(5f * lp) * 0.22f
+            val subHarm = tanh(4f * sub[i]) * 0.25f
+            mix[i] = d + a * 0.45f * sub[i] + a * 0.30f * subHarm + a * 0.42f * ring + a * 0.50f * lp + a * 0.45f * bassHarm + a * 0.35f * air
         }
 
         val comb = (rate * 0.007f).toInt().coerceAtLeast(1)         // 7 ms = metallic resonance around 140 Hz
-        val cg = 0.45f * a
+        val cg = 0.55f * a
         for (i in comb until total) mix[i] += cg * mix[i - comb]
         val g = 0.30f * a
         for (i in echoD until total) mix[i] += g * mix[i - echoD]    // feedback echo
 
+        // v7.124: the drive no longer depends on how loud the phone voice was. Level the mix to a fixed RMS first, then soft-clip:
+        // the same warm edge every time (never harsh), and a louder voice for the same peak.
+        var sq = 0.0
+        for (i in 0 until total) sq += (mix[i] * mix[i]).toDouble()
+        val rms = kotlin.math.sqrt(sq / total).toFloat()
+        // v7.124e: robot grit: a blend with a sample-and-hold copy (about 8 kHz "digital" staircase) = metallic machine edge
+        val hold = (rate / 8000).coerceAtLeast(1)
+        if (hold > 1) {
+            var keep = 0f
+            for (i in 0 until total) {
+                if (i % hold == 0) keep = mix[i]
+                mix[i] = mix[i] * 0.55f + keep * 0.45f
+            }
+        }
+        val pre = if (rms > 0.00001f) 0.40f / rms else 1f
         var peak = 0f
         for (i in 0 until total) {
-            val v = tanh(1.8f * mix[i])                              // soft clip: edge, never harsh
+            val v = tanh(2.4f * mix[i] * pre)
             mix[i] = v
             if (abs(v) > peak) peak = abs(v)
         }
-        val scale = if (peak > 0.0001f) 0.9f / peak else 1f
+        val scale = if (peak > 0.0001f) 0.98f / peak else 1f
         val out = ShortArray(total)
         for (i in 0 until total) out[i] = (mix[i] * scale * 32767f).toInt().coerceIn(-32768, 32767).toShort()
         return out

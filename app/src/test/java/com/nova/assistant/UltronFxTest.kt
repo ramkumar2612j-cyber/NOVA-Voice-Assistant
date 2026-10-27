@@ -37,7 +37,7 @@ class UltronFxTest {
     @Test fun peakIsNormalisedBelowClipping() {
         val y = UltronFx.process(tone(16000, 400, 150.0), 16000, 0.75f)
         val peak = y.maxOf { abs(it.toInt()) }
-        assertTrue(peak in 25000..31000)
+        assertTrue(peak in 28000..32500)
     }
 
     @Test fun effectReallyChangesTheVoiceAndStrengthMatters() {
@@ -75,5 +75,23 @@ class UltronFxTest {
         val x = FloatArray(rate / 2) { sin(2.0 * PI * 200.0 * it / rate).toFloat() * 0.5f }
         fun crossings(a: FloatArray): Int { var c = 0; for (i in 3000 until a.size) if (a[i - 1] <= 0f && a[i] > 0f) c++; return c }
         assertTrue(crossings(UltronFx.pitchShift(x, 0.72f, rate)) < crossings(UltronFx.pitchShift(x, 0.94f, rate)))
+    }
+
+    @Test fun voiceStaysLoudAndNotHarshOnSpeechLikeSound() {
+        // v7.124: harmonic "vowel" at 120 Hz with a 2.5 kHz consonant burst, quiet and loud input must come out at the same level
+        val rate = 22050
+        fun speech(gain: Double) = ShortArray(rate) { i ->
+            val t = i.toDouble() / rate
+            val vowel = (1..12).sumOf { h -> sin(2.0 * PI * 120.0 * h * t) / h }
+            val burst = if (i % 5000 < 400) 0.6 * sin(2.0 * PI * 2500.0 * t) else 0.0
+            ((vowel * 0.35 + burst) * gain * 9000).toInt().coerceIn(-32768, 32767).toShort()
+        }
+        fun rms(a: ShortArray): Double = kotlin.math.sqrt(a.sumOf { it.toDouble() * it } / a.size)
+        val quiet = UltronFx.process(speech(0.25), rate, 0.75f)
+        val loud = UltronFx.process(speech(1.0), rate, 0.75f)
+        assertTrue(rms(quiet) > 9000)
+        assertTrue(rms(loud) > 9000)
+        assertTrue(Math.abs(rms(quiet) / rms(loud) - 1.0) < 0.25)
+        assertTrue(quiet.maxOf { abs(it.toInt()) } <= 32500)
     }
 }

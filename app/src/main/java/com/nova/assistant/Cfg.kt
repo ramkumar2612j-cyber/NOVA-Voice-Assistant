@@ -53,10 +53,10 @@ class Cfg(ctx: Context) {
         get() = p.getBoolean("silentMode", false)
         set(v) { p.edit().putBoolean("silentMode", v).apply() }
 
-    /** v7.120: movie-style "Ultron" voice effect on NOVA's own spoken replies. Default OFF; OFF keeps the old voice exactly as before. */
+    /** v7.120: movie-style "Ultron" voice effect on NOVA's own spoken replies. v7.124d: ON by default (new key, so old phones that saved OFF also get it); the ULTRON button can still turn it off. */
     var ultronVoice: Boolean
-        get() = p.getBoolean("ultronVoice", false)
-        set(v) { p.edit().putBoolean("ultronVoice", v).apply() }
+        get() = p.getBoolean("ultronVoiceV2", true)
+        set(v) { p.edit().putBoolean("ultronVoiceV2", v).apply() }
 
     /** v7.120: how strong the Ultron effect is (0.2 .. 1.0). */
     var ultronAmount: Float

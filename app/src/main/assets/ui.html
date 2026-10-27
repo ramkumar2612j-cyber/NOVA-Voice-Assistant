@@ -6,7 +6,7 @@ if(t!=="low"&&t!=="mid"&&t!=="high"){var q=/[?&]tier=(low|mid|high)/.exec(locati
 window.__tier=t;try{document.documentElement.setAttribute("data-tier",t)}catch(e){}window.__dprCap=t==="high"?3:(t==="mid"?2:1.5);
 if(t==="low"){window.__forceLow=true;document.documentElement.classList.add("lowfx")}
 /* v7.4 Quality: Auto (default, tier based) / Sharp (more pixels, capped) / Smooth (light effects, fewer pixels, no hang) */
-try{var q=localStorage.getItem("nova_q");if(!localStorage.getItem("nova_q_mig1")){localStorage.setItem("nova_q_mig1","1");if(!q||q==="auto"){q="smooth";localStorage.setItem("nova_q","smooth")}}q=q||"smooth";window.__quality=q;if(q==="smooth"){window.__dprCap=2;window.__forceLow=true;document.documentElement.classList.add("lowfx");document.documentElement.classList.add("qsmooth")}else if(q==="sharp"&&t==="high"){window.__dprCap=Math.min(3,Math.max(window.__dprCap||2,2))}}catch(e){}})();</script>
+try{var q=localStorage.getItem("nova_q");if(!localStorage.getItem("nova_q_mig1")){localStorage.setItem("nova_q_mig1","1");if(!q||q==="auto"){q="smooth";localStorage.setItem("nova_q","smooth")}}q=q||"smooth";window.__quality=q;if(q==="smooth"){window.__dprCap=2;window.__forceLow=true;document.documentElement.classList.add("lowfx");document.documentElement.classList.add("qsmooth")}else if(q==="sharp"&&t==="high"){window.__dprCap=Math.min(2.5,Math.max(window.__dprCap||2,2))}}catch(e){}})();</script>
 <script id="qsmooth-init-v784">/* v7.84: SMOOTH = still theme. The live theme (3D orb, starfield, NOVA core, HUD rings) is drawn once per state change instead of 30 times a second, so the phone stays free for the real work. Helpers only: classes and one throttle gate. */
 (function(){var h=document.documentElement,W=window,G={};
 W.__isSmooth=function(){return h.classList.contains("qsmooth")};
@@ -4244,7 +4244,7 @@ var KEY="nova_perf",LIFE=3*864e5;
 function rd(){try{var s=localStorage.getItem(KEY);if(!s)return null;var o=JSON.parse(s);if(o&&typeof o.l==="number"&&typeof o.t==="number"&&Date.now()-o.t<LIFE&&o.l>=1&&o.l<=4)return o.l}catch(e){}return null}
 function wr(n){try{localStorage.setItem(KEY,JSON.stringify({l:n,t:Date.now()}))}catch(e){}}
 var tier=String(W.__tier||"").toLowerCase(),qs=String(W.__quality||"auto");
-var floor=qs==="smooth"?3:1,cap=(qs==="sharp"&&tier==="high")?3:4;      /* owner chose Sharp: never switch the orb off. Smooth: never above level 3 look */
+var floor=qs==="smooth"?3:1,cap=4;      /* v7.124: SHARP used to be capped at level 3 on HIGH phones, so a real freeze could never stop the heavy 3D orb and the app hung. Level 4 (2D orb) now only comes after real stalls; the sharp text / pixels stay. */
 var lvl=tier==="low"?3:tier==="mid"?2:1;
 var seen=(qs==="auto")?rd():null;if(seen!==null)lvl=seen;
 lvl=Math.max(floor,Math.min(cap,lvl));
@@ -5630,6 +5630,107 @@ setTimeout(function(){
 </script>
 
 
+<style id="pro-layout-v7125">
+/* v7.125 PROFESSIONAL LAYOUT (add-only). Settings boxes are grouped under headers (nodes are MOVED, never removed or renamed: every id and handler stays). Delete this style + the script below to undo. */
+.pro_g{margin:18px 2px 8px;display:flex;align-items:center;gap:10px;font-family:inherit}
+.pro_g b{font-size:11px;letter-spacing:3px;color:#5ff3ff;text-shadow:0 0 10px rgba(0,229,255,.55);white-space:nowrap}
+.pro_g i{flex:1;height:1px;background:linear-gradient(90deg,rgba(0,229,255,.55),rgba(255,40,60,.0))}
+.pro_g em{font-style:normal;font-size:9.5px;letter-spacing:1px;color:#7fa9b6}
+#pro_auto{margin:6px 0 4px;padding:14px 14px 12px;border-radius:18px;border:1px solid rgba(0,229,255,.35);background:linear-gradient(160deg,rgba(0,40,60,.78),rgba(40,0,10,.55));box-shadow:0 0 22px rgba(0,229,255,.14),inset 0 0 18px rgba(255,40,70,.07)}
+#pro_auto h4{margin:0 0 4px;font-size:12px;letter-spacing:3px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+#pro_auto h4 span{font-size:9px;letter-spacing:1.5px;color:#30e090;border:1px solid rgba(48,224,144,.55);border-radius:20px;padding:3px 9px}
+#pro_auto p{margin:0 0 10px;font-size:11px;line-height:1.5;color:#9fc3cf}
+.pro_r{display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid rgba(255,255,255,.07);font-size:11.5px;color:#dff}
+.pro_r i{width:9px;height:9px;border-radius:50%;background:#30e090;box-shadow:0 0 9px #30e090;flex:0 0 auto}
+.pro_r i.off{background:#ff6a6a;box-shadow:0 0 9px #ff6a6a}.pro_r i.mid{background:#ffd24a;box-shadow:0 0 9px #ffd24a}
+.pro_r span{flex:1;letter-spacing:.4px}.pro_r b{font-size:10.5px;letter-spacing:1.5px;color:#5ff3ff}
+.pro_r button{font-size:9.5px;letter-spacing:1.5px;padding:5px 10px}
+/* v7.124e: the Ultron voice is the one automatic voice. Nothing about it is written or shown on screen (ids stay, so no code breaks). */
+#ultron,#s_ultron,#p6d_ultron,#pro_voice_chip{display:none!important}
+#s_ultron_amt{display:none!important}
+.row:has(>label>#s_ultron_amt){display:none!important}
+</style>
+<script id="pro-layout-v7125-js">
+(function(){try{
+var d=document,W=window;
+function $(i){return d.getElementById(i)}
+function A(f,def){try{var v=W.Android&&W.Android[f]();return v===undefined||v===null?def:v}catch(e){return def}}
+var panel=$('panel');if(!panel)return;
+var GROUPS=[
+ ['AUTOMATIC','sab kaam apne aap',/SAARE FEATURES|AUTO REPLY|ROUTINES|ROZ KA SUDHAAR|MERA SCHEDULE|BAAT-CHEET|TEACH ONCE|KYA SEEKHA|SEEKHNA AUR SHOR|COMMAND LISTENING|BACKGROUND/],
+ ['VOICE + AI','awaaz, wake word, brain',/WAKE WORD|PORCUPINE|GEMINI|GROQ|FREE ONLINE AI|FREE IMAGE|FREE AI|BADA OFFLINE|MODEL DOWNLOAD|NOVA MEMORY|YAAD|BUSY|NOVA busy/i],
+ ['PHONE + ACCESS','permission, family, browser',/PAPA|ACCESSIBILITY|PERMISSIONS|WEB BROWSERS/],
+ ['LOOK + SPEED','graphics quality',/GRAPHICS QUALITY/],
+ ['SYSTEM','update, test, publish',/UPDATES|TEST REPORT|GITHUB/]
+];
+function labelOf(el){var l=el.querySelector('label,h3,b,summary');return ((l||el).textContent||'').trim()}
+var did=false;
+function build(){
+  if(did||$('pro_auto'))return;did=true;
+  var h2=panel.querySelector('h2');
+  var first=h2?h2.nextSibling:panel.firstChild;
+  var boxes=[].slice.call(panel.children).filter(function(c){return c.tagName==='DIV'&&c!==$('smsg')&&!c.querySelector('#s_save')&&c.id!=='pro_auto'&&(c.classList.contains('accd')||/_card$/.test(c.id)||c.querySelector('#s_ultron_amt'))});
+  var used={};
+  var frag=d.createDocumentFragment();
+  // top summary card
+  var card=d.createElement('div');card.id='pro_auto';
+  card.innerHTML='<h4>AUTO MODE<span id="pro_pill">LIVE</span></h4><p>NOVA ab apne aap tay karta hai. Neeche sirf wahi cheezein hain jo aap badalna chaho.</p>'+
+   '<div class="pro_r"><i id="pro_t_i"></i><span>AWAAZ</span><b>EK HI AWAAZ, APNE AAP</b><button class="sm" id="pro_u_t">TEST</button></div>'+
+   '<div class="pro_r"><i id="pro_q_i"></i><span>GRAPHICS QUALITY</span><b id="pro_q_b">AUTO</b></div>'+
+   '<div class="pro_r"><i id="pro_f_i"></i><span>FEATURES</span><b id="pro_f_b">-</b></div>'+
+   '<div class="pro_r"><i id="pro_s_i"></i><span>STOP BUTTON</span><b>SIRF ROKTA HAI</b></div>';
+  frag.appendChild(card);
+  GROUPS.forEach(function(g,gi){
+    var mine=boxes.filter(function(b,i){return !used[i]&&(g[2].test(labelOf(b))||(b.id&&g[2].test(b.id)) )});
+    if(gi===1){ // the Ultron strength row lives with the voice group
+      var sr=$('s_ultron_amt');var row=sr&&sr.closest('.row');if(row&&row!==$('s_save')&&!row.querySelector('#s_save'))mine.unshift(row)}
+    if(!mine.length)return;
+    boxes.forEach(function(b,i){if(mine.indexOf(b)>=0)used[i]=1});
+    var hd=d.createElement('div');hd.className='pro_g';hd.innerHTML='<b>'+g[0]+'</b><i></i><em>'+g[1]+'</em>';frag.appendChild(hd);
+    mine.forEach(function(b){frag.appendChild(b)});
+  });
+  var rest=boxes.filter(function(b,i){return !used[i]&&!b.querySelector('#s_ultron_amt')});
+  if(rest.length){var hd2=d.createElement('div');hd2.className='pro_g';hd2.innerHTML='<b>MORE</b><i></i><em>baaki</em>';frag.appendChild(hd2);rest.forEach(function(b){frag.appendChild(b)})}
+  panel.insertBefore(frag,first&&first.parentNode===panel?first:panel.firstChild);
+  var t=$('pro_u_t');if(t)t.onclick=function(){try{W.Android.testVoice()}catch(e){}};
+}
+function paint(){try{
+  var q='auto';try{q=localStorage.getItem('nova_q')||'smooth'}catch(e){}
+  var qi=$('pro_q_i'),qb=$('pro_q_b');if(qb)qb.textContent=q.toUpperCase();if(qi)qi.className=q==='smooth'?'mid':'';
+  var f=$('fcc'),fl=f?labelOf(f):'',m=/\((\d+)\s*\/\s*(\d+)/.exec(fl),fb=$('pro_f_b'),fi=$('pro_f_i');
+  if(fb)fb.textContent=m?m[1]+' / '+m[2]+' ON':'-';if(fi)fi.className=m&&m[1]==='0'?'off':(m&&m[1]!==m[2]?'mid':'');
+  var si=$('pro_s_i');if(si)si.className='';
+}catch(e){}}
+function go(){build();paint()}
+var g=$('gear');if(g)g.addEventListener('click',function(){setTimeout(go,60)},true);
+setTimeout(go,1500);setInterval(function(){if(!d.hidden)paint()},3000);
+}catch(e){try{console.log('pro layout',e)}catch(_){}}})();
+</script>
+
+<script id="sharpguard-v7124">
+/* v7.124 SHARP anti-hang guard (add-only). Only when GRAPHICS QUALITY = SHARP: after the page has run 3 s, frames are timed for 4 s.
+   If the phone is really slow (average frame > 70 ms, or 1 frame in 3 over 120 ms) the heavy 3D orb is switched to the 2D orb at once (NovaPerf level 4, not remembered).
+   Sharp text and pixel size stay, SHARP stays chosen. Delete this one script to undo. */
+(function(){try{
+var W=window,d=document;
+function q(){try{return localStorage.getItem("nova_q")||"smooth"}catch(e){return "smooth"}}
+if(q()!=="sharp")return;
+setTimeout(function(){
+  if(q()!=="sharp"||d.hidden||!W.NovaPerf)return;
+  var last=0,n=0,sum=0,bad=0,t0=0;
+  function f(t){
+    if(d.hidden)return;
+    if(!t0)t0=t;
+    if(last){var dt=t-last;if(dt<1000){n++;sum+=dt;if(dt>120)bad++}}
+    last=t;
+    if(t-t0<4000){requestAnimationFrame(f);return}
+    if(n>15&&(sum/n>70||bad*3>n)&&q()==="sharp"){try{W.NovaPerf.pressure(3)}catch(e){}var a=d.getElementById("s_qnote");if(a)a.textContent="SHARP me phone atak raha tha, isliye 3D orb halka kar diya (text saaf hi hai)."}
+  }
+  requestAnimationFrame(f);
+},3000);
+}catch(e){}})();
+</script>
+
 <style id="v7120_nolimits">
 #t_limits,#v_limits{display:none!important}
 #c_lim{font-weight:600;letter-spacing:.2px}
@@ -5777,6 +5878,30 @@ $('u_x').addEventListener('click',function(){dismissed=true;sync()});
 $('u_act').addEventListener('click',function(){var s=st();if(s==='speak'){var q=$('quiet');if(q)q.click()}else{var b=$('silent');if(b)b.click()}setTimeout(sync,120)});
 sync();
 }catch(e){try{console.log('ultron skin',e)}catch(_){}}})();
+</script>
+
+<style id="ultron-mouth-v7126">
+/* v7.126 ULTRON LIVE MOUTH: add-only. Mouth is hidden until NOVA speaks (#app.speak), then it opens/closes in a speech rhythm (pure CSS, no JS timer). */
+.orbbox .u-mouth{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:3}
+.u-mouth i{position:absolute;left:0;top:0;display:block;transform:translate(-50%,-50%);width:var(--mw,26px);height:var(--mh,17px);opacity:0;transition:opacity .15s}
+.u-mouth b{display:block;width:100%;height:100%;border-radius:45%/50%;background:radial-gradient(ellipse at 50% 50%,#000 35%,#22030a 78%);box-shadow:0 0 7px rgba(255,43,61,.95),inset 0 0 5px rgba(255,43,61,.85);transform:scaleY(.1)}
+#app.speak .u-mouth i{opacity:1}
+#app.speak .u-mouth b{animation:uTalk 1.15s ease-in-out infinite}
+@keyframes uTalk{0%{transform:scaleY(.1)}8%{transform:scaleY(.7)}15%{transform:scaleY(.2)}24%{transform:scaleY(1)}33%{transform:scaleY(.35)}41%{transform:scaleY(.8)}50%{transform:scaleY(.1)}58%{transform:scaleY(.6)}68%{transform:scaleY(1)}77%{transform:scaleY(.3)}86%{transform:scaleY(.75)}100%{transform:scaleY(.1)}}
+</style>
+<script id="ultron-mouth-v7126-js">
+(function(){try{
+var d=document,app=d.getElementById('app'),ob=d.querySelector('.orbbox');if(!app||!ob||ob.querySelector('.u-mouth'))return;
+var box=d.createElement('div');box.className='u-mouth';var m=d.createElement('i');m.appendChild(d.createElement('b'));box.appendChild(m);ob.appendChild(box);
+/* hero image is 440x340, background-size:cover, position: center 22%. Mouth slot is at (220,252) in that image. */
+var IW=440,IH=340,MX=220,MY=252,MW=26,MH=17;
+function place(){var w=ob.offsetWidth,h=ob.offsetHeight;if(!w||!h)return;var s=Math.max(w/IW,h/IH);
+box.style.left=((w-IW*s)*0.5+MX*s)+'px';box.style.top=((h-IH*s)*0.22+MY*s)+'px';
+m.style.setProperty('--mw',(MW*s).toFixed(1)+'px');m.style.setProperty('--mh',(MH*s).toFixed(1)+'px')}
+window.addEventListener('resize',place);try{new ResizeObserver(place).observe(ob)}catch(e){}
+new MutationObserver(place).observe(app,{attributes:true,attributeFilter:['class']});
+place();
+}catch(e){try{console.log('ultron mouth',e)}catch(_){}}})();
 </script>
 
 </body></html>

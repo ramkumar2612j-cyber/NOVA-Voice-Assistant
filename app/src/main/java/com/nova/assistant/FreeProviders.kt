@@ -473,9 +473,10 @@ object ProviderChain {
         rich: Boolean = false,   // v7.1: typed chat turn -> long answer (2000 tokens, 6000 char question, newlines kept)
         accept: ((String) -> Boolean)? = null,   // v6.90: a text that fails this check counts as "no answer from this provider" (no cooldown), the next provider tries
         hedge: Boolean = false,   // v7.4 5-second rule: ask the top two providers at the same time (first valid answer wins)
+        hedgeStaggerMs: Long = 0L,   // v7.126: > 0 = the 2nd provider starts only if the 1st has not answered after this many ms (faster long answers, no wasted quota when the 1st is quick)
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
-        if (hedge && !rich) return runHedged(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, call)
+        if (hedge) return runHedged(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, rich, hedgeStaggerMs, call)
         val start = now()
         val tried = ArrayList<String>()
         var worst = "nokey"
@@ -536,21 +537,39 @@ object ProviderChain {
         turns: List<Pair<String, String>> = emptyList(),
         width: Int = UnderstandBudget.HEDGE_WIDTH,
         accept: ((String) -> Boolean)? = null,
+        rich: Boolean = false,
+        staggerMs: Long = 0L,
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
         val start = now()
         val usable = providers.filter { p -> enabled(p.id) && !cd.cooling(p.id, now()) && (p.keyName == null || keyOf(p.keyName).trim().isNotEmpty()) }
-        if (usable.size < 2 || width < 2) return run(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = false, accept = accept, hedge = false, call = call)
+        if (usable.size < 2 || width < 2) return run(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, call = call)
         val first = usable.take(width)
         val rest = providers.filter { it !in first }
         val pool = java.util.concurrent.Executors.newFixedThreadPool(first.size)
         val ecs = java.util.concurrent.ExecutorCompletionService<ChainResult>(pool)
         try {
-            for (p in first) ecs.submit(java.util.concurrent.Callable<ChainResult> { run(listOf(p), keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = false, accept = accept, hedge = false, call = call) })
             var worst = "nokey"
             val tried = ArrayList<String>()
             var network = false
-            repeat(first.size) {
+            var consumed = 0
+            for ((i, p) in first.withIndex()) {
+                if (i > 0 && staggerMs > 0L) {   // v7.126: give the first provider a head start; the next one joins only if it is slow
+                    val early = ecs.poll(staggerMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    if (early != null) {
+                        consumed++
+                        val er = try { early.get() } catch (e: Exception) { null }
+                        if (er != null) {
+                            if (er.text != null) { pool.shutdownNow(); return er }
+                            tried.addAll(er.tried)
+                            if (er.failKind == "network") network = true
+                            worst = FreeProviders.worse(worst, er.failKind)
+                        }
+                    }
+                }
+                ecs.submit(java.util.concurrent.Callable<ChainResult> { run(listOf(p), keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, call = call) })
+            }
+            repeat(first.size - consumed) {
                 val left = budgetMs - (now() - start)
                 val f = ecs.poll(maxOf(200L, left), java.util.concurrent.TimeUnit.MILLISECONDS) ?: return@repeat
                 val r = try { f.get() } catch (e: Exception) { null } ?: return@repeat
@@ -562,7 +581,7 @@ object ProviderChain {
             if (network) return ChainResult(null, null, null, "network", tried)
             val left = budgetMs - (now() - start)
             if (rest.isNotEmpty() && left > UnderstandBudget.MIN_CALL_MS) {
-                val r = run(rest, keyOf, enabled, system, user, cd, now, left, turns, rich = false, accept = accept, hedge = false, call = call)
+                val r = run(rest, keyOf, enabled, system, user, cd, now, left, turns, rich = rich, accept = accept, hedge = false, call = call)
                 return ChainResult(r.text, r.providerId, r.model, r.failKind, tried + r.tried)
             }
             return ChainResult(null, null, null, worst, tried)

@@ -684,8 +684,28 @@ class NovaService : Service() {
         return true
     }
 
-    /** Starts the Ultron path on a worker thread. false = could not even start, caller speaks normally. */
+    /** v7.126: one synth of one piece into [f]. true = the WAV file is ready. fxId carries [nm] so the TTS callbacks find it. */
+    private fun ultronSynth(t: TextToSpeech, part: String, nm: String, f: File): Boolean {
+        val latch = CountDownLatch(1)
+        return try {
+            fxOk = false
+            fxLatch = latch
+            fxId = nm
+            f.delete()
+            val r = t.synthesizeToFile(part, android.os.Bundle(), f, nm)
+            if (r != TextToSpeech.SUCCESS) { fxId = ""; false } else latch.await(20, TimeUnit.SECONDS) && fxOk
+        } catch (e: Throwable) {
+            ErrLog.add("NovaService", "ultron synth: $e")
+            false
+        }
+    }
+
+    /**
+     * Starts the Ultron path on a worker thread. false = could not even start, caller speaks normally.
+     * v7.126: the reply is cut at sentence ends (UltronChunks); only the FIRST piece is made before NOVA starts talking, the rest follows piece by piece.
+     */
     private fun startUltron(t: TextToSpeech, spoken: String, id: String): Boolean {
+        val parts = UltronChunks.split(spoken)
         val name = "fx$id"
         val f = File(cacheDir, "ultron_$id.wav")
         val latch = CountDownLatch(1)
@@ -696,7 +716,7 @@ class NovaService : Service() {
             fxLatch = latch
             fxId = name
             f.delete()
-            val r = t.synthesizeToFile(spoken, android.os.Bundle(), f, name)
+            val r = t.synthesizeToFile(parts[0], android.os.Bundle(), f, name)
             if (r != TextToSpeech.SUCCESS) { fxId = ""; cfg.applyVoice(t); return false }
         } catch (e: Throwable) {
             ErrLog.add("NovaService", "ultron start: $e")
@@ -704,10 +724,11 @@ class NovaService : Service() {
             try { cfg.applyVoice(t) } catch (e2: Throwable) { }
             return false
         }
-        ttsDeadline += 8000L
+        ttsDeadline += 8000L + 1500L * parts.size
         val amount = cfg.ultronAmount
         Thread {
             var res = UltronPlayer.FAILED
+            var rest: String? = null   // set when a later piece could not be made: the normal voice reads from there
             try {
                 if (latch.await(20, TimeUnit.SECONDS) && fxOk && id == curUtt) {
                     val w = WavPcm.parse(f.readBytes())
@@ -719,11 +740,21 @@ class NovaService : Service() {
                         }
                     }
                 }
+                var i = 1
+                while (res == UltronPlayer.DONE && i < parts.size && id == curUtt && ttsActive) {
+                    val w2 = if (ultronSynth(t, parts[i], "$name-$i", f)) WavPcm.parse(f.readBytes()) else null
+                    if (id != curUtt || !ttsActive) break                      // STOP or a newer reply came while the piece was being made
+                    if (w2 == null) { rest = parts.drop(i).joinToString(" "); break }
+                    val fx2 = UltronFx.process(UltronFx.toShorts(w2.pcm), w2.rate, amount)
+                    if (id != curUtt || !ttsActive) break
+                    res = UltronPlayer.play(fx2, w2.rate)
+                    i++
+                }
             } catch (e: Throwable) {
                 ErrLog.add("NovaService", "ultron play: $e")
             } finally {
                 try { f.delete() } catch (e: Throwable) { }
-                if (fxId == name) fxId = ""
+                if (fxId == name || fxId.startsWith("$name-")) fxId = ""
             }
             if (id != curUtt) return@Thread                     // a newer reply or STOP already took over
             if (res == UltronPlayer.FAILED) {
@@ -732,6 +763,12 @@ class NovaService : Service() {
                     cfg.applyVoice(t)
                     val r2 = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
                     if (r2 != TextToSpeech.SUCCESS) utteranceEnded(id, false)
+                } catch (e: Throwable) { utteranceEnded(id, false) }
+            } else if (rest != null && ttsActive) {
+                try {
+                    cfg.applyVoice(t)
+                    val r3 = t.speak(rest, TextToSpeech.QUEUE_FLUSH, null, id)
+                    if (r3 != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                 } catch (e: Throwable) { utteranceEnded(id, false) }
             } else {
                 utteranceEnded(id, res == UltronPlayer.DONE)
@@ -2504,9 +2541,20 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "profile_search"
             return runProfileSearch(psReq)
         }
+        run {   // v7.124: "movie ka naam kya hai" right AFTER a scan = the name from that scan (the movie is no longer on the screen, a new scan would find nothing)
+            val lm = lastMovie
+            if (text.isNotBlank() && lm != null && LastMovieRules.fresh(lm, System.currentTimeMillis()) && LastMovieRules.isNameFollowUp(text)) {
+                lastTurnLocal = true; lastKind = "media"
+                return LastMovieRules.answer(lm, cfg.lang == "en")
+            }
+        }
         if (text.isNotBlank() && MovieScanRules.parse(text) == MovieScanRules.Ask.MOVIE) {
             lastTurnLocal = true; lastKind = "media"
             return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
+        }
+        if (text.isNotBlank() && ScreenVideoRules.isBareAnalyse(text) && AnalysisVoiceRules.parse(text) == AnalysisVoiceRules.Ask.NONE) {   // v7.124: popup / voice "analyse karo" = read the screen now (a movie playing in any app is found), not a chat answer
+            lastTurnLocal = true; lastKind = "screen"
+            return analyzeScreen(text)
         }
         if (text.isNotBlank() && ScreenVideoRules.isScreenVideoAsk(text)) {   // v7.76: "reel me kya chal raha hai"
             lastTurnLocal = true; lastKind = "screen"
@@ -3341,7 +3389,8 @@ class NovaService : Service() {
             { System.currentTimeMillis() },
             turns = fallbackTurns(),   // v6.70: a backup AI continues the same conversation, not a lone sentence
             rich = rich,
-            hedge = !rich   // v7.4: voice answers ask the top 2 providers at once
+            hedge = true,   // v7.4: voice answers ask the top 2 providers at once; v7.126: long typed answers too, but the 2nd one only joins after 2.5 s
+            hedgeStaggerMs = if (rich) 2500L else 0L
         ) { p, _, body, key -> rankedCall(p, body, key) }
         }
     }
@@ -5189,7 +5238,9 @@ class NovaService : Service() {
             system,
             user,
             freeCooldowns,
-            { System.currentTimeMillis() }
+            { System.currentTimeMillis() },
+            hedge = true,            // v7.126: agent steps no longer wait for one slow provider
+            hedgeStaggerMs = 2000L
         ) { p, _, body, key -> rankedCall(p, body, key) }.text
     } catch (t: Throwable) { null }
 
@@ -6821,6 +6872,7 @@ class NovaService : Service() {
     @Volatile private var movieScanRunning = false
     @Volatile private var movieScanCancel = false
     @Volatile private var movieFrames: List<ByteArray> = emptyList()
+    @Volatile private var lastMovie: LastMovieRules.Saved? = null   // v7.124: the last real scan result (name only, no frames) for "movie ka naam kya hai"
     @Volatile private var movieStage: String = ""   // v7.65 14B-3: real stage + percent of the running movie scan (READ TEXT / VISION / SEARCH / RESULT); the laser overlay (14B-4) reads it
 
     // ---- v7.67 PART 15: "poora padho" = the voice reads the FULL last report (analysis or movie scan). Text is already in the chat; silent mode keeps it silent.
@@ -6924,7 +6976,7 @@ class NovaService : Service() {
      * v7.76 worker thread. The text to say about the video on screen, or null = could not be read as a video here (the caller then uses the normal one-screenshot reading).
      * Protected screens are never captured (checked before and after every frame, and once more before anything leaves the phone).
      */
-    private fun screenVideoRead(): String? {
+    private fun screenVideoRead(generic: Boolean = false): String? {   // v7.124 generic = a plain "analyse karo" in a non-video app: a non-video result goes back to the normal screen reading
         val en = cfg.lang == "en"
         videoQuietUntil = System.currentTimeMillis() + QuickScan.QUIET_FOLLOW_MS   // v7.86
         if (Build.VERSION.SDK_INT < 30 || movieScanRunning) return null
@@ -6958,9 +7010,10 @@ class NovaService : Service() {
         val d = VideoScanPipeline.run(r.frames, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> screenStage = "$st $pct" }, budgetStartMs = quickStart)
         val rd = d.read
         val out: String = when (d.kind) {
-            "OK" -> if (rd == null) return null else {
+            "OK" -> if (rd == null) return null else if (generic && rd.kind == ScreenVideoRules.Kind.OTHER) return null else {
                 val o = d.outcome
                 val popup = ScreenVideoRules.isWork(rd.kind) && ScreenVideoRules.autoPopup(o) && MoviePopup.canShow(this)   // v7.86: not for a LOW guess, never the browser by itself
+                if (o != null && ScreenVideoRules.isWork(rd.kind) && o.title.length >= 2) lastMovie = LastMovieRules.Saved(o, System.currentTimeMillis())   // v7.124
                 if (popup && o != null) showMoviePopup(o, rd.kind, rd.summary, false)
                 ScreenVideoRules.resultText(rd, o, en, popup)
             }
@@ -7196,6 +7249,8 @@ class NovaService : Service() {
                             }
                             val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en, d.vision) else line
                             val ok = d.kind == "OK"
+                            val om = d.outcome
+                            if (ok && om != null && om.title.length >= 2) lastMovie = LastMovieRules.Saved(om, System.currentTimeMillis())
                             deliverMovie(line, said, if (ok) MovieGuessRules.card(d.outcome, en) else "", if (ok) MovieGuessRules.historyLine(d.outcome) else "")
                             if (ok && d.outcome != null && ScreenVideoRules.shouldPopup(d.outcome)) showMoviePopup(d.outcome, ScreenVideoRules.Kind.MOVIE)   // v7.76: popup browser
                         }
@@ -7618,7 +7673,7 @@ class NovaService : Service() {
         val ident = ScreenSession.wantsIdentify(spoken)
         val firstIntent = if (ident) ScreenSession.Intent.IDENTIFY else ScreenSession.Intent.REFRESH
         if (ScreenVideoRules.useVideoMode(sn.pkg, spoken) && !ScreenSession.isProtected(scrPkg, packageName)) {   // v7.76: reel / video = what happens in it, not the buttons
-            val v = screenVideoRead()
+            val v = screenVideoRead(generic = !ScreenVideoRules.isVideoApp(sn.pkg) && !ScreenVideoRules.wantsVideo(spoken))
             if (v != null) return v
         }
         val gate = screenGate(firstIntent)
@@ -7704,7 +7759,7 @@ class NovaService : Service() {
         )
         if ((intent == ScreenSession.Intent.REFRESH || intent == ScreenSession.Intent.IDENTIFY || intent == ScreenSession.Intent.WHAT) &&
             ScreenVideoRules.useVideoMode(scrPkg, said) && !ScreenSession.isProtected(scrPkg, packageName)) {   // v7.76
-            val v = screenVideoRead()
+            val v = screenVideoRead(generic = !ScreenVideoRules.isVideoApp(scrPkg) && !ScreenVideoRules.wantsVideo(said))
             if (v != null) return v
         }
         val gate = screenGate(intent)

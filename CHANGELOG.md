@@ -1,3 +1,36 @@
+## v7.127 Sharp Ultron + popup mouth + faster thinking/speaking (versionName stays 7.114)
+- Hero photo 3x sharper file; popup head mouth moves while speaking; long answers and agent steps hedge 2 AI providers (2nd starts after 2-2.5 s); Ultron voice starts after the first sentence piece instead of the whole reply.
+
+## v7.126 - Ultron live mouth
+- ui.html: home Ultron mouth moves while NOVA speaks (add-only block ultron-mouth-v7126).
+
+## v7.125b Ultron voice hidden + louder + more robotic (lite series; versionName stays 7.114)
+- UI: ULTRON button, dock button, strength slider and every "Ultron voice" line are hidden (CSS display:none, ids kept). The voice is simply NOVA's one automatic voice; AUTO MODE card says "EK HI AWAAZ, APNE AAP" with a TEST button. No Ultron voice text is visible anywhere (checked in the page text).
+- Voice: robot grit (blend with an 8 kHz sample-and-hold copy), stronger drive 2.4 and leveling target 0.40, peak 0.98 (was 0.9): clearly louder. 10 UltronFxTest PASS (RMS > 9000 for quiet and loud input). NOT HEARD on a phone.
+
+## v7.125 Professional Settings layout + AUTO MODE card (lite series; versionName stays 7.114)
+- ui.html (add-only, script `pro-layout-v7125-js`): Settings boxes are MOVED under 5 headers: AUTOMATIC, VOICE + AI, PHONE + ACCESS, LOOK + SPEED, SYSTEM (+ MORE for anything else). No id, label or handler removed (checked: s_save, s_close, s_ultron, s_silent, s_quality, s_ultron_amt, fam_box, fcc, s_test all present, accordion opens).
+- New AUTO MODE card at the top of Settings: Ultron voice (ON, TEST button), graphics quality, features count, STOP behaviour; refreshed every 3 s.
+- Home: new chip AWAAZ "ULTRON AUTO" (opens Settings). Ultron strength slider sits in VOICE + AI.
+- Checked in headless Chromium with a mocked Android bridge (390x844): home + settings screenshots, no JS errors. NOT SEEN on a real phone.
+
+## v7.124d Ultron voice is ALWAYS ON by default (one voice)
+- Cfg.ultronVoice now uses key ultronVoiceV2 with default true, so every phone (even one that saved OFF before) speaks in the Ultron voice without pressing ULTRON. The ULTRON button still works if you ever want the normal voice. If the effect fails, the normal voice speaks (unchanged fallback).
+
+## v7.124c Ultron darker, heavier, a little slower (lite series; versionName stays 7.114)
+- TTS base pitch 0.8 (was 0.9), max speech rate 0.84 (was 0.92); pitch shift up to -34% (was -28%); octave-down, 60 Hz metal ring, bass, comb and echo layers stronger; drive 1.9. 10 UltronFxTest PASS. NOT HEARD on a phone.
+
+## v7.124b Ultron voice cleaner (lite series; versionName stays 7.114)
+- Octave layer is now a real octave down (0.5, was 0.62). Bass and octave layers also go through a soft clipper so their harmonics (300-900 Hz) are played by a phone speaker (it cannot play under ~300 Hz): the voice sounds deep on the phone, not only on headphones.
+- New clear high band (above 2.2 kHz) keeps s / t / k audible. Mix is levelled to a fixed RMS before the soft clip: same edge for quiet and loud TTS, never harsh, louder for the same peak.
+- Test: UltronFxTest + voiceStaysLoudAndNotHarshOnSpeechLikeSound (10 tests PASS with kotlinc). NOT HEARD on a phone: tune the ULTRON STRENGTH slider.
+
+## v7.124 SHARP hang fix + movie name after scan (lite series; versionName stays 7.114)
+- SHARP hang: on HIGH phones SHARP was capped at perf level 3, so a real freeze could never stop the heavy 3D orb. Cap is now 4 (2D orb only after REAL stalls); SHARP pixel cap 3 -> 2.5; new `sharpguard-v7124` script: 3 s after start, 4 s of frame timing, if the phone is really slow (avg > 70 ms or 1 frame in 3 > 120 ms) the 3D orb goes to 2D (not remembered, SHARP stays chosen, text stays sharp).
+- Popup / voice "analyse karo" (bare sentence, <= 5 words) now reads the live screen (it used to fall to a plain chat answer or a UI-text read). In a non-video app the frames are read too; if the result is not a video the normal screen reading continues as before (`screenVideoRead(generic)`).
+- Movie name after the scan: the last real scan result (name + confidence, no frames) is kept 10 min (`LastMovieRules`). "movie ka naam kya hai / uska naam / movie name" is answered from it with the same honest confidence. "ye kon si movie hai", "dobara", "abhi", "scan" still start a fresh scan; actor / hero / "kaun hai" questions are never matched.
+- Tests: LastMovieRulesTest (5). Rules + ScreenVideoRulesTest run with kotlinc + JUnit here: 16 PASS. NOT COMPILED as a whole app (no Android SDK), NOT TESTED on a phone.
+
 ## v7.123 Ultron voice made much stronger (lite series; versionName stays 7.114)
 - The v7.120 effect was too weak (14 ms double + 55 Hz ring = almost no change). UltronFx.process now: real pitch shift down (two-tap harmonizer, amount 0.2..1.0 = -5%..-28%), an octave-down dark layer, 70 Hz metal ring, bass body, 7 ms metallic comb, hall echo, soft clip. The strength slider scales every layer.
 - TTS base pitch 0.9 (was 0.82; the shift does the rest). Free, offline, no real person's voice is copied. Fallback to the normal voice on any failure is unchanged.
