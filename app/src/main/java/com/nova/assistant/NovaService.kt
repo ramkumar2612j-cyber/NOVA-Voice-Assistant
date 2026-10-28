@@ -591,6 +591,7 @@ class NovaService : Service() {
         dictTarget = null
         answerWindow = false
         history.clear()
+        try { VoiSparkSpeaker.stop() } catch (e: Throwable) { }
         try { UltronPlayer.stop() } catch (e: Throwable) { }
         try { tts?.stop(); tts?.shutdown() } catch (e: Exception) { }
         tts = null
@@ -661,6 +662,8 @@ class NovaService : Service() {
         ttsActive = true                                 // BEFORE speak(), so the loop can never hear our own voice
         ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + spoken.length * 90L)
         UltronPlayer.stop()                                  // v7.120: a new reply always cuts the old Ultron audio
+        VoiSparkSpeaker.stop()                               // v7.129: ... and the old VoiSpark audio
+        if (VoiSparkSpeaker.eligible(this, cfg, spoken) && startVoiSpark(t, spoken, id)) return true
         if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return true
         val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
@@ -777,6 +780,30 @@ class NovaService : Service() {
         return true
     }
 
+    // ---- v7.129 VOISPARK ULTRON VOICE: online voice first; ANY failure -> the existing Ultron-effect voice -> the normal voice. ----
+    private fun startVoiSpark(t: TextToSpeech, spoken: String, id: String): Boolean {
+        ttsDeadline += 14000L   // the request may take up to ~10 s before the fallback speaks
+        Thread {
+            var res = VoiSparkSpeaker.FAILED
+            try {
+                res = VoiSparkSpeaker.speak(this, cfg, spoken) { if (id == curUtt) emit("mode", "speak") }
+            } catch (e: Throwable) { ErrLog.addOnce("VoiSpark", "run " + e.javaClass.simpleName) }
+            if (id != curUtt) return@Thread                     // STOP or a newer reply already took over
+            if (res == VoiSparkSpeaker.FAILED) {
+                if (!ttsActive) return@Thread
+                try {
+                    cfg.applyVoice(t)
+                    if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
+                    val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                    if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
+                } catch (e: Throwable) { utteranceEnded(id, false) }
+            } else {
+                utteranceEnded(id, res == VoiSparkSpeaker.DONE)
+            }
+        }.start()
+        return true
+    }
+
     // ---- v7.39 PART 4 SAFE STOP ----
     @Volatile private var dropHeard = false
 
@@ -792,7 +819,7 @@ class NovaService : Service() {
         Thread { try { runCommand(Logic.Cmd("stop")) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }.start()
     }
 
-    fun stopSpeaking() { try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
+    fun stopSpeaking() { try { VoiSparkSpeaker.stop() } catch (e: Throwable) { }; try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
 
     // ---- FIXTEST: hooks for Settings > SELF TEST. They only read state or run harmless local tools.
     fun testState(): String {

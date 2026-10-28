@@ -1708,6 +1708,49 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun clearOpenRouterKey() { SecureStore.clearSlot(this@MainActivity, "openrouter") }
 
+        // ---- v7.129 VoiSpark Ultron voice. The key is written only here, never sent back to the page. ----
+        @JavascriptInterface
+        fun saveVoiSparkKey(raw0: String): String = try {
+            val raw = if (raw0.length > 400) "" else raw0
+            val k = raw.trim()
+            if (k.length < 20 || k.length > 200 || k.any { it.isWhitespace() }) "invalid"
+            else if (SecureStore.saveSlot(this@MainActivity, VoiSparkClient.SLOT, k)) { VoiSparkSpeaker.resume(); "ok" }
+            else "fail"
+        } catch (e: Exception) { "fail" }
+
+        @JavascriptInterface
+        fun hasVoiSparkKey(): Boolean = SecureStore.hasSlot(this@MainActivity, VoiSparkClient.SLOT)
+
+        @JavascriptInterface
+        fun clearVoiSparkKey() { SecureStore.clearSlot(this@MainActivity, VoiSparkClient.SLOT) }
+
+        @JavascriptInterface
+        fun getVoiSpark(): Boolean = cfg.voiSparkOn
+
+        @JavascriptInterface
+        fun setVoiSpark(on: Boolean) { cfg.voiSparkOn = on; if (on) VoiSparkSpeaker.resume() }
+
+        @Volatile private var voiSparkReport = ""
+        @Volatile private var voiSparkRunning = false
+
+        /** Starts the real VoiSpark check on a worker thread (about 6 characters = 24 credits). Poll voiSparkCheckResult(). */
+        @JavascriptInterface
+        fun voiSparkCheckStart(): Boolean {
+            if (voiSparkRunning) return false
+            voiSparkRunning = true
+            voiSparkReport = ""
+            Thread {
+                try { voiSparkReport = VoiSparkClient.check(this@MainActivity, cfg.voiSparkVoiceId) }
+                catch (e: Throwable) { voiSparkReport = "FAIL  VoiSpark check - " + e.javaClass.simpleName }
+                finally { voiSparkRunning = false }
+            }.start()
+            return true
+        }
+
+        /** "" while running / not started, else the finished report (no key, no links, no audio). */
+        @JavascriptInterface
+        fun voiSparkCheckResult(): String = if (voiSparkRunning) "" else voiSparkReport
+
         /** Optional Z.ai (Zhipu GLM, free Flash models) key for the free AI chain. Written only here, never sent back. ok / invalid / fail. */
         @JavascriptInterface
         fun saveZaiKey(raw0: String): String = try {

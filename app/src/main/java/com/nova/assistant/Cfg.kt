@@ -58,6 +58,18 @@ class Cfg(ctx: Context) {
         get() = p.getBoolean("ultronVoiceV2", true)
         set(v) { p.edit().putBoolean("ultronVoiceV2", v).apply() }
 
+    /** v7.129: VoiSpark Ultron voice (online). Works only when a VoiSpark key is saved; any failure falls back to the voices below. Not a secret: voice id and limits only. */
+    var voiSparkOn: Boolean
+        get() = p.getBoolean("voiSparkOn", true)
+        set(v) { p.edit().putBoolean("voiSparkOn", v).apply() }
+    var voiSparkVoiceId: String
+        get() = p.getString("voiSparkVoiceId", VoiSparkApi.DEFAULT_VOICE_ID) ?: VoiSparkApi.DEFAULT_VOICE_ID
+        set(v) { p.edit().putString("voiSparkVoiceId", v.trim()).apply() }
+    /** Replies longer than this use the existing voice (VoiSpark costs 4 credits per character). */
+    var voiSparkMaxChars: Int
+        get() = VoiSparkApi.clampMaxChars(p.getInt("voiSparkMaxChars", VoiSparkApi.DEFAULT_MAX_CHARS))
+        set(v) { p.edit().putInt("voiSparkMaxChars", VoiSparkApi.clampMaxChars(v)).apply() }
+
     /** v7.120: how strong the Ultron effect is (0.2 .. 1.0). */
     var ultronAmount: Float
         get() = UltronFx.clampAmount(p.getFloat("ultronAmount", UltronFx.DEFAULT_AMOUNT))

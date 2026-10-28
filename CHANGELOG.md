@@ -1019,3 +1019,6 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - Open decision: 1.5B and other pack models still auto-download on Wi-Fi + charging when ExtCfg.autoModels is ON (v6.96); only the 3B is tap-only.
 - v7.117 (lite, Fix 1): Vosk wake recognizer runs only while a voice is present (+2 s, 0.4 s pre-roll replay); silent chunks cost no recognizer work. Not compiled, not phone-tested.
 - v7.118 (lite, Fix 2): chat messages use content-visibility:auto (off-screen messages are not painted, long chats scroll lighter). Screen timers/blur were already limited in SMOOTH by v7.113. Not phone-tested.
+
+## v7.129
+- VoiSpark Ultron voice added (add-only), see PART_STATUS_v7_129_VOISPARK.md
