@@ -3965,7 +3965,7 @@ class NovaService : Service() {
         if (NovaAccessibilityService.instance == null) return false
         for (k in 0 until tries) {
             try { Thread.sleep(150) } catch (e: InterruptedException) { return false }
-            val pkg = NovaAccessibilityService.foregroundPackage() ?: continue
+            val pkg = (NovaAccessibilityService.foregroundPackage()?.takeIf { it != packageName } ?: NovaAccessibilityService.reelPackage()) ?: continue
             if (if (expectPkg != null) pkg == expectPkg else pkg != before) return true
         }
         return false
@@ -4005,6 +4005,7 @@ class NovaService : Service() {
             // Without Accessibility nothing can see the screen: the order was given, the result cannot be checked. No claim of success.
             return R(true, tr("$what kholne ka order de diya", "I sent the order to open $what"))
         }
+        if (waitFront(before, expectPkg, 30)) return ok   // v7.138: big apps can take 5 s+ to show
         ErrLog.add("launch", "not in front after 3 ways: " + what)
         lastLaunchBlocked = true
         return R(false, tr(
