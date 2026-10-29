@@ -2852,6 +2852,17 @@ class NovaService : Service() {
             lastKind = "app_download"
             return downloadApp(dlReq)
         }
+        // v7.142 STEP 2: direct road. YouTube search / Maps route open in ONE step (no AI plan, no screen taps). Unknown phrase or a failed open
+        // returns null and the old agent path below runs unchanged.
+        val drPlan = if (text.isBlank()) null else try { DirectRoute.parse(HindiRoman.toRoman(text)) } catch (e: Throwable) { null }
+        if (drPlan != null) {
+            val drMsg = directRouteRun(drPlan)
+            if (drMsg != null) {
+                lastTurnLocal = true
+                lastKind = "direct_route"
+                return drMsg
+            }
+        }
         // General project/research/creation jobs are routed after the specialist builders so they cannot steal them.
         if (text.isNotBlank() && AgentRules.isTask(text)) {
             lastTurnLocal = false
@@ -4023,6 +4034,36 @@ class NovaService : Service() {
             "$what nahi khul paya: phone ne background se app kholne se roka. Ek baar App info > Other permissions me 'Display pop-up windows while running in the background' (ya 'Display over other apps') ON karo.",
             "$what did not open: the phone blocked opening apps from the background. Once, turn ON 'Display pop-up windows while running in the background' (or 'Display over other apps') in App info > Other permissions."
         ))
+    }
+
+    /** v7.142 STEP 2: opens one ordinary link for a [DirectRoute.Plan]. Never plays, taps or sends. Returns null = let the agent try. */
+    private fun directRouteRun(p: DirectRoute.Plan): String? {
+        return try {
+            val unverified = NovaAccessibilityService.instance == null
+            when (p.kind) {
+                DirectRoute.Kind.YT_SEARCH -> {
+                    val r = launch(Intent(Intent.ACTION_VIEW, Uri.parse(DirectRoute.youtubeUrl(p.arg) { enc(it) })), null, "YouTube")
+                    if (r.ok) tr(
+                        if (unverified) "YouTube par '${p.arg}' ki search kholne ka order de diya. Video abhi nahi chala, result par tap karo" else "YouTube par '${p.arg}' ki search khol di. Video abhi nahi chala, result par tap karo",
+                        if (unverified) "I sent the order to open a YouTube search for '${p.arg}'. Nothing is playing yet, tap a result" else "Opened a YouTube search for '${p.arg}'. Nothing is playing yet, tap a result"
+                    ) else if (lastLaunchBlocked) r.msg else null
+                }
+                DirectRoute.Kind.MAPS_NAV -> {
+                    val r = launch(Intent(Intent.ACTION_VIEW, Uri.parse(DirectRoute.mapsNavUrl(p.arg) { enc(it) })), null, "Maps")
+                    if (r.ok) tr(
+                        if (unverified) "'${p.arg}' ka rasta Maps me kholne ka order de diya. Start aap Maps me khud dabana" else "'${p.arg}' ka rasta Maps me khol diya. Start aap Maps me khud dabana",
+                        if (unverified) "I sent the order to open the route to '${p.arg}' in Maps. Press Start in Maps yourself" else "Opened the route to '${p.arg}' in Maps. Press Start in Maps yourself"
+                    ) else if (lastLaunchBlocked) r.msg else null
+                }
+                DirectRoute.Kind.MAPS_SHOW -> {
+                    val r = launch(Intent(Intent.ACTION_VIEW, Uri.parse(DirectRoute.mapsShowUrl(p.arg) { enc(it) })), null, "Maps")
+                    if (r.ok) tr(
+                        if (unverified) "'${p.arg}' Maps me dhundhne ka order de diya" else "'${p.arg}' Maps me khol diya",
+                        if (unverified) "I sent the order to search '${p.arg}' in Maps" else "Opened '${p.arg}' in Maps"
+                    ) else if (lastLaunchBlocked) r.msg else null
+                }
+            }
+        } catch (e: Throwable) { ErrLog.add("DirectRoute", e.toString()); null }
     }
 
     /** Opens the still or video camera, optionally on the front lens. Android has no official "front" switch, so the common extras are
