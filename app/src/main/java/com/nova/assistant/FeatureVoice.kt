@@ -19,10 +19,11 @@ object FeatureVoice {
         "lockguard" to listOf("lock guard", "lockguard"),
         "batteryalert" to listOf("battery alert", "battery warning", "battery kam alert"),
         "offlinepack" to listOf("offline pack", "offline ai pack", "offline ai"),
-        "apilimits" to listOf("api limit", "api limits", "limit kitni", "api use")
+        "apilimits" to listOf("api limit", "api limits", "limit kitni", "api use"),
+        "agentscore" to listOf("kaam ka hisaab", "agent ka hisaab", "task ka hisaab", "agent score", "kaam ka score", "agent history", "task history")   // v7.141
     )
     private val STATUS_CUE = listOf("status", "kya hai", "on hai", "off hai", "chalu hai", "band hai", "chal raha", "chal rha", "check", "jaanch",
-        "batao", "bata do", "bataiye", "is it on", "is it off", "kitni bachi", "kitna use", "how much", "tell me")
+        "batao", "bata do", "bataiye", "hisaab", "score", "history", "is it on", "is it off", "kitni bachi", "kitna use", "how much", "tell me")
     private val ORDER_WORDS = listOf("karo", "kar do", "kardo", "karna", "enable", "disable", "turn", "set ", "shuru", "start", "stop", "ruko", "delete", "hatao",
         "bhejo", "send", "call", "banao", "create", "add", "remove", "on kar", "off kar", "band kar", "chalu kar")
 
@@ -50,6 +51,7 @@ object FeatureVoice {
                           else t("Abhi koi routine nahi hai. Settings mein bana sakte ho.", "No routines yet. You can make one in Settings.")
             "apilimits" -> if (s.on) t("Kuch AI limit ke paas hai: ${s.note}. LIMITS screen dekho.", "Some AI limits are close: ${s.note}. See the LIMITS screen.")
                            else t("Koi AI limit ke paas nahi hai. Poori list LIMITS screen par hai.", "No AI is near its limit. The full list is on the LIMITS screen.")
+            "agentscore" -> s.note
             else -> ""
         }
     }
@@ -75,6 +77,10 @@ object FeatureVoice {
                     if (r.optInt("percent", -1) >= 90) near.add(r.optString("label"))
                 }
                 State(near.isNotEmpty(), near.joinToString(", "))
+            }
+            "agentscore" -> {   // v7.141: counts the task ledger; read-only
+                val rows = AgentTaskLedger(ctx).history().map { AgentScore.Row(it.summary, it.state.name, it.steps) }
+                State(rows.isNotEmpty(), AgentScore.reply(rows, Cfg(ctx).lang == "en"))
             }
             else -> State(false)
         }
