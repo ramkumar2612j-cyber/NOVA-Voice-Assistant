@@ -133,7 +133,8 @@ object JarvisSpeaker {
 
     /** Cheap checks before NovaService asks for a Jarvis voice (no network). */
     fun eligible(ctx: Context, cfg: Cfg, text: String, now: Long = System.currentTimeMillis()): Boolean =
-        wants(cfg.jarvisOn, cfg.jarvisUrl, cfg.jarvisAnyLang, cfg.lang == "en", text, cfg.jarvisMaxChars, isPaused(now))
+        !ReplyLang.isHindi(text) &&   // v7.138: Hindi / Hinglish replies are spoken by a Hindi voice, English ones by Jarvis (automatic)
+        wants(cfg.jarvisOn, cfg.jarvisUrl, cfg.jarvisAnyLang, true, text, cfg.jarvisMaxChars, isPaused(now))
 
     /**
      * Blocking (worker thread): request audio, then play it. FAILED = nothing was played, caller uses the existing voice.

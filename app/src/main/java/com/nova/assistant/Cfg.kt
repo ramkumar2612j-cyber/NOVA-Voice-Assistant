@@ -96,9 +96,12 @@ class Cfg(ctx: Context) {
 
     fun locale(): Locale = if (lang == "en") Locale("en", "IN") else Locale("hi", "IN")
 
+    /** v7.138: the voice follows the language of the reply being spoken (ReplyLang); before the first reply it follows the app language. */
+    fun voiceLocale(): Locale = when (ReplyLang.voiceLang) { "en" -> Locale("en", "IN"); "hi" -> Locale("hi", "IN"); else -> locale() }
+
     fun applyVoice(t: TextToSpeech?) {
         if (t == null) return
-        val r = t.setLanguage(locale())
+        val r = t.setLanguage(voiceLocale())
         if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
             t.setLanguage(Locale.US)
         }
@@ -110,7 +113,7 @@ class Cfg(ctx: Context) {
     /** v16: of the voices already on the phone for this language, prefer the highest quality one that works offline. */
     private fun pickBestVoice(t: TextToSpeech) {
         try {
-            val want = if (lang == "en") "en" else "hi"
+            val want = ReplyLang.voiceLang ?: (if (lang == "en") "en" else "hi")
             var best: android.speech.tts.Voice? = null
             for (v in t.voices ?: return) {
                 if (v.locale.language != want) continue

@@ -652,8 +652,9 @@ class NovaService : Service() {
             if (confirm) answerWindow = true   // no voice: the user can still read the question and answer
             return false
         }
-        cfg.applyVoice(t)
         val spoken = if (text.contains('\n') || text.contains("```") || text.contains("**")) FreeProviders.speakable(text).ifBlank { text } else text   // v7.3: a long chat answer is read without markdown / code
+        ReplyLang.voiceLang = ReplyLang.langOf(spoken)   // v7.138: English -> Jarvis, Hindi / Hinglish -> a Hindi voice, automatically
+        cfg.applyVoice(t)
         val id = "u" + uttSeq.incrementAndGet()
         curUtt = id
         confirmUtt = if (confirm) id else ""
@@ -784,7 +785,7 @@ class NovaService : Service() {
     // ---- v7.129 JARVIS VOICE (v7.136, replaces Jarvis): online voice first; ANY failure -> the existing Ultron-effect voice -> the normal voice. ----
     /** v7.138: Jarvis-style voice, no server: the phone's offline British male voice, deeper and calmer. English replies only. false = not used, the next voice speaks. */
     private fun startJarvisLocal(t: TextToSpeech, spoken: String, id: String): Boolean {
-        if (!cfg.jarvisLocal || !JarvisVoiceApi.englishOk(spoken)) return false
+        if (!cfg.jarvisLocal || !JarvisVoiceApi.englishOk(spoken) || ReplyLang.isHindi(spoken)) return false   // v7.138: Hinglish is not English
         return try {
             val vs = t.voices ?: return false
             val pick = JarvisLocalVoice.pick(vs.map { JarvisLocalVoice.Cand(it.name, it.locale.language, it.locale.country, it.quality, it.isNetworkConnectionRequired) }) ?: return false
