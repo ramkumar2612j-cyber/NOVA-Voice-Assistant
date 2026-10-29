@@ -230,22 +230,29 @@ object SiteGen {
 
     /** Makes the AI pictures a page asks for (max 4, only while the build is young); failures simply stay pixels. */
     private fun aiPictures(ctx: Context, template: String, start: Long, allowNew: Boolean): Map<String, String> {
-        val wanted = SiteMedia.placeholders(template).take(4)
+        val wanted = SiteMedia.placeholders(template).take(8)   // v7.140: was 4, so a page with 6 slots kept 2 empty pixels
         if (wanted.isEmpty()) return emptyMap()
         for (d in wanted) {
             if (aiCache.containsKey(d) || !allowNew) continue
-            if (System.currentTimeMillis() - start > 170_000L) break
-            try {
-                val r = ImageGen.generate(ctx, d, null)
-                val raw = r.img
-                if (r.ok && raw != null) {
-                    val small = ImageGen.shrink(raw, 1024) ?: raw
-                    aiCache[d] = "data:image/jpeg;base64," + ImageGen.b64(small)
-                }
-            } catch (e: Throwable) { ErrLog.addOnce("quiet:SiteGen", e.toString()) }
+            val late = System.currentTimeMillis() - start > 170_000L
+            if (!late) {
+                try {
+                    val r = ImageGen.generate(ctx, d, null)
+                    val raw = r.img
+                    if (r.ok && raw != null) {
+                        val small = ImageGen.shrink(raw, 1024) ?: raw
+                        aiCache[d] = "data:image/jpeg;base64," + ImageGen.b64(small)
+                    }
+                } catch (e: Throwable) { ErrLog.addOnce("quiet:SiteGen", e.toString()) }
+            }
+            if (!aiCache.containsKey(d)) {   // v7.140: AI picture failed -> a public Wikipedia picture (fast, no key)
+                val w = SitePics.wiki(d)
+                if (w != null) aiCache[d] = w
+            }
         }
         val out = HashMap<String, String>()
-        for (d in wanted) aiCache[d]?.let { out[d] = it }
+        var i = 0
+        for (d in wanted) { out[d] = aiCache[d] ?: SitePics.card(d, i); i++ }   // v7.140: last fallback: a title card, never an empty pixel
         return out
     }
 
