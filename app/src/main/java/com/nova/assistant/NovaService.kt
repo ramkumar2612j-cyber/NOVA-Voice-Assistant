@@ -654,7 +654,7 @@ class NovaService : Service() {
         }
         val spoken = if (text.contains('\n') || text.contains("```") || text.contains("**")) FreeProviders.speakable(text).ifBlank { text } else text   // v7.3: a long chat answer is read without markdown / code
         ReplyLang.voiceLang = ReplyLang.langOf(spoken)   // v7.138: English -> Jarvis, Hindi / Hinglish -> a Hindi voice, automatically
-        cfg.applyVoice(t)
+        cfg.applyVoiceIfChanged(t)   // v7.139: not on every reply (this runs on the main thread)
         val id = "u" + uttSeq.incrementAndGet()
         curUtt = id
         confirmUtt = if (confirm) id else ""
@@ -715,6 +715,7 @@ class NovaService : Service() {
         val f = File(cacheDir, "ultron_$id.wav")
         val latch = CountDownLatch(1)
         try {
+            cfg.voiceKey = ""
             t.setPitch(UltronFx.PITCH)
             t.setSpeechRate(minOf(cfg.rate, UltronFx.MAX_RATE))
             fxOk = false
@@ -784,13 +785,22 @@ class NovaService : Service() {
 
     // ---- v7.129 JARVIS VOICE (v7.136, replaces Jarvis): online voice first; ANY failure -> the existing Ultron-effect voice -> the normal voice. ----
     /** v7.138: Jarvis-style voice, no server: the phone's offline British male voice, deeper and calmer. English replies only. false = not used, the next voice speaks. */
+    @Volatile private var jarvisVoiceCache: Pair<TextToSpeech, android.speech.tts.Voice>? = null
+
     private fun startJarvisLocal(t: TextToSpeech, spoken: String, id: String): Boolean {
         if (!cfg.jarvisLocal || !JarvisVoiceApi.englishOk(spoken) || ReplyLang.isHindi(spoken)) return false   // v7.138: Hinglish is not English
         return try {
-            val vs = t.voices ?: return false
-            val pick = JarvisLocalVoice.pick(vs.map { JarvisLocalVoice.Cand(it.name, it.locale.language, it.locale.country, it.quality, it.isNetworkConnectionRequired) }) ?: return false
-            val v = vs.firstOrNull { it.name == pick.name } ?: return false
-            if (t.setVoice(v) != TextToSpeech.SUCCESS) { cfg.applyVoice(t); return false }
+            // v7.139: the voice list is a blocking service call and this runs on the main thread: look it up once per engine.
+            val cached = jarvisVoiceCache
+            val v = if (cached != null && cached.first === t) cached.second else {
+                val vs = t.voices ?: return false
+                val pick = JarvisLocalVoice.pick(vs.map { JarvisLocalVoice.Cand(it.name, it.locale.language, it.locale.country, it.quality, it.isNetworkConnectionRequired) }) ?: return false
+                val f = vs.firstOrNull { it.name == pick.name } ?: return false
+                jarvisVoiceCache = Pair(t, f)
+                f
+            }
+            if (t.voice?.name != v.name && t.setVoice(v) != TextToSpeech.SUCCESS) { cfg.applyVoice(t); return false }
+            cfg.voiceKey = ""
             t.setPitch(JarvisLocalVoice.PITCH)
             t.setSpeechRate(minOf(cfg.rate, 1.0f) * JarvisLocalVoice.RATE_FACTOR)
             val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)

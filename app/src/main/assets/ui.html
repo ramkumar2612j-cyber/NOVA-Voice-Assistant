@@ -6024,4 +6024,10 @@ place();
 }catch(e){try{console.log('ultron mouth',e)}catch(_){}}})();
 </script>
 
+<style id="v7139-safe">
+/* v7.139 SAFE GRAPHICS (add-only). Some phone GPUs paint random colours over the whole screen with a fixed full-screen background, a CSS mask on a big photo or a backdrop blur. In the smooth / low-effects mode (the default) those three are switched off; the look stays almost the same. */
+html.lowfx *,html.lowfx *:before,html.lowfx *:after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;mix-blend-mode:normal!important;will-change:auto!important}
+html.lowfx body{background-attachment:scroll!important}
+html.lowfx .orbbox{-webkit-mask-image:none!important;mask-image:none!important;box-shadow:inset 0 0 28px 16px rgba(3,6,15,.96)}
+</style>
 </body></html>

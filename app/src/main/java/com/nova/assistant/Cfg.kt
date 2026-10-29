@@ -99,8 +99,18 @@ class Cfg(ctx: Context) {
     /** v7.138: the voice follows the language of the reply being spoken (ReplyLang); before the first reply it follows the app language. */
     fun voiceLocale(): Locale = when (ReplyLang.voiceLang) { "en" -> Locale("en", "IN"); "hi" -> Locale("hi", "IN"); else -> locale() }
 
+    /** v7.139: what applyVoice last set on the engine. speak() runs on the main thread and every TTS call is a blocking service call: only redo it when something changed. */
+    @Volatile var voiceKey = ""
+    private fun keyOf(t: TextToSpeech) = "" + System.identityHashCode(t) + "|" + voiceLocale() + "|" + rate + "|" + pitch
+    fun applyVoiceIfChanged(t: TextToSpeech?) {
+        if (t == null) return
+        if (voiceKey == keyOf(t)) return
+        applyVoice(t)
+    }
+
     fun applyVoice(t: TextToSpeech?) {
         if (t == null) return
+        voiceKey = ""
         val r = t.setLanguage(voiceLocale())
         if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
             t.setLanguage(Locale.US)
@@ -108,6 +118,7 @@ class Cfg(ctx: Context) {
         pickBestVoice(t)
         t.setSpeechRate(rate)
         t.setPitch(pitch)
+        voiceKey = keyOf(t)
     }
 
     /** v16: of the voices already on the phone for this language, prefer the highest quality one that works offline. */
