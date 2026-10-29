@@ -25,7 +25,7 @@ android {
         versionCode = (System.getenv("NOVA_VERSION_CODE") ?: "37").toIntOrNull() ?: 37
         versionName = "7.138"
         // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
-        ndk { abiFilters += listOf("arm64-v8a") }
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
     signingConfigs {
         if (haveNovaKeystore) {
