@@ -37,6 +37,7 @@ object AppSearchRules {
         if (n.length < 6) return null
         val words = n.split(" ").filter { it.isNotEmpty() }
         if (words.isEmpty()) return null
+        if (OpenWebRules.parseDownload(input) != null) return null   // v7.133: "play store pe whatsapp download karo" is the Play Store download route, not an in-app search
         return parseShare(words) ?: parseSearch(words)
     }
 

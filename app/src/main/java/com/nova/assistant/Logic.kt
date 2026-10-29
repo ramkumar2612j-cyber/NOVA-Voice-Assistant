@@ -438,7 +438,9 @@ object Logic {
 
         // A basic contact call must not depend on a configured cloud model/API key.
         // Keep the grammar narrow: only explicit "call/phone <name>" or "<name> ko call karo".
-        val callTarget = Regex("^(?:please )?(?:call|phone) (.+?)(?: please)?$").find(n)?.groupValues?.get(1)
+        // v7.133 FINAL: verb first with the action word before the name: "phone karo papa ko", "call karo papa", "call lagao mummy ko"
+        val callTarget = Regex("^(?:please )?(?:call|phone) (?:karo|kar do|lagao|laga do) (.+?)(?: ko)?(?: please)?$").find(n)?.groupValues?.get(1)
+            ?: Regex("^(?:please )?(?:call|phone) (.+?)(?: please)?$").find(n)?.groupValues?.get(1)
             ?: Regex("^(.+?) ko (?:call|phone)(?: (?:karo|kar do|lagao|laga do))?$").find(n)?.groupValues?.get(1)
             ?: Regex("^(.+?) (?:call|phone) (?:karo|kar do|lagao|laga do)$").find(n)?.groupValues?.get(1)
         if (callTarget != null) {

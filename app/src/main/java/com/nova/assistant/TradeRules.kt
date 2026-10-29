@@ -7,7 +7,7 @@ package com.nova.assistant
  * never says "sure profit" / "no loss", and always gives entry + stop loss + target + small risk, or says WAIT.
  */
 object TradeRules {
-    data class Req(val query: String, val openMt5: Boolean, val placeAsk: Boolean)
+    data class Req(val query: String, val openMt5: Boolean, val placeAsk: Boolean, val closeAsk: Boolean = false)
 
     const val MT5_PKG = "net.metaquotes.metatrader5"
 
@@ -18,14 +18,23 @@ object TradeRules {
     private val BLOCK = setOf("website", "site", "photo", "video", "reel", "movie", "song", "gaana", "call", "message", "whatsapp", "alarm", "timer", "torch", "wifi", "brightness", "volume", "meeting", "schedule")
     private val PLACE = setOf("trade", "lagao", "lagana", "place", "execute", "order", "kholo", "khol", "open")
 
+    // v7.133 FINAL: two-word spellings are joined first ("stop loss", "usd inr"); "close / band" for a trade is a CLOSE ask, never a PLACE ask
+    private val JOIN = listOf("stop loss" to "stoploss", "take profit" to "tp", "usd inr" to "usdinr", "eur usd" to "eurusd", "gbp usd" to "gbpusd", "usd jpy" to "usdjpy", "xau usd" to "xauusd", "btc usd" to "btcusd")
+    private val CLOSE_WORD = setOf("close", "band", "exit", "khatam", "square", "squareoff")
+    private val TRADE_NOUN = setOf("trade", "trades", "position", "positions", "order", "orders")
+    private val WEAK_CUE = setOf("kaisa", "kaisi", "analysis", "trend", "signal", "batao")
+
     fun parse(raw: String): Req? {
-        val n = Logic.norm(raw)
+        var n = Logic.norm(raw)
+        for ((a, b) in JOIN) n = n.replace(a, b)
         if (n.isBlank() || n.length > 160) return null
         val t = n.split(" ").filter { it.isNotBlank() }
         if (t.size < 2) return null
         if (t.any { it in BLOCK }) return null
-        val market = t.any { it in MARKET }
+        val market = t.any { it in MARKET } || (t.contains("market") && t.any { it in WEAK_CUE })   // "aaj market kaisa hai"
         if (!market) return null
+        // "trade close karo", "gold trade band karo": NOVA cannot close a trade itself; it only opens MT5 and says so
+        if (t.any { it in CLOSE_WORD } && t.any { it in TRADE_NOUN }) return Req(n.take(160), true, false, true)
         // "mt5 kholo" alone is the normal open-app command (it must keep working)
         val onlyOpen = t.all { it in setOf("nova", "mt5", "metatrader", "metatrader5", "5", "kholo", "khol", "open", "karo", "do", "app", "please", "chalu") }
         if (onlyOpen) return null
@@ -51,6 +60,7 @@ object TradeRules {
 
     fun noKeyText(en: Boolean) = if (en) "Trading analysis needs an AI key. Add a Gemini key in Settings." else "Trading analysis ke liye AI key chahiye. Settings me Gemini key daalo."
     fun failedText(en: Boolean) = if (en) "I could not get the market analysis right now. Check the internet and try again." else "Abhi market analysis nahi mil paya. Internet check karke dobara bolo."
+    fun closeText(en: Boolean) = if (en) "I cannot close a trade myself: I opened MT5, close it from the Trade tab yourself." else "Trade main khud band nahi kar sakta: MT5 khol diya, Trade tab se aap khud close karo."
     fun placeText(en: Boolean) = if (en) "I cannot place the trade myself yet: I will open MT5, you tap the order using the entry, stop loss and target above, on the DEMO account." else "Trade main khud nahi laga sakta abhi: MT5 khol deta hoon, upar wale entry, stop loss aur target se DEMO account me order aap lagao."
     fun mt5MissingText(en: Boolean) = if (en) "MT5 is not installed on this phone." else "Is phone me MT5 app install nahi hai."
 }

@@ -58,17 +58,26 @@ class Cfg(ctx: Context) {
         get() = p.getBoolean("ultronVoiceV2", true)
         set(v) { p.edit().putBoolean("ultronVoiceV2", v).apply() }
 
-    /** v7.129: VoiSpark Ultron voice (online). Works only when a VoiSpark key is saved; any failure falls back to the voices below. Not a secret: voice id and limits only. */
-    var voiSparkOn: Boolean
-        get() = p.getBoolean("voiSparkOn", true)
-        set(v) { p.edit().putBoolean("voiSparkOn", v).apply() }
-    var voiSparkVoiceId: String
-        get() = p.getString("voiSparkVoiceId", VoiSparkApi.DEFAULT_VOICE_ID) ?: VoiSparkApi.DEFAULT_VOICE_ID
-        set(v) { p.edit().putString("voiSparkVoiceId", v.trim()).apply() }
-    /** Replies longer than this use the existing voice (VoiSpark costs 4 credits per character). */
-    var voiSparkMaxChars: Int
-        get() = VoiSparkApi.clampMaxChars(p.getInt("voiSparkMaxChars", VoiSparkApi.DEFAULT_MAX_CHARS))
-        set(v) { p.edit().putInt("voiSparkMaxChars", VoiSparkApi.clampMaxChars(v)).apply() }
+    /** v7.136: JARVIS voice (online, your own server). Works only when a server address is saved; any failure falls back to the voices below. The address is not a secret (the token is, in SecureStore). */
+    /** v7.138: Jarvis-style voice from the phone's own British male voice (no server). Used when the server voice is off / fails and the reply is English. */
+    var jarvisLocal: Boolean
+        get() = p.getBoolean("jarvisLocal", true)
+        set(v) { p.edit().putBoolean("jarvisLocal", v).apply() }
+
+    var jarvisOn: Boolean
+        get() = p.getBoolean("jarvisOn", true)
+        set(v) { p.edit().putBoolean("jarvisOn", v).apply() }
+    var jarvisUrl: String
+        get() = p.getString("jarvisUrl", "") ?: ""
+        set(v) { p.edit().putString("jarvisUrl", JarvisVoiceApi.cleanBase(v)).apply() }
+    /** The model is English-only: by default Jarvis speaks only when NOVA's language is English. ON = also Hinglish / Hindi replies written in plain A-Z letters. */
+    var jarvisAnyLang: Boolean
+        get() = p.getBoolean("jarvisAnyLang", false)
+        set(v) { p.edit().putBoolean("jarvisAnyLang", v).apply() }
+    /** Longer replies use the existing voice (the model card says long synthesis can develop noise). */
+    var jarvisMaxChars: Int
+        get() = JarvisVoiceApi.clampMaxChars(p.getInt("jarvisMaxChars", JarvisVoiceApi.DEFAULT_MAX_CHARS))
+        set(v) { p.edit().putInt("jarvisMaxChars", JarvisVoiceApi.clampMaxChars(v)).apply() }
 
     /** v7.120: how strong the Ultron effect is (0.2 .. 1.0). */
     var ultronAmount: Float

@@ -23,13 +23,21 @@ object CmdQueue {
 
     /** Splits one utterance into 1..MAX commands. Never splits on a plain "aur". Extra items beyond MAX are cut off (see [splitDropped]). */
     fun split(text: String): List<String> {
+        // v7.133: "phir se / phir bhi / phir wapas" means "again / still", not "then": it must not cut a command in two ("ye gaana phir se chalao").
+        // "aur phir se X" is a real "and then": the "se" is dropped.
+        val t0 = text.trim().replace(Regex("(?i)\\baur phir se\\b"), "aur phir")
+        val prot = Regex("(?i)\\b(phir|fir) (se|bhi|wapas)\\b").replace(t0) { it.groupValues[1] + "\u0001" + it.groupValues[2] }
+        return splitRaw(prot).map { it.replace("\u0001", " ").trim() }.filter { it.isNotEmpty() }
+    }
+
+    private fun splitRaw(text: String): List<String> {
         val t = text.trim()
         if (t.isEmpty()) return emptyList()
         var parts: List<String> = STRONG.split(t).map { it.trim() }.filter { it.isNotEmpty() }
         if (parts.size <= 1 && !hasCue(t)) {
             val alt = SOFT.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
             val re = Regex("(?:^|\\s)(?:" + alt + ")(?=\\s)", RegexOption.IGNORE_CASE)
-            val p = re.split(t).map { it.trim().trim(',', '.') }.filter { it.isNotEmpty() }
+            val p = re.split(t).map { it.trim().trim(',', '.').replace(Regex("(?i)\\s+(aur|and)$"), "") }.filter { it.isNotEmpty() }   // v7.133: no dangling "aur" before "uske baad"
             val best: List<String> = if (p.size > 1) p else listOf(t)
             parts = best
         }

@@ -28,7 +28,7 @@ checks = {
  'Parts 2-4 hooks still present': 'PlaybookStore(this).record(pbKind, apps, state == AgentTaskRules.State.SUCCEEDED)' in svc and 'agentAltSwitch(AlternativesRules.Gap.STUCK' in svc and 'WebOperatorRules.targets(task)' in svc,
  'old v7.103 learning hooks still present': 'CapabilityLearningStore(this).recordFailure(message)' in svc,
  'unit test covers password, code, mailbox, captcha/chooser, whole words, danger, hint, messages': all(x in test for x in ('passwordBoxOrPrompt', 'codeAndPhoneApproval', 'mailboxLinesAboutCodes', 'captchaIsAWall', 'wholeWordsOnly', 'accountSecurityTaps', 'hintOnlyFor', 'ownerMessagesName')),
- 'version 7.108 or newer (code 35+)': any(('versionName = "%s"' % v) in gradle for v in ('7.108', '7.109', '7.110', '7.113', '7.114')) and any(('"%s"' % c) in gradle for c in ('35', '36', '37')),
+ 'version 7.108 or newer (code 35+)': any(('versionName = "%s"' % v) in gradle for v in ('7.108', '7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')) and any(('"%s"' % c) in gradle for c in ('35', '36', '37')),
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)

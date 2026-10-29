@@ -1708,48 +1708,86 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun clearOpenRouterKey() { SecureStore.clearSlot(this@MainActivity, "openrouter") }
 
-        // ---- v7.129 VoiSpark Ultron voice. The key is written only here, never sent back to the page. ----
+        // ---- v7.136 JARVIS voice (your own server). The token is written only here, never sent back to the page. ----
         @JavascriptInterface
-        fun saveVoiSparkKey(raw0: String): String = try {
+        fun saveJarvisUrl(raw0: String): String = try {
+            val raw = if (raw0.length > 400) "" else raw0
+            if (raw.isBlank()) { cfg.jarvisUrl = ""; "cleared" }
+            else if (JarvisVoiceApi.cleanBase(raw).isEmpty()) "invalid"
+            else { cfg.jarvisUrl = raw; JarvisSpeaker.resume(); "ok" }
+        } catch (e: Exception) { "fail" }
+
+        @JavascriptInterface
+        fun getJarvisUrl(): String = cfg.jarvisUrl
+
+        /** Optional token (the server may run without one). 8..300 chars, no spaces. */
+        @JavascriptInterface
+        fun saveJarvisToken(raw0: String): String = try {
             val raw = if (raw0.length > 400) "" else raw0
             val k = raw.trim()
-            if (k.length < 20 || k.length > 200 || k.any { it.isWhitespace() }) "invalid"
-            else if (SecureStore.saveSlot(this@MainActivity, VoiSparkClient.SLOT, k)) { VoiSparkSpeaker.resume(); "ok" }
+            if (k.length < 8 || k.length > 300 || k.any { it.isWhitespace() }) "invalid"
+            else if (SecureStore.saveSlot(this@MainActivity, JarvisVoiceClient.SLOT, k)) { JarvisSpeaker.resume(); "ok" }
             else "fail"
         } catch (e: Exception) { "fail" }
 
         @JavascriptInterface
-        fun hasVoiSparkKey(): Boolean = SecureStore.hasSlot(this@MainActivity, VoiSparkClient.SLOT)
+        fun hasJarvisToken(): Boolean = SecureStore.hasSlot(this@MainActivity, JarvisVoiceClient.SLOT)
 
         @JavascriptInterface
-        fun clearVoiSparkKey() { SecureStore.clearSlot(this@MainActivity, VoiSparkClient.SLOT) }
+        fun clearJarvisToken() { SecureStore.clearSlot(this@MainActivity, JarvisVoiceClient.SLOT) }
+
+        /** v7.137: one-tap pairing. Reads a NOVA-JARVIS code from the clipboard and saves address + token. Returns ok / nocode / invalid / fail. The code and token are never logged or returned. */
+        @JavascriptInterface
+        fun jarvisPasteCode(): String = try {
+            val cm = this@MainActivity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val t = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString()
+            if (t == null || !t.contains(JarvisPairing.PREFIX)) "nocode"
+            else {
+                val p = JarvisPairing.parse(t)
+                if (p == null) "invalid"
+                else if (p.token.isNotEmpty() && !SecureStore.saveSlot(this@MainActivity, JarvisVoiceClient.SLOT, p.token)) "fail"
+                else { cfg.jarvisUrl = p.address; JarvisSpeaker.resume(); "ok" }
+            }
+        } catch (e: Exception) { "fail" }
 
         @JavascriptInterface
-        fun getVoiSpark(): Boolean = cfg.voiSparkOn
+        fun getJarvis(): Boolean = cfg.jarvisOn
 
         @JavascriptInterface
-        fun setVoiSpark(on: Boolean) { cfg.voiSparkOn = on; if (on) VoiSparkSpeaker.resume() }
+        fun setJarvis(on: Boolean) { cfg.jarvisOn = on; if (on) JarvisSpeaker.resume() }
 
-        @Volatile private var voiSparkReport = ""
-        @Volatile private var voiSparkRunning = false
-
-        /** Starts the real VoiSpark check on a worker thread (about 6 characters = 24 credits). Poll voiSparkCheckResult(). */
         @JavascriptInterface
-        fun voiSparkCheckStart(): Boolean {
-            if (voiSparkRunning) return false
-            voiSparkRunning = true
-            voiSparkReport = ""
+        fun getJarvisLocal(): Boolean = cfg.jarvisLocal
+
+        @JavascriptInterface
+        fun setJarvisLocal(on: Boolean) { cfg.jarvisLocal = on }
+
+        @JavascriptInterface
+        fun getJarvisAnyLang(): Boolean = cfg.jarvisAnyLang
+
+        @JavascriptInterface
+        fun setJarvisAnyLang(on: Boolean) { cfg.jarvisAnyLang = on }
+
+        @Volatile private var jarvisReport = ""
+        @Volatile private var jarvisRunning = false
+
+        /** Starts the real Jarvis check on a worker thread (health + one short sentence). Poll jarvisCheckResult(). */
+        @JavascriptInterface
+        fun jarvisCheckStart(): Boolean {
+            if (jarvisRunning) return false
+            jarvisRunning = true
+            jarvisReport = ""
             Thread {
-                try { voiSparkReport = VoiSparkClient.check(this@MainActivity, cfg.voiSparkVoiceId) }
-                catch (e: Throwable) { voiSparkReport = "FAIL  VoiSpark check - " + e.javaClass.simpleName }
-                finally { voiSparkRunning = false }
+                try { jarvisReport = JarvisVoiceClient.check(this@MainActivity, cfg.jarvisUrl) }
+                catch (e: Throwable) { jarvisReport = "FAIL  Jarvis check - " + e.javaClass.simpleName }
+                finally { jarvisRunning = false }
             }.start()
             return true
         }
 
-        /** "" while running / not started, else the finished report (no key, no links, no audio). */
+        /** "" while running / not started, else the finished report (no token, no address, no audio). */
         @JavascriptInterface
-        fun voiSparkCheckResult(): String = if (voiSparkRunning) "" else voiSparkReport
+        fun jarvisCheckResult(): String = if (jarvisRunning) "" else jarvisReport
 
         /** Optional Z.ai (Zhipu GLM, free Flash models) key for the free AI chain. Written only here, never sent back. ok / invalid / fail. */
         @JavascriptInterface

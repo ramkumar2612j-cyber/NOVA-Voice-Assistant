@@ -37,7 +37,7 @@ checks = {
  'MADAD topic in Kotlin and ui.html': 'Topic("brainlearn"' in hg and '"id": "brainlearn"' in ui,
  'unit tests cover RAM tiers, pack isolation, order, states, refusals, ids, headline': all(x in test for x in ('recommendationFollowsRam', 'ownerPickBrainIsNeverInTheAutomaticPackList', 'installedOwnerPickBrainIsTriedFirst', 'optionStatesFollowRamStorageAndInstalled', 'downloadNeedsTheOwnersTapAndEveryCondition', 'onlyTheTwoOfferedIdsAreAccepted', 'headlineIsHonestAboutWeakPhones')),
  'HARD DENY list and protected screens untouched': '"pay", "payment", "buy"' in rd('AgentRules.kt') and 'BLOCKED_FRAGMENTS' in rd('Control.kt'),
- 'version 7.110 / code 37': 'versionName = "7.114"' in gradle and '"37"' in gradle,
+ 'version 7.110 / code 37': any(('versionName = "%s"' % v) in gradle for v in ('7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')) and '"37"' in gradle,
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)

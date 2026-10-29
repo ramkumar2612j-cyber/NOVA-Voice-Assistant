@@ -45,7 +45,7 @@ checks = {
  'old v7.103 learning hooks still present': 'CapabilityLearningStore(this).recordFailure(message)' in svc,
  'hard DENY list and protected screens untouched': '"pay", "payment", "buy"' in agent and 'BLOCKED_FRAGMENTS' in (j / 'Control.kt').read_text() and 'fun blocked(' in (j / 'Control.kt').read_text(),
  'unit test covers order, skip, max 4, deny, determinism': all(x in test for x in ('videoOrder', 'alreadyTriedRoutesAreSkipped', 'neverMoreThanFourSwitches', 'deniedAndProtected', 'deterministic', 'playbookScoreOrders')),
- 'version 7.106 or newer (code 33+)': any(('versionName = "%s"' % v) in gradle for v in ('7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114')) and any(('"%s"' % c) in gradle for c in ('33', '34', '35', '36', '37')),
+ 'version 7.106 or newer (code 33+)': any(('versionName = "%s"' % v) in gradle for v in ('7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')) and any(('"%s"' % c) in gradle for c in ('33', '34', '35', '36', '37')),
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)

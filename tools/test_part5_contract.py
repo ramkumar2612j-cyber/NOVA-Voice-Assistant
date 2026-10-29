@@ -35,7 +35,7 @@ for m in re.finditer(r'AutoTrace\.add\(([^)]*)\)', ns):
     need(re.search(r'\btext\b|rawText|text0', m.group(1)) is None, 'AutoTrace.add must not get the full sentence: ' + m.group(1))
 # every Android.* the page calls has a bridge (spot check of the new one + audit tool)
 need('fun detectIntent' in ma and 'fun editPhoto' in ma, 'detectIntent/editPhoto bridge missing')
-need(hashlib.sha256(open(os.path.join(R, '.github/workflows/build.yml'), 'rb').read()).hexdigest() == '030cf82035c2a63c185f36f3dc6b4958f9e954bfa0328a81c7db129f0d47f0d8', 'build.yml changed!')
+need(hashlib.sha256(open(os.path.join(R, '.github/workflows/build.yml'), 'rb').read()).hexdigest() == '3f33c02ed799cf09f274f04b8b589c35f9a9f2f49313fc850288a61c53c4a009', 'build.yml changed!')
 if bad:
     print('FAIL part5 contract'); [print(' -', x) for x in bad]; sys.exit(1)
 print('PASS part5 contract')

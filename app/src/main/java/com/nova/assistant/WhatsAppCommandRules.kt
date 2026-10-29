@@ -17,7 +17,9 @@ object WhatsAppCommandRules {
         // Logic.norm lowercases and strips punctuation / non-Latin script: give back the user's exact text.
         val whoMatch = locate(body, r.recipient, 0)
         val who = whoMatch?.value ?: r.recipient
-        return Request(who, restoreTail(body, r.message, whoMatch?.range?.last?.plus(1) ?: 0), business)
+        var tail = restoreTail(body, r.message, whoMatch?.range?.last?.plus(1) ?: 0)
+        if (!Logic.stripWake(Logic.norm(body)).startsWith("whatsapp ")) tail = tail.replace(Regex("(?i)\\s+(?:bhejo|bhej do|bhejdo|bhejna|karo|kar do|send)\\s*$"), "").trim().ifBlank { r.message }   // v7.133: natural order keeps the user's spelling but not the trailing verb
+        return Request(who, tail, business)
     }
 
     /** Finds [norm] (lower-cased, punctuation-free words) inside [raw] and returns the user's original spelling. */
@@ -35,7 +37,7 @@ object WhatsAppCommandRules {
 
     private fun parseNorm(input: String): Request? {
         val n = Logic.stripWake(Logic.norm(input))
-        if (!n.startsWith("whatsapp ")) return null
+        if (!n.startsWith("whatsapp ")) return natural(n)
         val rest = n.removePrefix("whatsapp ").trim()
         if (rest.isBlank()) return null
         val explicit = Regex("^(.+?)\\s+ko\\s+(?:message\\s+)?(?:bhejo|bhejna|send)\\s+(.+)$").find(rest)
@@ -49,6 +51,28 @@ object WhatsAppCommandRules {
         val words = rest.split(Regex("\\s+")).filter { it.isNotBlank() }
         if (words.size >= 3) return clean(words.take(2).joinToString(" "), words.drop(2).joinToString(" "))
         return null
+    }
+
+    // v7.133: natural word order "Anand ko WhatsApp bhejo ki main late aaunga" / "mummy ko whatsapp karo ki khana ban gaya" / "papa ko whatsapp pe bolo main aa raha hu".
+    // Before this only the cloud AI could do it (no key / no internet = nothing). Strict: needs the literal "ko whatsapp", a short name, a real text.
+    private val NATURAL = Regex("^(.+?)\\s+ko\\s+(?:whatsapp|wa)\\s+(?:(?:par|pe|pr)\\s+)?(?:(?:message|msg)\\s+)?(?:(?:bhejo|bhejna|send|bhej do|bhejdo|karo|kar do|kardo|bolo|likho)\\s+)?(?:ki\\s+)?(.+)$")
+    private val TAIL_VERB = Regex("\\s+(?:bhejo|bhej do|bhejdo|bhejna|karo|kar do|send)$")
+    private val VERBS = setOf("message", "msg", "bhejo", "bhejna", "send", "karo", "kar", "do", "bhej", "bhejdo", "bolo", "likho", "ki")
+    private val NOT_TEXT = setOf("photo", "pic", "picture", "image", "video", "file", "document", "pdf", "voice", "audio", "sticker", "gif", "status", "location", "screenshot", "reel", "contact", "link")
+    private val TIME_OR_PLAN = setOf("roz", "har", "baje", "kal", "aaj", "parso", "subah", "shaam", "raat", "dopahar", "minute", "ghante", "ghanta", "baad", "alarm", "remind", "yaad", "schedule", "meeting", "reminder")
+    private val PRONOUN = setOf("usko", "unko", "isko", "inko", "wo", "woh", "usi", "unhe", "use", "ye", "yeh")
+
+    private fun natural(n: String): Request? {
+        val m = NATURAL.find(n) ?: return null
+        val who = m.groupValues[1].trim()
+        val ww = who.split(" ").filter { it.isNotBlank() }
+        if (ww.isEmpty() || ww.size > 3 || who.any { it.isDigit() }) return null
+        if (ww.any { it in TIME_OR_PLAN || it in PRONOUN || it in NOT_TEXT }) return null
+        var msg = m.groupValues[2].trim().replace(TAIL_VERB, "").trim()
+        val mw = msg.split(" ").filter { it.isNotBlank() }
+        if (mw.isEmpty() || mw.all { it in VERBS } || mw.any { it in NOT_TEXT }) return null
+        if (msg.length > 1000) return null
+        return clean(who, msg)
     }
 
     private fun clean(to: String, message: String): Request? {

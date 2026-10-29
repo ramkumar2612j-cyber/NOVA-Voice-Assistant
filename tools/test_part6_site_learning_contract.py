@@ -38,7 +38,7 @@ checks = {
  'Parts 1-5 hooks still present': all(x in svc for x in ('CapabilityLearningStore(this).recordFailure(message)', 'agentAltSwitch(AlternativesRules.Gap.STUCK', 'WebOperatorRules.targets(task)', 'LoginRules.WALL_STEPS', 'LoginRules.wantsHint(task)')),
  'HARD DENY list and protected screens untouched': '"pay", "payment", "buy"' in (j / 'AgentRules.kt').read_text() and 'BLOCKED_FRAGMENTS' in (j / 'Control.kt').read_text(),
  'unit tests cover site label, bank deny, counters, bounds, decay, hints, keys, summary, login gap': all(x in test for x in ('siteLabelIsHostOnly', 'bankAndPaymentHostsAreNeverStored', 'recordCountsOkAndBlockersPerKindAndSite', 'atMostTwoSitesPerJobAndBoundedEntries', 'countersDecayAndStayCapped', 'hintWarnsEarlyAboutRepeatedWall', 'hintIsQuietWhenSiteMostlyWorks', 'missingAppAndSwitchHintsComeFromTheKind', 'storedKeysMustStayClean', 'summaryHasNoRawText', 'loginStopMessagesBecomeLoginGap')),
- 'version 7.109 or newer (code 36+)': any(('versionName = "%s"' % v) in gradle for v in ('7.109', '7.110', '7.113', '7.114')) and any(('"%s"' % c) in gradle for c in ('36', '37')),
+ 'version 7.109 or newer (code 36+)': any(('versionName = "%s"' % v) in gradle for v in ('7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')) and any(('"%s"' % c) in gradle for c in ('36', '37')),
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)

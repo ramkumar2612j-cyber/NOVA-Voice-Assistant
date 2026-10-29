@@ -155,7 +155,8 @@ class NovaNotificationService : NotificationListenerService() {
                 ReplyPresenceRules.pending.cancel(m.key, ReplyPresenceRules.CODE_OWNER)
                 ReplyPresenceRules.takeover.mark(m.sender, nowTs, ReplyPresenceRules.OWNER_TAKEOVER_MS)
             }
-            if (!ownLast && MessageMode.enabled && MessageMode.isSelected(this, pkg)) autoReply(m, ex.getBoolean("android.isGroupConversation", false), lines)
+            val newestIsOwn = ReplyPresenceRules.ownerSpokeLast(lines) || SmartReplyRules.convo.isAssistantEcho(m.sender, m.text)   // v7.131: NOVA never answers its own echo or the owner's own line (this caused double / both-sides replies)
+            if (!ownLast && !newestIsOwn && MessageMode.enabled && MessageMode.isSelected(this, pkg)) autoReply(m, ex.getBoolean("android.isGroupConversation", false), lines)
             // Avoid double-reading when both independent switches are ON. Message Mode wins the announcement;
             // Driving retains its own inbox only when Message Mode is OFF.
             if (MessageMode.enabled && MessageMode.isSelected(this, pkg)) {

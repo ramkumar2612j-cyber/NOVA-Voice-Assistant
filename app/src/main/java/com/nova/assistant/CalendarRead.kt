@@ -48,6 +48,28 @@ object CalendarRead {
         return "Aaj ke ${events.size} event: " + events.take(8).joinToString("; ") { "${it.title} ${fmt.format(Instant.ofEpochMilli(it.begin))}" } + "."
     }
 
+    /** v7.133 FINAL: events of one day (offsetDays 0 = today, 1 = tomorrow), spoken locally like todayText. */
+    fun dayText(ctx: Context, offsetDays: Int): String {
+        if (offsetDays == 0) return todayText(ctx)
+        if (!permitted(ctx)) return "Calendar permission OFF hai. NOVA Settings mein ALLOW CALENDAR dabao; voice command permission khud nahi maangega."
+        val zone = ZoneId.systemDefault(); val date = LocalDate.now(zone).plusDays(offsetDays.toLong())
+        val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+        val events = query(ctx, start, end)
+        if (events.isEmpty()) return "Kal calendar mein koi event nahi mila."
+        val fmt = DateTimeFormatter.ofPattern("h:mm a").withZone(zone)
+        return "Kal ke ${events.size} event: " + events.take(8).joinToString("; ") { "${it.title} ${fmt.format(Instant.ofEpochMilli(it.begin))}" } + "."
+    }
+
+    /** v7.133 FINAL: the next event in the coming 30 days ("meeting kab hai"). */
+    fun nextText(ctx: Context): String {
+        if (!permitted(ctx)) return "Calendar permission OFF hai. NOVA Settings mein ALLOW CALENDAR dabao; voice command permission khud nahi maangega."
+        val zone = ZoneId.systemDefault(); val now = System.currentTimeMillis()
+        val e = query(ctx, now, now + 30L * 24 * 60 * 60 * 1000).firstOrNull() ?: return "Agle 30 din mein calendar mein koi event nahi mila."
+        val fmt = DateTimeFormatter.ofPattern("d MMM, h:mm a").withZone(zone)
+        return "Agla event: ${e.title}, ${fmt.format(Instant.ofEpochMilli(e.begin))}."
+    }
+
     /** Schedules reminders 10 minutes before the next week of events. Requires owner-granted READ_CALENDAR. */
     fun scheduleUpcoming(ctx: Context): Int {
         if (!permitted(ctx)) return 0

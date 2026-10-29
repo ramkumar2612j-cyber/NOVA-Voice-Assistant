@@ -591,7 +591,7 @@ class NovaService : Service() {
         dictTarget = null
         answerWindow = false
         history.clear()
-        try { VoiSparkSpeaker.stop() } catch (e: Throwable) { }
+        try { JarvisSpeaker.stop() } catch (e: Throwable) { }
         try { UltronPlayer.stop() } catch (e: Throwable) { }
         try { tts?.stop(); tts?.shutdown() } catch (e: Exception) { }
         tts = null
@@ -662,8 +662,9 @@ class NovaService : Service() {
         ttsActive = true                                 // BEFORE speak(), so the loop can never hear our own voice
         ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + spoken.length * 90L)
         UltronPlayer.stop()                                  // v7.120: a new reply always cuts the old Ultron audio
-        VoiSparkSpeaker.stop()                               // v7.129: ... and the old VoiSpark audio
-        if (VoiSparkSpeaker.eligible(this, cfg, spoken) && startVoiSpark(t, spoken, id)) return true
+        JarvisSpeaker.stop()                               // v7.129: ... and the old Jarvis audio
+        if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return true
+        if (startJarvisLocal(t, spoken, id)) return true   // v7.138
         if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return true
         val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
@@ -780,25 +781,42 @@ class NovaService : Service() {
         return true
     }
 
-    // ---- v7.129 VOISPARK ULTRON VOICE: online voice first; ANY failure -> the existing Ultron-effect voice -> the normal voice. ----
-    private fun startVoiSpark(t: TextToSpeech, spoken: String, id: String): Boolean {
-        ttsDeadline += 14000L   // the request may take up to ~10 s before the fallback speaks
+    // ---- v7.129 JARVIS VOICE (v7.136, replaces Jarvis): online voice first; ANY failure -> the existing Ultron-effect voice -> the normal voice. ----
+    /** v7.138: Jarvis-style voice, no server: the phone's offline British male voice, deeper and calmer. English replies only. false = not used, the next voice speaks. */
+    private fun startJarvisLocal(t: TextToSpeech, spoken: String, id: String): Boolean {
+        if (!cfg.jarvisLocal || !JarvisVoiceApi.englishOk(spoken)) return false
+        return try {
+            val vs = t.voices ?: return false
+            val pick = JarvisLocalVoice.pick(vs.map { JarvisLocalVoice.Cand(it.name, it.locale.language, it.locale.country, it.quality, it.isNetworkConnectionRequired) }) ?: return false
+            val v = vs.firstOrNull { it.name == pick.name } ?: return false
+            if (t.setVoice(v) != TextToSpeech.SUCCESS) { cfg.applyVoice(t); return false }
+            t.setPitch(JarvisLocalVoice.PITCH)
+            t.setSpeechRate(minOf(cfg.rate, 1.0f) * JarvisLocalVoice.RATE_FACTOR)
+            val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+            if (r != TextToSpeech.SUCCESS) { cfg.applyVoice(t); false } else true
+        } catch (e: Throwable) { try { cfg.applyVoice(t) } catch (x: Throwable) { }; false }
+    }
+
+    private fun startJarvis(t: TextToSpeech, spoken: String, id: String): Boolean {
+        ttsDeadline += 24000L   // the request may take up to ~20 s before the fallback speaks
+        val vsGen = JarvisSpeaker.generation()   // v7.133 FINAL: read on THIS thread, so a STOP between here and the worker start still cancels
         Thread {
-            var res = VoiSparkSpeaker.FAILED
+            var res = JarvisSpeaker.FAILED
             try {
-                res = VoiSparkSpeaker.speak(this, cfg, spoken) { if (id == curUtt) emit("mode", "speak") }
-            } catch (e: Throwable) { ErrLog.addOnce("VoiSpark", "run " + e.javaClass.simpleName) }
+                res = JarvisSpeaker.speak(this, cfg, spoken, vsGen) { if (id == curUtt) emit("mode", "speak") }
+            } catch (e: Throwable) { ErrLog.addOnce("Jarvis", "run " + e.javaClass.simpleName) }
             if (id != curUtt) return@Thread                     // STOP or a newer reply already took over
-            if (res == VoiSparkSpeaker.FAILED) {
+            if (res == JarvisSpeaker.FAILED) {
                 if (!ttsActive) return@Thread
                 try {
                     cfg.applyVoice(t)
+                    if (startJarvisLocal(t, spoken, id)) return@Thread   // v7.138
                     if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
                     val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
                     if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                 } catch (e: Throwable) { utteranceEnded(id, false) }
             } else {
-                utteranceEnded(id, res == VoiSparkSpeaker.DONE)
+                utteranceEnded(id, res == JarvisSpeaker.DONE)
             }
         }.start()
         return true
@@ -819,7 +837,7 @@ class NovaService : Service() {
         Thread { try { runCommand(Logic.Cmd("stop")) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }.start()
     }
 
-    fun stopSpeaking() { try { VoiSparkSpeaker.stop() } catch (e: Throwable) { }; try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
+    fun stopSpeaking() { try { JarvisSpeaker.stop() } catch (e: Throwable) { }; try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
 
     // ---- FIXTEST: hooks for Settings > SELF TEST. They only read state or run harmless local tools.
     fun testState(): String {
@@ -2558,10 +2576,34 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "screen"
             return if (ReelRunner.clearWatch(this)) tr("Theek hai, friend ki post par kaam band kar diya.", "OK, I stopped watching for that friend's posts.") else tr("Koi watch chalu nahi tha.", "No watch was on.")
         }
+        val shortsOpen = if (text.isBlank()) null else ShortsOpenRules.parse(text)   // v7.135: "shorts kholo" = YouTube app; "chrome me shorts kholo" = Chrome
+        if (shortsOpen != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return openShorts(shortsOpen)
+        }
+        val reelStop = if (text.isBlank()) null else ReelStopRules.parse(text)   // v7.133 FINAL: "reel dekhna band karo" / "reel pause karo" (before ReelRules, which would read "reel scroll band karo" as a scroll plan)
+        if (reelStop != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return stopReels(reelStop)
+        }
+        val calQ = if (text.isBlank()) null else CalendarQueryRules.parse(text)   // v7.133 FINAL: "meeting kab hai", "aaj kya schedule hai", "kal ki meeting dikhao"
+        if (calQ != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return when (calQ) {
+                CalendarQueryRules.Day.TODAY -> CalendarRead.dayText(this, 0)
+                CalendarQueryRules.Day.TOMORROW -> CalendarRead.dayText(this, 1)
+                CalendarQueryRules.Day.NEXT -> CalendarRead.nextText(this)
+            }
+        }
         val reelPlan = if (text.isBlank()) null else ReelRules.parse(text, ReelRunner.isVideoApp(try { NovaAccessibilityService.reelPackage() } catch (e: Throwable) { null }))
         if (reelPlan != null) {
             lastTurnLocal = true; lastKind = "screen"
             return startReelPlan(reelPlan)
+        }
+        val reelOpen = if (text.isBlank()) null else ReelOpenRules.parse(text)   // v7.133: "reel kholo" / "reel dekhne ka man hai" = Instagram reels in the app; "chrome me ..." = Chrome
+        if (reelOpen != null) {
+            lastTurnLocal = true; lastKind = "screen"
+            return openReels(reelOpen)
         }
         val psReq = if (text.isBlank()) null else ProfileSearchRules.parse(text)   // v7.89: "nova instagram par rahul_sharma search karo" (name / username only, never a face)
         if (psReq != null) {
@@ -7096,6 +7138,10 @@ class NovaService : Service() {
     /** v7.90 TRADING EXPERT, worker thread: live-price analysis via the owner's AI key + Google Search. Never places a trade. */
     private fun runTradeAnalysis(req: TradeRules.Req): String {
         val en = cfg.lang == "en"
+        if (req.closeAsk) {   // v7.133 FINAL: "trade close karo" is not a place request and not an analysis: MT5 opens, the owner closes it
+            val li = try { packageManager.getLaunchIntentForPackage(TradeRules.MT5_PKG) } catch (e: Exception) { null }
+            return if (li == null) TradeRules.mt5MissingText(en) else try { startActivity(li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); TradeRules.closeText(en) } catch (e: Exception) { TradeRules.mt5MissingText(en) }
+        }
         // v7.91: real candles + own indicators first (works without any AI key). The AI + Google Search answer below is the fallback.
         val tsym = Logic.norm(req.query).split(" ").map { TradeEngine.Spec.canon(it) }.firstOrNull { it.isNotEmpty() }
         if (tsym != null) {
@@ -7156,6 +7202,28 @@ class NovaService : Service() {
         if (FamilyContacts.isFull(this, r.name)) return FamilyContacts.fullText(en)
         val saved = FamilyContacts.set(this, r.name, r.number)
         return if (saved.isEmpty()) FamilyContacts.refusedText(en) else FamilyContacts.savedText(r.name, saved, en)
+    }
+
+    /** v7.133 FINAL: STOP ends a running reel job; PAUSE asks the phone's media key (same route as the plain "pause" command). Not phone tested. */
+    private fun stopReels(k: ReelStopRules.Kind): String {
+        if (reelRunning) { reelCancel = true; return tr("Theek hai, reel ka kaam band kar diya.", "OK, I stopped the reel job.") }
+        if (k == ReelStopRules.Kind.PAUSE) return media("pause").msg
+        return tr("Abhi koi reel kaam chalu nahi hai.", "No reel job is running right now.")
+    }
+
+    /** v7.135: YouTube Shorts in the YouTube app, or in Chrome when the sentence says chrome / browser. Not phone tested. */
+    private fun openShorts(r: ShortsOpenRules.Req): String {
+        if (lockQuiet()) return ReelRules.lockedText(cfg.lang == "en")
+        val pkg = if (r.chrome) "com.android.chrome" else "com.google.android.youtube"
+        val i = Intent(Intent.ACTION_VIEW, Uri.parse(ShortsOpenRules.URL)).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launch(i, pkg, if (r.chrome) tr("Chrome mein Shorts", "Shorts in Chrome") else tr("YouTube Shorts", "YouTube Shorts")).msg
+    }
+
+    private fun openReels(r: ReelOpenRules.Req): String {
+        if (lockQuiet()) return ReelRules.lockedText(cfg.lang == "en")
+        val pkg = if (r.chrome) "com.android.chrome" else "com.instagram.android"
+        val i = Intent(Intent.ACTION_VIEW, Uri.parse(ReelOpenRules.URL)).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return launch(i, pkg, if (r.chrome) tr("Chrome mein reels", "Reels in Chrome") else tr("Instagram reels", "Instagram reels")).msg
     }
 
     /** What to say / do for a reel sentence. Worker thread. Returns the reply at once; the real work runs on its own thread and speaks the result. */

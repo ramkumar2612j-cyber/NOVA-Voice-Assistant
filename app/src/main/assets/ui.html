@@ -530,14 +530,19 @@ load();setTimeout(load,1500);setTimeout(load,4000);
 <div class="row"><button class="sm" id="g_save">GROQ SAVE</button><button class="sm" id="g_del">GROQ HATAO</button></div>
 </div>
 
-<div class="box" id="vs_box">
-<label style="margin-top:0">VOISPARK ULTRON AWAAZ <span id="vs_st"></span></label>
-<label class="chk"><input type="checkbox" id="vs_on"> VoiSpark Ultron awaaz ON (chhote jawab; fail ho to purani awaaz apne aap bolegi)</label>
-<input type="password" id="vs_key" placeholder="VoiSpark API token (voispark.com > API Tokens)" autocomplete="off">
-<small>Token sirf is phone me encrypted save hota hai. Har akshar ke 4 credits lagte hain, isliye sirf chhote jawab (240 akshar tak) VoiSpark se bolte hain. Free plan me credits 0 ho sakte hain.</small>
-<div class="row"><button class="sm" id="vs_save">VOISPARK SAVE</button><button class="sm" id="vs_del">VOISPARK HATAO</button></div>
-<div class="row"><button class="sm" id="vs_chk">VOISPARK CHECK (24 credits)</button><button class="sm" id="vs_copy">REPORT COPY</button></div>
-<pre id="vs_rep" style="white-space:pre-wrap;font-size:12px"></pre>
+<div class="box" id="jv_box">
+<label style="margin-top:0">JARVIS AWAAZ <span id="jv_st"></span></label>
+<label class="chk"><input type="checkbox" id="jv_on"> Jarvis awaaz ON (chhote English jawab; server na chale to purani awaaz apne aap bolegi)</label>
+<label class="chk"><input type="checkbox" id="jv_loc"> Jarvis jaisi awaaz phone me hi (British male, bina server, bina setup). English jawab ke liye.</label>
+<label class="chk"><input type="checkbox" id="jv_any"> Hinglish jawab me bhi (model English ke liye bana hai, Hinglish ajeeb bol sakta hai)</label>
+<input type="text" id="jv_url" placeholder="Server address: https://...  (apna Jarvis server)" autocomplete="off" autocapitalize="off" spellcheck="false">
+<input type="password" id="jv_key" placeholder="Token (agar server me lagaya ho)" autocomplete="off">
+<small>Ye awaaz phone me nahi chalti: aapka apna server (tools/jarvis_server) bolta hai aur NOVA sunata hai. Token sirf is phone me encrypted save hota hai. Sirf chhote jawab (300 akshar tak) Jarvis se bolte hain.</small>
+<div class="row"><button class="sm" id="jv_paste">CODE PASTE (1 TAP)</button></div>
+<small>Colab me COPY CODE dabao, yahan aakar CODE PASTE dabao: address aur token apne aap save. Phir JARVIS CHECK.</small>
+<div class="row"><button class="sm" id="jv_save">JARVIS SAVE</button><button class="sm" id="jv_del">TOKEN HATAO</button></div>
+<div class="row"><button class="sm" id="jv_chk">JARVIS CHECK</button><button class="sm" id="jv_copy">REPORT COPY</button></div>
+<pre id="jv_rep" style="white-space:pre-wrap;font-size:12px"></pre>
 </div>
 
 <div class="box">
@@ -717,31 +722,50 @@ load();setTimeout(load,1500);setTimeout(load,4000);
     cst();
   })}
   (function(){
-    function vst(){var e=g("vs_st");if(!e)return;var k=false;try{k=Android.hasVoiSparkKey()}catch(x){}e.textContent=k?"(key saved)":"(key nahi)"}
-    var on=g("vs_on");
-    if(on){try{on.checked=!!Android.getVoiSpark()}catch(x){}
-      on.addEventListener("change",function(){try{Android.setVoiSpark(on.checked);say(on.checked?"VoiSpark awaaz ON":"VoiSpark awaaz OFF",true)}catch(x){say("Switch save nahi hua",false)}})}
-    var sv=g("vs_save");
-    if(sv){sv.addEventListener("click",function(){var f=g("vs_key");var r="fail";
-      try{r=Android.saveVoiSparkKey(f.value)}catch(x){}
-      if(r==="ok"){f.value="";say("VoiSpark key save ho gayi",true)}
-      else if(r==="invalid"){say("Key galat lag rahi hai (kam se kam 20 akshar, bina space)",false)}
-      else{say("VoiSpark key save nahi hui",false)}
-      vst()})}
-    var dl=g("vs_del");
-    if(dl){dl.addEventListener("click",function(){try{Android.clearVoiSparkKey()}catch(x){}say("VoiSpark key hata di",true);vst()})}
-    var ck=g("vs_chk"),rep=g("vs_rep");
+    function jst(){var e=g("jv_st");if(!e)return;var u="",k=false;try{u=Android.getJarvisUrl()}catch(x){}try{k=Android.hasJarvisToken()}catch(x){}e.textContent=u?(k?"(server + token saved)":"(server saved, token nahi)"):"(server nahi)"}
+    var on=g("jv_on");
+    if(on){try{on.checked=!!Android.getJarvis()}catch(x){}
+      on.addEventListener("change",function(){try{Android.setJarvis(on.checked);say(on.checked?"Jarvis awaaz ON":"Jarvis awaaz OFF",true)}catch(x){say("Switch save nahi hua",false)}})}
+    var an=g("jv_any");
+    if(an){try{an.checked=!!Android.getJarvisAnyLang()}catch(x){}
+      an.addEventListener("change",function(){try{Android.setJarvisAnyLang(an.checked);say(an.checked?"Hinglish me bhi Jarvis":"Sirf English me Jarvis",true)}catch(x){say("Switch save nahi hua",false)}})}
+    var lc=g("jv_loc");
+    if(lc){try{lc.checked=!!Android.getJarvisLocal()}catch(x){}
+      lc.addEventListener("change",function(){try{Android.setJarvisLocal(lc.checked);say(lc.checked?"Phone wali Jarvis awaaz ON":"Phone wali Jarvis awaaz OFF",true)}catch(x){say("Switch save nahi hua",false)}})}
+    var uf=g("jv_url");if(uf){try{uf.value=Android.getJarvisUrl()||""}catch(x){}}
+    var sv=g("jv_save");
+    if(sv){sv.addEventListener("click",function(){var r="fail",t="fail",f=g("jv_key");
+      try{r=Android.saveJarvisUrl(uf?uf.value:"")}catch(x){}
+      if(f&&f.value){try{t=Android.saveJarvisToken(f.value)}catch(x){}}else{t="skip"}
+      if(r==="invalid"){say("Address galat: https://... hona chahiye",false)}
+      else if(r==="fail"){say("Address save nahi hua",false)}
+      else if(t==="invalid"){say("Token galat lag raha hai (8-300 akshar, bina space)",false)}
+      else if(t==="fail"){say("Token save nahi hua",false)}
+      else{if(f)f.value="";say(r==="cleared"?"Server address hata diya":"Jarvis save ho gaya",true)}
+      if(uf){try{uf.value=Android.getJarvisUrl()||""}catch(x){}}
+      jst()})}
+    var pc=g("jv_paste");
+    if(pc){pc.addEventListener("click",function(){var r="fail";try{r=Android.jarvisPasteCode()}catch(x){}
+      if(r==="ok"){say("Jarvis code mil gaya, save ho gaya. Ab JARVIS CHECK dabao",true)}
+      else if(r==="nocode"){say("Clipboard me code nahi: Colab me COPY CODE dabao",false)}
+      else if(r==="invalid"){say("Code adhura ya galat: dobara COPY CODE karo",false)}
+      else{say("Save nahi hua",false)}
+      if(uf){try{uf.value=Android.getJarvisUrl()||""}catch(x){}}
+      jst()})}
+    var dl=g("jv_del");
+    if(dl){dl.addEventListener("click",function(){try{Android.clearJarvisToken()}catch(x){}say("Jarvis token hata diya",true);jst()})}
+    var ck=g("jv_chk"),rep=g("jv_rep");
     if(ck){ck.addEventListener("click",function(){
-      var st=false;try{st=Android.voiSparkCheckStart()}catch(x){}
+      var st=false;try{st=Android.jarvisCheckStart()}catch(x){}
       if(!st){say("Check pehle se chal raha hai",false);return}
-      rep.textContent="Check chal raha hai... (20-40 second)";
-      var n=0;var t=setInterval(function(){var r="";try{r=Android.voiSparkCheckResult()}catch(x){}n++;
+      rep.textContent="Check chal raha hai... (10-30 second)";
+      var n=0;var t=setInterval(function(){var r="";try{r=Android.jarvisCheckResult()}catch(x){}n++;
         if(r){clearInterval(t);rep.textContent=r}
         else if(n>90){clearInterval(t);rep.textContent="Time out: result nahi aaya"}},700)})}
-    var cp=g("vs_copy");
+    var cp=g("jv_copy");
     if(cp){cp.addEventListener("click",function(){var r=rep?rep.textContent:"";if(!r){say("Pehle CHECK chalao",false);return}
       try{Android.copyText(r);say("Report copy ho gayi",true)}catch(x){say("Copy nahi hua",false)}})}
-    vst();
+    jst();
   })();
   var o1=g("or_save");
   if(o1){o1.addEventListener("click",function(){
@@ -4537,7 +4561,7 @@ window.addEventListener('error',function(e){try{L('js_error',(e&&e.message?e.mes
    every JS function Kotlin calls exists, the key elements and the new scripts exist, and answers with Android.verifyPage(json). Read-only: it clicks nothing and reads no typed text. */
 (function(){try{
 var d=document;
-var BRIDGE=["getAskPrefs", "setAskPref", "getFamilyJson", "setFamilyNumber", "getSosNumber", "setSosNumber", "getBrainChoice", "startBrainInstall", "cancelBrainInstall", "getLearnedSummary", "clearJobLearning", "actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getUltronVoice", "getUltronAmount", "setUltronVoice", "setUltronAmount", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow", "tradeAnalyse", "tradeCard", "tradeOpenMt5", "tradePractice", "tradeResetPractice", "tradeSendDemo", "tradeSendReal", "tradeSetBalance", "tradeSetRisk", "tradeSetSymbols", "tradeSettle", "tradeSetFilters", "getApiUsage", "showPopup", "saveVoiSparkKey", "hasVoiSparkKey", "clearVoiSparkKey", "getVoiSpark", "setVoiSpark", "voiSparkCheckStart", "voiSparkCheckResult"];
+var BRIDGE=["getAskPrefs", "setAskPref", "getFamilyJson", "setFamilyNumber", "getSosNumber", "setSosNumber", "getBrainChoice", "startBrainInstall", "cancelBrainInstall", "getLearnedSummary", "clearJobLearning", "actionUnseen", "addSchedule", "analysisCancel", "analysisResultText", "analysisStart", "analysisStatus", "answerAsk", "applySelfImprove", "brainClear", "brainEngineReady", "brainStats", "cancelSchedule", "chatPhotoAsk", "checkUpdates", "clearActionLog", "clearErrors", "clearGithubToken", "clearGroqKey", "clearImgKey", "clearKey", "clearLearned", "clearMemory", "clearOpenRouterKey", "clearPhoto", "clearPorcupine", "clearSiteMedia", "clearZaiKey", "clearZaiKeyN", "connectorBegin", "connectorClientId", "connectorClip", "connectorDeviceCancel", "connectorDeviceLogin", "connectorDisconnect", "connectorPaste", "connectorRun", "connectorSetClientId", "connectorSetPerm", "connectorTest", "connectorUseClip", "contextInfo", "copyText", "currentChat", "deleteAllChats", "deleteChat", "deleteLearned", "deleteRoutine", "deleteSent", "detectIntent", "editPhoto", "editReport", "editedToSite", "exportChat", "frameExtractCancel", "frameExtractStart", "frameExtractStatus", "frameExtractThumb", "getActionLog", "getAiOrder", "getAlerts", "getAutoDeleteDays", "getAutoLearn", "getAutoModels", "getAutoReply", "getBrowserStatus", "getChatAi", "getChatSpeak", "getConnectors", "getConvo", "getErrors", "getFeatureStatus", "getFreeChain", "getFreeImg", "getFreeKeyless", "getHomeCity", "getLearned", "getLocalFirst", "getLockGuard", "getMemoryCount", "getMemoryInChain", "getMemoryJson", "getMemoryText", "getNoiseCancel", "getOwnerName", "getPersona", "getSafeMode", "getStopPowersOff", "getSchedules", "getSelfImprove", "getSelfImproveCfg", "getSettings", "getSilentMode", "getUltronVoice", "getUltronAmount", "setUltronVoice", "setUltronAmount", "getSmartReply", "getStatus", "getTier", "getUpdates", "getWaitSec", "getWebBrowsers", "hasGithubToken", "hasGroqKey", "hasImgKey", "hasOpenRouterKey", "hasZaiKey", "hasZaiKeyN", "installUpdate", "keepLearned", "listChats", "lockGuardStatus", "makeImage", "markActionsSeen", "mediaIntakeAttach", "mediaIntakeCancel", "mediaIntakeClear", "mediaIntakeList", "mediaIntakeOpen", "mediaIntakeRemove", "mediaIntakeThumb", "mediaPick", "memoryAdd", "memoryDelete", "memoryEdit", "memoryExport", "memoryImport", "newChat", "noiseCancelStatus", "offerOfflineBrain", "openAccessibility", "openAppInfo", "openAssistantSettings", "openBatterySettings", "openChat", "openDndAccess", "openInstallSettings", "openNotificationAccess", "openOverlaySettings", "openPowerGuide", "openPublished", "openTtsSettings", "openWriteSettings", "pendingAsk", "photoToSite", "pickPhoto", "pickPorcupineModel", "pickSiteMedia", "pinChat", "porcupineStatus", "publishLastSite", "recStart", "recStatus", "recStop", "rejectSelfImprove", "renameChat", "requestBasics", "requestContacts", "rerunSetup", "resetApiUsage", "revertSelfImprove", "rollbackUpdate", "runSelfImprove", "running", "saveGithubToken", "saveGroqKey", "saveImgKey", "saveKeys", "saveOpenRouterKey", "savePorcupineKey", "saveRoutine", "saveSettings", "saveZaiKey", "saveZaiKeyN", "searchChats", "selfTest", "selfTestFree", "selfTestImage", "sendText", "setAlerts", "setApiLimit", "setAutoDeleteDays", "setAutoLearn", "setAutoModels", "setAutoReply", "setChatAi", "setChatSpeak", "setConvo", "setFeedUrl", "setFreeChain", "setFreeImg", "setFreeKeyless", "setHomeCity", "setLocalFirst", "setLockGuard", "setMemoryInChain", "setNoiseCancel", "setOwnerName", "setPersona", "exitSafeMode", "setStopPowersOff", "setSchedulePrio", "setSelfImproveCfg", "setSilentMode", "setSmartReply", "setWaitSec", "setWebBrowsers", "shareText", "siteMediaCount", "skipUpdate", "speakMsg", "stopSpeak", "systemVoice", "teachAdd", "teachDelete", "testBrowser", "testVoice", "toggle", "uiLog", "verifyNow", "verifyPage", "vibrate", "videoStart", "wakeNow", "tradeAnalyse", "tradeCard", "tradeOpenMt5", "tradePractice", "tradeResetPractice", "tradeSendDemo", "tradeSendReal", "tradeSetBalance", "tradeSetRisk", "tradeSetSymbols", "tradeSettle", "tradeSetFilters", "getApiUsage", "showPopup", "saveJarvisUrl", "getJarvisUrl", "saveJarvisToken", "hasJarvisToken", "clearJarvisToken", "getJarvis", "setJarvis", "getJarvisAnyLang", "setJarvisAnyLang", "jarvisCheckStart", "jarvisCheckResult", "jarvisPasteCode", "getJarvisLocal", "setJarvisLocal"];
 var CB=["onAsk", "onAutoTest", "onChatExport", "onConn", "onConnRun", "onFeatureVerify", "onFlow", "onImage", "onImgCancel", "onLearn", "onMediaIntake", "onMemBackup", "onNova", "onPhoto", "onPhotoEdited", "onPhotoErr", "onPorcupineFile", "onPublish", "onRecordingsChanged", "onSelfImprove", "onSelfTest", "onSelfTestDone", "onSite", "onSiteMedia", "onSystemVoice", "onTeachBackup", "onChatPhotoGo", "onChatPhotoNo", "onTradeAnalysis", "onTradeSent", "onTradeSettled"];
 var IDS=['clog','c_in','c_send','c_thw','c_thumb','c_auto','p4_core','p4_stars','btn','autoT','c_imode','chatb','st','p6_board','p6_dock'];
 var SCR=['p1_auto','p2_auto','p3_fx','p4_fx','p5_log','p6_verify','p6_home','p7_motion','pt8_chat','pt9_persona','pt10_wire','pt11_media','pt12_frames','pt13_analyse','pt13d_chat','pt14_laser','pt17_switches','pt7_brain_learned','pt18_safe','pt19_family'];
@@ -5560,6 +5584,65 @@ d.addEventListener('click',function(e){var t=e.target;if(t&&t.closest&&t.closest
 window.addEventListener('resize',function(){if(on&&ctx)size()});
 d.addEventListener('visibilitychange',function(){if(!d.hidden){if(timer)clearTimeout(timer);poll()}});
 timer=setTimeout(poll,1600);
+}catch(e){}})();
+</script>
+<style id="pt135_laser3d_css">
+/* v7.135 LASER 3D: clear + modern. Add-only override of the v7.62 scan: solid dark backdrop (no app text bleeding through), 3D moving floor grid, 3 turning rings with a glowing core,
+   a sharp laser line, a glass HUD card with a progress bar. Pure CSS animation (transform/opacity/background-position only). lowfx / reduced motion = static or slower. */
+#p14_scan{background:radial-gradient(ellipse at 50% 42%,#04241a 0%,#02120c 48%,#000604 100%);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#p14_scan .gr{opacity:.35;background-size:40px 40px}
+#p14_scan canvas{opacity:.2}
+#p14_scan .vg{background:radial-gradient(ellipse at center,transparent 38%,rgba(0,0,0,.78) 100%)}
+#p14_scan .fl{position:absolute;left:-60%;right:-60%;bottom:-6%;height:74%;transform:perspective(420px) rotateX(62deg);transform-origin:50% 100%;
+  background-image:linear-gradient(rgba(93,255,154,.7) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(93,255,154,.5) 1.5px,transparent 1.5px);background-size:46px 46px;
+  -webkit-mask-image:linear-gradient(to top,#000 20%,transparent 96%);mask-image:linear-gradient(to top,#000 20%,transparent 96%);animation:p135fl 1.4s linear infinite;will-change:background-position}
+@keyframes p135fl{from{background-position:0 0,0 0}to{background-position:0 46px,0 0}}
+#p14_scan .gy{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:14vh;perspective:760px;pointer-events:none}
+#p14_scan .gw{position:relative;width:min(56vw,236px);aspect-ratio:1;transform-style:preserve-3d;animation:p135tilt 8s ease-in-out infinite alternate}
+@keyframes p135tilt{from{transform:rotateX(58deg) rotateZ(0deg)}to{transform:rotateX(70deg) rotateZ(40deg)}}
+#p14_scan .gw i{position:absolute;inset:0;border-radius:50%;border:2px solid #7dffb4;box-shadow:0 0 14px rgba(93,255,154,.8),inset 0 0 14px rgba(93,255,154,.45);transform-style:preserve-3d}
+#p14_scan .gw i.r1{animation:p135r1 5.5s linear infinite}
+#p14_scan .gw i.r2{inset:12%;border-style:dashed;border-color:#b9ffd6;animation:p135r2 7s linear infinite reverse}
+#p14_scan .gw i.r3{inset:26%;border-width:3px;border-color:#37ff95;animation:p135r3 4.2s linear infinite}
+@keyframes p135r1{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
+@keyframes p135r2{from{transform:rotateX(0)}to{transform:rotateX(360deg)}}
+@keyframes p135r3{from{transform:rotateZ(0)}to{transform:rotateZ(360deg)}}
+#p14_scan .gw b{position:absolute;left:50%;top:50%;width:26%;aspect-ratio:1;margin:-13% 0 0 -13%;border-radius:50%;background:radial-gradient(circle at 38% 34%,#eafff3 0%,#6dffaa 38%,#0a8f4a 100%);box-shadow:0 0 30px 8px rgba(93,255,154,.7);animation:p135core 1.8s ease-in-out infinite}
+@keyframes p135core{0%,100%{transform:scale(.86);opacity:.85}50%{transform:scale(1.12);opacity:1}}
+#p14_scan .ln{height:2px;background:linear-gradient(90deg,transparent,#c9ffe0 12%,#fff 50%,#c9ffe0 88%,transparent);box-shadow:0 0 6px 1px #fff,0 0 18px 5px rgba(93,255,154,.95),0 0 54px 16px rgba(40,255,120,.5)}
+#p14_scan .tr{height:150px;top:-150px;background:linear-gradient(to top,rgba(93,255,154,.32),rgba(93,255,154,.08) 55%,transparent)}
+#p14_scan .cn{width:38px;height:38px;border-width:3px;border-color:#7dffb4;filter:drop-shadow(0 0 6px rgba(93,255,154,.9));animation:p135cn 2s ease-in-out infinite}
+@keyframes p135cn{0%,100%{opacity:.55}50%{opacity:1}}
+#p14_scan .hud{left:14px;right:14px;top:calc(56px + env(safe-area-inset-top,0px));padding:14px 12px 14px;border:1px solid rgba(125,255,180,.35);border-radius:18px;
+  background:linear-gradient(160deg,rgba(6,40,26,.82),rgba(2,16,10,.9));box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 24px rgba(93,255,154,.18),inset 0 1px 0 rgba(255,255,255,.12);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#p14_scan .ti{font-size:12px;letter-spacing:.38em;color:#9dffc4}
+#p14_scan .pc{font-size:52px;line-height:1.05;background:linear-gradient(180deg,#fff,#6dffaa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;filter:drop-shadow(0 0 10px rgba(93,255,154,.8))}
+#p14_scan .pb{height:6px;margin:8px 8px 2px;border-radius:6px;background:rgba(93,255,154,.14);overflow:hidden}
+#p14_scan .pb i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#1fdc78,#b9ffd6);box-shadow:0 0 10px rgba(93,255,154,.9);transition:width .35s ease-out}
+#p14_scan .sg b{font-size:11px;padding:5px 9px;border-radius:8px;background:rgba(93,255,154,.06)}
+#p14_scan .sg b.act{animation:p135chip 1.2s ease-in-out infinite}
+@keyframes p135chip{0%,100%{box-shadow:0 0 6px rgba(80,255,150,.5)}50%{box-shadow:0 0 16px rgba(80,255,150,.95)}}
+#p14_scan .ms{color:#e2fff0;font-size:14px}
+#p14_scan button{background:rgba(40,8,12,.85);color:#ffb3bd;border-radius:14px;box-shadow:0 0 18px rgba(255,93,112,.3);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#p14_scan.done .gw,#p14_scan.done .fl{animation-play-state:paused;opacity:.5}
+html.lowfx #p14_scan .fl{animation-duration:3s}
+html.lowfx #p14_scan .gw,html.lowfx #p14_scan .gw i,html.lowfx #p14_scan .cn{animation:none}
+html.lowfx #p14_scan .gw{transform:rotateX(62deg)}
+html.lowfx #p14_scan{-webkit-backdrop-filter:none;backdrop-filter:none}
+@media (prefers-reduced-motion:reduce){#p14_scan .fl,#p14_scan .gw,#p14_scan .gw i,#p14_scan .gw b,#p14_scan .cn,#p14_scan .sg b.act{animation:none}#p14_scan .gw{transform:rotateX(62deg)}}
+</style>
+<script id="pt135_laser3d_js">
+/* v7.135: only ADDS decoration nodes (floor, rings, progress bar) to the existing #p14_scan. The bar width mirrors the real percent text; nothing is read from the user or the network. */
+(function(){try{
+var d=document,root=d.getElementById('p14_scan');if(!root||root.getAttribute('data-l3d'))return;root.setAttribute('data-l3d','1');
+function mk(t,c){var e=d.createElement(t);if(c)e.className=c;return e}
+var vg=root.querySelector('.vg'),fl=mk('div','fl'),gy=mk('div','gy'),gw=mk('div','gw');
+['r1','r2','r3'].forEach(function(c){gw.appendChild(mk('i',c))});gw.appendChild(mk('b'));gy.appendChild(gw);
+root.insertBefore(fl,vg);root.insertBefore(gy,vg);
+var pc=root.querySelector('.pc'),sg=root.querySelector('.sg');
+if(pc&&sg&&pc.parentNode){var pb=mk('div','pb'),bar=mk('i');pb.appendChild(bar);pc.parentNode.insertBefore(pb,sg);
+  var up=function(){var n=parseInt(String(pc.textContent||'0'),10);if(isNaN(n))n=0;bar.style.width=Math.max(0,Math.min(100,n))+'%'};
+  up();if(window.MutationObserver)new MutationObserver(up).observe(pc,{childList:true,characterData:true,subtree:true})}
 }catch(e){}})();
 </script>
 <style id="v76_pro_css">

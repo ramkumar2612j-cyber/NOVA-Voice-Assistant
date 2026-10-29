@@ -155,6 +155,20 @@ object SmartReplyRules {
 
         @Synchronized fun turns(sender: String): List<Pair<String, String>> = (map[sender.lowercase().take(40)] ?: ArrayList()).toList()
 
+        /** v7.131: true when [text] is NOVA's own earlier reply coming back in the notification (WhatsApp / Instagram re-post it, often with a prefix or cut short). Loose match on letters and digits only. */
+        @Synchronized fun isAssistantEcho(sender: String, text: String): Boolean {
+            fun norm(x: String) = x.lowercase().filter { it.isLetterOrDigit() }
+            val t = norm(text)
+            if (t.length < 3) return false
+            val mine = (map[sender.lowercase().take(40)] ?: ArrayList()).filter { it.first == "assistant" }.takeLast(4)
+            for (a in mine) {
+                val n = norm(a.second)
+                if (n.length < 3) continue
+                if (n == t || (t.length >= 8 && n.contains(t)) || (n.length >= 8 && t.contains(n))) return true
+            }
+            return false
+        }
+
         @Synchronized fun lastAssistant(sender: String): String = (map[sender.lowercase().take(40)] ?: ArrayList()).lastOrNull { it.first == "assistant" }?.second ?: ""
 
         @Synchronized fun add(sender: String, role: String, text: String) {

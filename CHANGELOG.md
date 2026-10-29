@@ -1,3 +1,15 @@
+## v7.138 Jarvis-style voice on the phone itself (owner: no server hassle)
+- New default voice path when the server voice is off or fails and the reply is English: the phone's offline British (en-GB) male voice, deeper and calmer (`JarvisLocalVoice.kt`, `startJarvisLocal`). No download, no server, no setup. Order: Jarvis server > phone Jarvis > Ultron effect > normal voice. Switch: Settings > JARVIS AWAAZ.
+- Jarvis-LIKE, not the cloned film voice. Needs an offline en-GB voice installed (Google TTS usually has one). Hinglish replies keep the old voice.
+- AUTO TEST: new CI job `smoke` (build.yml, tools/emulator_smoke.sh) installs the APK on an emulator, opens it, waits 30 s, sends 400 random taps, and writes AUTO_TEST_STATUS.md (artifact auto-test-report + run summary). continue-on-error: never blocks the APK. Cannot test voice / wake word / WhatsApp / MT5 / Jarvis sound. NOT RUN yet (needs GitHub).
+- Tests: JarvisLocalVoiceTest (4) + contract. Kotlin NOT COMPILED here; the sound itself NOT TESTED on a phone.
+
+## v7.137 Jarvis 2-tap setup (owner request: no manual Colab steps)
+- Notebook is now ONE cell: GPU check, install, server, free https link, then a COPY CODE button (+ the same code printed). No upload by default (`MY_VOICE = True` = own voice). server.py: reference.wav optional (uses a reference inside the release if it has one).
+- App: Settings > JARVIS AWAAZ > CODE PASTE (1 TAP) reads the NOVA-JARVIS code from the clipboard and saves address + encrypted token (`JarvisPairing.kt`, bridge `jarvisPasteCode`). Typing address / token still works.
+- Tests: JarvisPairingTest (4), contract checks added. Python: server FAKE test + contracts PASS. Kotlin: NOT COMPILED here (no kotlinc / internet); GitHub build must confirm.
+- NOT TESTED: real model without reference, Colab clipboard button, everything on a phone.
+
 ## v7.127 Sharp Ultron + popup mouth + faster thinking/speaking (versionName stays 7.114)
 - Hero photo 3x sharper file; popup head mouth moves while speaking; long answers and agent steps hedge 2 AI providers (2nd starts after 2-2.5 s); Ultron voice starts after the first sentence piece instead of the whole reply.
 
@@ -1022,3 +1034,43 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 
 ## v7.129
 - VoiSpark Ultron voice added (add-only), see PART_STATUS_v7_129_VOISPARK.md
+
+## v7.130
+- AutoSetup.startQwen now respects the AUTO DOWNLOAD switch (off = no background offline-brain download/load). Add-only guard, default unchanged (ON).
+
+## v7.131
+- WhatsApp/Instagram auto-reply: NOVA no longer answers its own echoed reply or a chat whose newest line is the owner's (stopped double / both-sides replies). Add-only guard.
+
+## v7.132 (AUDIT PART 1 of 3)
+- Read-only audit: UI wiring, manifest, permissions, 162/163 Python guards. No app code changed. See PART_STATUS_v7_132_AUDIT_PART1.md.
+
+## v7.133 (AUDIT PART 2 of 3)
+- Audit: ~230 voice phrases replayed in real Kotlin. Compile + 1644 JUnit PASS (sandbox). Fixes: CmdQueue "phir se" split + dangling "aur"; AppSearchRules defers Play Store download; WhatsAppCommandRules natural order; NEW ReelOpenRules (reel kholo = Instagram app, chrome me = Chrome); versionName 7.133. See PART_STATUS_v7_133_PART2.md.
+
+## v7.133 FINAL (AUDIT PART 2 completed; versionName stays 7.133)
+- Written after the Part 2 compile run: NOT COMPILED, NOT JUNIT-RUN (sandbox had no kotlinc and no network). First thing to run: `bash tools/local_compile_check.sh <ABSOLUTE dir>` or the GitHub Actions build.
+- Verb-first call: Logic.classify now reads "phone karo papa ko", "call karo papa", "call lagao mummy ko" as a call (old orders unchanged).
+- Trade words: TradeRules joins "stop loss" / "usd inr" / "eur usd" ..., accepts "aaj market kaisa hai"; "trade close karo" / "gold trade band karo" = new Req.closeAsk (opens MT5 and says it cannot close a trade itself; never a PLACE request). NovaService.runTradeAnalysis handles closeAsk first.
+- NEW ReelStopRules.kt: "reel dekhna band karo", "reels band karo", "reel scroll band karo" stop a running reel job; "reel pause karo" sends the media pause key (same as plain "pause"). Runs before ReelRules in handle().
+- NEW CalendarQueryRules.kt + CalendarRead.dayText / nextText: "meeting kab hai", "aaj kya schedule hai", "my next meeting", "kal ki meeting dikhao" are answered locally from the phone calendar (needs the owner's Calendar permission; creating / cancelling words are not taken).
+- VoiSpark: the generation is now read on the calling thread (VoiSparkSpeaker.generation() + speak(..., startGen, ...)), so a STOP between the call and the worker start still cancels. findAudio prefers a key with "audio" in it and ignores callback / avatar / image style keys.
+- New JUnit: VoiceRouteAuditTest (verbFirstCall, tradeWordsAndClose, reelStopAndPause, calendarQuestions), VoiSparkApiTest.findAudioPrefersAudioKey. All NOT RUN.
+- New OWNER_PHONE_TEST_LIST_v7_133.md.
+
+## v7.134 (AUDIT PART 3 of 3; versionName 7.134)
+- The Part 2 FINAL code (verb-first call, trade words + close, ReelStopRules, CalendarQueryRules, VoiSpark generation + "audio" key) was COMPILED and JUNIT-RUN for the first time here: Kotlin compile PASS, JUnit OK (1650 tests = 1644 + 5 from Part 2 FINAL + 1 new VoiSparkApiTest.stopMovesGenerationOn). No code fix was needed; only a displaced doc comment in NovaService was moved back above startReelPlan.
+- Python guards: tools/run_all_checks.sh run to the end = 163 passed, 0 failed (test_part4_fx_render PASS in this sandbox too). The 8 version-pin guards now also accept 7.134.
+- versionName 7.133 -> 7.134. Phone: NOT TESTED. See OWNER_PHONE_TEST_LIST_v7_134.md.
+
+## v7.135 (versionName 7.135)
+- Shorts: NEW ShortsOpenRules.kt + NovaService.openShorts. "shorts kholo" / "youtube shorts dekhna hai" / "shorts chalao" open YouTube Shorts IN THE YOUTUBE APP (https://www.youtube.com/shorts, package com.google.android.youtube); "chrome me shorts kholo" / "browser me ..." open it in Chrome. Not taken (left to the other handlers): like / subscribe / comment / share / scroll / next / download / band, questions, Instagram or reel words, usernames, a lone word "short" without youtube ("short me batao", "short video banao"). JUnit shortsOpenAppOrChrome PASS. Phone: NOT TESTED.
+- Laser scan (the full-screen NOVA SCAN shown while an analysis runs) made clear and 3D, add-only (ui.html blocks pt135_laser3d_css / pt135_laser3d_js, no id or handler removed): solid dark backdrop (before, the app text showed through and overlapped the HUD and the ROKO button), 3D moving floor grid, 3 turning rings with a glowing core, a sharp bright laser line, glass HUD card with a progress bar that mirrors the real percent. lowfx and reduced-motion = static or slower. Checked in headless Chromium at 390x844 with a fake bridge (before / after screenshots): no JS errors. NOT SEEN on a real phone.
+- Compile PASS, JUnit 1651 OK, versionName 7.134 -> 7.135 (8 version-pin guards accept 7.135).
+
+## v7.136 (versionName 7.136) - Jarvis voice replaces VoiSpark
+- REMOVED (owner order): VoiSpark completely - VoiSparkApi.kt, VoiSparkClient.kt, VoiSparkApiTest.kt, tools/test_voispark_contract.py, its Cfg keys, bridge functions and the Settings box. The local Ultron-effect voice (UltronFx) and the normal phone voice are KEPT as the fallback.
+- NEW JarvisVoiceApi.kt + JarvisVoiceClient.kt (JarvisVoiceClient, JarvisSpeaker): voice from the model FuturePresentLabs/tts-jarvis (VoxCPM2 + LoRA, English). The model cannot run on a phone, so NOVA calls the owner's own server: POST {address}/tts with {"text"} and an optional Bearer token -> wav; GET /health. https only (http only for 127.0.0.1 in tests); token in SecureStore, sent only to the saved host, no redirects. Chain: Jarvis -> Ultron effect -> normal voice. Only short replies (300 chars) and, by default, only when NOVA's language is English (model card: multilingual not validated); a Settings switch allows Hinglish in plain letters; Devanagari never. A failure pauses Jarvis for 10 minutes. STOP race fix (generation read on the calling thread) carried over.
+- Settings: new JARVIS AWAAZ box (address, token, ON, Hinglish switch, JARVIS SAVE / TOKEN HATAO / JARVIS CHECK / REPORT COPY).
+- NEW tools/jarvis_server/: server.py (standard library only; real VoxCPM2 engine written from the model card's Usage example + a FAKE test engine), test_server.py, README_HINGLISH.md, requirements.txt.
+- Tests: JarvisVoiceApiTest (5: address rules, wav / English checks, wants() decision, client against a local HTTP server incl. token-host pin, stop / pause). Compile PASS, JUnit 1656 OK. Server contract test PASS (fake engine). REAL model engine: NOT TESTED (no GPU / weights). Phone: NOT TESTED.
+- v7.136 add-on: tools/jarvis_server/NOVA_Jarvis_Colab.ipynb (free Google Colab T4 + Cloudflare quick tunnel; auto token; phone recording converted to wav by ffmpeg) + EASY_STEPS_HINGLISH.md. Notebook cells 1-5 PASS in the sandbox with the FAKE engine; tunnel and real model NOT TESTED.

@@ -87,6 +87,7 @@ object AutoSetup {
     } catch (e: Throwable) { true }
 
     private fun startQwen(app: Context) {
+        if (!ExtCfg.autoModels(app)) return   // v7.130: the AUTO DOWNLOAD switch also stops the offline brain download/load (it used to ignore the switch and could slow the phone)
         if (!qwenStarted.compareAndSet(false, true)) return
         Thread({
             try {

@@ -17,7 +17,7 @@ checks = {
  'hard DENY list is untouched': all(w in agent for w in ('"pay", "payment", "buy"', '"password", "otp", "passcode"')) and 'Verdict.DENY, "money, account or security item"' in agent,
  'protected screens still blocked': 'Control.blocked(pkg, ownPkg, "tap")' in agent,
  'agent tap confirm still has its own switch': 'ExtCfg.skipRiskyConfirm(this)' in svc,
- 'version is 7.104 or newer': any(('versionName = "%s"' % v) in gradle for v in ('7.104', '7.105', '7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114')),
+ 'version is 7.104 or newer': any(('versionName = "%s"' % v) in gradle for v in ('7.104', '7.105', '7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')),
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)
