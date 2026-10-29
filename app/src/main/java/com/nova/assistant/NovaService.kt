@@ -609,7 +609,7 @@ class NovaService : Service() {
             ttsInitCode = st   // v6.74: SUCCESS = 0, ERROR = -1; a failed engine start is now visible in the status row
             if (st != TextToSpeech.SUCCESS) ErrLog.add("NovaService", "TextToSpeech init failed, code $st")
             if (st == TextToSpeech.SUCCESS && t != null) {
-                cfg.applyVoice(t)
+                Thread { try { cfg.applyVoice(t)
                 t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(id: String?) { if (id != null && id == curUtt) emit("mode", "speak") }   // v7.12: HUD speaking state
                     override fun onDone(id: String?) { if (fxCallback(id, true)) return; utteranceEnded(id, true) }
@@ -618,7 +618,7 @@ class NovaService : Service() {
                     override fun onError(id: String?, errorCode: Int) { if (fxCallback(id, false)) return; utteranceEnded(id, false) }
                     override fun onStop(id: String?, interrupted: Boolean) { if (fxCallback(id, false)) return; utteranceEnded(id, false) }
                 })
-                ttsReady = true
+                if (tts === t) ttsReady = true } catch (e: Throwable) { ErrLog.add("NovaService", "TTS setup: " + e) } }.apply { name = "nova-tts-init"; isDaemon = true }.start()
             }
         }
     }
