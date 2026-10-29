@@ -18,5 +18,5 @@ class JarvisLocalVoiceTest {
         val p = JarvisLocalVoice.pick(listOf(c("en-gb-x-fis-local", q = 300), c("en-gb-x-gba-local", q = 400)))
         assertEquals("en-gb-x-gba-local", p!!.name); assertFalse(JarvisLocalVoice.isMale(p))
     }
-    @Test fun emptyList() { assertNull(JarvisLocalVoice.pick(emptyList())) }
+    @Test fun emptyListGivesNull() { assertNull(JarvisLocalVoice.pick(emptyList())) }
 }

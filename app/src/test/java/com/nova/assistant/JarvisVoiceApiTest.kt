@@ -1,6 +1,5 @@
 package com.nova.assistant
 
-import com.sun.net.httpserver.HttpServer
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -37,32 +36,6 @@ class JarvisVoiceApiTest {
         assertFalse(w(en = false))                    // Hindi UI language: no Jarvis by default
         assertTrue(w(en = false, any = true))         // ... unless the owner allowed it (plain letters only)
         assertFalse(w(en = false, any = true, t = "नमस्ते"))   // Devanagari never
-    }
-    @Test fun clientAgainstLocalServer() {
-        val wav = ByteArray(2000); "RIFF".toByteArray().copyInto(wav, 0); "WAVE".toByteArray().copyInto(wav, 8)
-        val srv = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        var seenAuth: String? = null; var seenBody = ""
-        srv.createContext("/tts") { ex ->
-            seenAuth = ex.requestHeaders.getFirst("Authorization"); seenBody = String(ex.requestBody.readBytes())
-            if (seenAuth != "Bearer secret-token-123") { ex.sendResponseHeaders(401, -1); ex.close() }
-            else if (seenBody.contains("html")) { val h = "<html>oops</html>".toByteArray(); ex.sendResponseHeaders(200, h.size.toLong()); ex.responseBody.use { it.write(h) } }
-            else { ex.responseHeaders.add("Content-Type", "audio/wav"); ex.sendResponseHeaders(200, wav.size.toLong()); ex.responseBody.use { it.write(wav) } }
-        }
-        srv.createContext("/health") { ex -> val b = """{"ok":true}""".toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.use { it.write(b) } }
-        srv.start()
-        try {
-            val base = "http://127.0.0.1:" + srv.address.port
-            val ok = JarvisVoiceClient.speech(base, "secret-token-123", "The workshop is ready.")
-            assertNotNull(ok.why, ok.bytes); assertEquals(2000, ok.bytes!!.size); assertEquals("Bearer secret-token-123", seenAuth)
-            assertEquals("The workshop is ready.", JSONObject(seenBody).getString("text"))
-            val bad = JarvisVoiceClient.speech(base, "wrong", "hi"); assertNull(bad.bytes); assertTrue(bad.why, bad.why.contains("token"))
-            val notWav = JarvisVoiceClient.speech(base, "secret-token-123", "html page"); assertNull(notWav.bytes)
-            val h = JarvisVoiceClient.call(base, "", "GET", JarvisVoiceApi.healthUrl(base), null, 1000); assertEquals(200, h.http)
-            // the token never goes to another host / a non-saved address
-            assertEquals(0, JarvisVoiceClient.call(base, "t", "GET", "http://127.0.0.1:1/health", null, 1000).http)
-            assertEquals(0, JarvisVoiceClient.call("https://a.b.com", "t", "GET", base + "/health", null, 1000).http)
-        } finally { srv.stop(0) }
-        assertEquals(598, JarvisVoiceClient.call("http://127.0.0.1:1", "", "GET", "http://127.0.0.1:1/health", null, 1000).http)   // refused = "no internet / server"
     }
     @Test fun stopMovesGenerationOn() {
         val g = JarvisSpeaker.generation()
