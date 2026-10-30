@@ -4947,6 +4947,10 @@ class NovaService : Service() {
     // v7.105 PART 2: playbook of routes (coarse app labels + counters only, never task or screen text)
     @Volatile private var agentPlaybookKind: PlaybookRules.Kind? = null
     @Volatile private var agentPlaybookRecorded = false
+    // v7.143 STEP 3: learned routes. Steps of the CURRENT job (only plain, harmless ones), and whether this run was clean enough to learn.
+    private val agentRouteRec = ArrayList<LearnedRouteRules.Step>()
+    @Volatile private var agentRouteTaint = false
+    @Volatile private var agentReplayNote = ""
     private val agentRouteApps: MutableList<String> = java.util.Collections.synchronizedList(ArrayList<String>())
     // v7.106 PART 3: alternatives engine (route labels only, counters only, reset per job)
     private val agentTriedRoutes: MutableList<String> = java.util.Collections.synchronizedList(ArrayList<String>())
@@ -5107,6 +5111,7 @@ class NovaService : Service() {
         agentPlaybookKind = null; agentPlaybookRecorded = false; agentRouteApps.clear()   // v7.105 PART 2
         agentTriedRoutes.clear(); agentRouteSwitches = 0; agentRouteDeadEnds = 0   // v7.106 PART 3
         agentOwnerHosts.clear()   // v7.107 PART 4
+        synchronized(agentRouteRec) { agentRouteRec.clear() }; agentRouteTaint = record.steps > 0; agentReplayNote = ""   // v7.143 STEP 3 (a resumed job is never learned)
         agentBlocker = null; agentSiteRecorded = false   // v7.109 PART 6
         agentSilent = silentTurn
         agentAsked = false
@@ -5131,6 +5136,13 @@ class NovaService : Service() {
                     else -> "Task ended without verified success"
                 }
                 try { ledger.transition(record.id, agentOutcome, persistedStatus) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
+                // v7.143 STEP 3: only a VERIFIED, clean, input-free run is remembered (REPORTED_COMPLETE never is).
+                try {
+                    if (agentOutcome == AgentTaskRules.State.SUCCEEDED && !agentRouteTaint && !agentCancel) {
+                        val learned = synchronized(agentRouteRec) { ArrayList(agentRouteRec) }
+                        if (LearnedRouteRules.learnable(learned)) LearnedRouteStore(this).learn(task, learned)
+                    }
+                } catch (e: Throwable) { ErrLog.add("NovaLearnedRoute", e.toString()) }
                 val notifyTail = if (agentOutcome == AgentTaskRules.State.SUCCEEDED) "Independent visible-screen verifier found no listed gaps."
                     else "Owner verification is still required; do not treat this as verified success."
                 try { AgentTaskLedger(this).notifyResult(this, "NOVA task: ${record.summary}", "$persistedStatus. $notifyTail") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
@@ -5391,6 +5403,8 @@ class NovaService : Service() {
     } catch (t: Throwable) { "" }
 
     private fun agentRun(task: String): String {
+        // v7.143 STEP 3: a job that already ended verified once is replayed from its learned steps (no AI plan). null = run the normal agent.
+        try { agentReplayLearned(task)?.let { return it } } catch (e: Exception) { ErrLog.add("NovaLearnedRoute", e.toString()) }
         agentPlaybookKind = PlaybookRules.classify(task)   // v7.105 PART 2: coarse kind only, the text is not stored
         // v6.60 speed: a short "open <app> and do <thing>" job needs no separate planning call (one AI call and its waiting saved).
         val fastJob = (AgentRules.isOpenDo(task) || AgentRules.isAppJob(task)) && task.length <= 160
@@ -5420,6 +5434,7 @@ class NovaService : Service() {
         // v7.107 PART 4: website operator. Only hosts the owner named in this job are used; nothing is stored.
         val webTargets = try { WebOperatorRules.targets(task) } catch (e: Exception) { emptyList() }
         val webOpenable = webTargets.filter { !it.denied }
+        if (webTargets.isNotEmpty()) agentRouteTaint = true   // v7.143 STEP 3: a job that opens a website first is not learned (the open is not a replayable step)
         try { agentOwnerHosts.clear(); webOpenable.forEach { agentOwnerHosts.add(it.host) } } catch (e: Exception) { ErrLog.add("NovaWebOperator", e.toString()) }
         val loginHint = try { if (LoginRules.wantsHint(task)) LoginRules.hint() else "" } catch (e: Exception) { "" }   // v7.108 PART 5
         val siteHint = try { SiteLearningStore(this).hintFor(webOpenable.map { it.host }, PlaybookRules.classify(task)) } catch (e: Exception) { "" }   // v7.109 PART 6
@@ -5437,6 +5452,7 @@ class NovaService : Service() {
         agentMark(AgentTaskRules.State.RUNNING, "Agent worker active")
         val t0 = SystemClock.elapsedRealtime()
         val hist = ArrayList<String>()
+        if (agentReplayNote.isNotBlank()) { hist.add(agentReplayNote); agentReplayNote = "" }   // v7.143 STEP 3
         // v6.72: a task resumed by the owner after an interruption starts with what was already done (privacy-safe step lines, no typed text).
         try {
             val prev = AgentTaskLedger(this).latest()?.takeIf { it.id == agentTaskId }?.progress.orEmpty()
@@ -5551,7 +5567,7 @@ class NovaService : Service() {
             val a0 = AgentRules.parse(answer)
             val a = if (a0 == null) null else AgentRules.retargetType(a0, nodes)   // v6.18d: "type" aimed at a label -> the one text box
             if (a == null) {
-                bad++
+                bad++; agentRouteTaint = true
                 hist.add("step $step: (your last answer was not one valid JSON object, answer again with exactly one)")
                 agentNote("step $step: jawab samajh nahi aaya (" + bad + "/3)")
                 if (bad >= 3) return agentFinish(AgentTaskRules.State.FAILED, tr("Jawab samajh nahi aaya, kaam ruk gaya", "I could not understand the answer, so I stopped"))
@@ -5574,7 +5590,7 @@ class NovaService : Service() {
                         ?: verification?.reason?.takeIf { it.isNotBlank() }
                         ?: "independent verifier ka result nahi mila ya screen verify nahi ho saki"
                     if (verification != null && repairRounds < 3 && SystemClock.elapsedRealtime() - t0 < AgentRules.MAX_MS - 15000L) {
-                        repairRounds++
+                        repairRounds++; agentRouteTaint = true
                         hist.add("VERIFICATION GAP ROUND $repairRounds: $gaps. Continue editing until the screen meets the OWNER INTENT must/mustnot contract; then submit done again.")
                         agentMark(AgentTaskRules.State.RETRYING, "Verifier found gaps; repair round $repairRounds/3")
                         agentNote("Result mein gap mila; khud theek karne ki koshish $repairRounds/3: " + gaps.take(240))
@@ -5588,7 +5604,7 @@ class NovaService : Service() {
                 "fail" -> return agentFinish(AgentTaskRules.State.FAILED, tr("Kaam nahi ho paya. ", "I could not finish. ") + a.say)
                 "ask_wait" -> {   // v6.67: ask, listen, go on
                     agentAsked = true
-                    askWaits++
+                    askWaits++; agentRouteTaint = true
                     if (askWaits > 3) return agentFinish(AgentTaskRules.State.NEEDS_OWNER, tr("Bahut sawal ho gaye, kaam yahin rok diya", "Too many questions, I stopped here"))
                     agentMark(AgentTaskRules.State.WAITING_FOR_CONFIRMATION, "Waiting for the owner's spoken answer")
                     var heard = agentAskAnswer(a.say, a.kind == "text")
@@ -5606,7 +5622,7 @@ class NovaService : Service() {
             val node = nodes.getOrNull(a.index)
             val chk = AgentRules.check(a, node, pkg, packageName)
             if (chk.v == AgentRules.Verdict.DENY) {
-                denied++
+                denied++; agentRouteTaint = true
                 hist.add("step $step: " + agentDescribe(a, node) + " -> REFUSED by safety (" + chk.why + ")")
                 agentNote("step $step: " + a.act + " roka gaya (" + chk.why + ") [" + pkg + "]")   // v6.18d: visible in the chat
                 if (chk.why == "not a text box") {   // wip11: tell the model which items ARE text boxes so it can pick one instead of giving up
@@ -5621,6 +5637,7 @@ class NovaService : Service() {
             }
             // Owner order: a plain "Send" tap of a message he asked for is not asked again (his short "haan" often fails the voice check). Pay / delete / order / buy / post still ask.
             if (chk.v == AgentRules.Verdict.CONFIRM && !ExtCfg.skipRiskyConfirm(this) && !(ExtCfg.skipOrderConfirm(this) && AgentRules.isPlainSend(chk.why))) {
+                agentRouteTaint = true
                 agentMark(AgentTaskRules.State.WAITING_FOR_CONFIRMATION, "Waiting for spoken yes/no")
                 val yes = agentAskYes(tr("'" + chk.why + "' dabaun? Haan ya nahi bolo", "Tap '" + chk.why + "'? Say yes or no"))
                 if (!yes) return agentFinish(AgentTaskRules.State.CANCELLED, tr("Theek hai, kaam yahin rok diya", "Okay, I stopped the task here"))
@@ -5634,6 +5651,13 @@ class NovaService : Service() {
             ))
             val before = NovaAccessibilityService.screenSignature()
             val res = agentDo(a)
+            try {   // v7.143 STEP 3: remember this step only if it worked and is a plain one; anything else makes this run unlearnable
+                if (res.startsWith("FAILED")) agentRouteTaint = true
+                else if (!LearnedRouteRules.isSkippable(a.act)) {
+                    val st = LearnedRouteRules.stepFor(a.act, a.app, AgentRules.label(node), a.dir, task)
+                    if (st == null) agentRouteTaint = true else synchronized(agentRouteRec) { agentRouteRec.add(st) }
+                }
+            } catch (e: Throwable) { agentRouteTaint = true }
             val after = NovaAccessibilityService.screenSignature()
             val endHint = if (a.act == "scroll" && after == before) " (end reached: nothing more in this direction)" else ""
             val line = "step $step: " + agentDescribe(a, node) + " -> " + res + if (after != before) ", screen changed" else ", screen unchanged" + endHint
@@ -5667,7 +5691,7 @@ class NovaService : Service() {
                 if (AgentRules.stuck(acts, sigs)) {
                     // v6.68: do not give up at the first stall. Tell the model once that this way does not work and let it try another way.
                     if (stuckHints < 4) {
-                        stuckHints++
+                        stuckHints++; agentRouteTaint = true
                         acts.clear(); sigs.clear()
                         hist.add("STUCK: the last 3 actions changed nothing. Do NOT repeat them. Try a different item, scroll, press back, or open the app again.")
                         agentNote(tr("Atak gaya, doosra tareeka try kar raha hu ($stuckHints/4)", "Stuck, trying another way ($stuckHints/4)"))
@@ -5680,6 +5704,77 @@ class NovaService : Service() {
             }
         }
         return agentFinish(AgentTaskRules.State.FAILED, tr("Bahut steps ho gaye, kaam adhura chhoda. " + agentProgress(hist), "Too many steps, I stopped. " + agentProgress(hist)))
+    }
+
+    /**
+     * v7.143 STEP 3: replays the steps learned from an earlier VERIFIED run of the SAME spoken job, with no AI plan. Every tap is found by its
+     * label on the live screen (exactly one match, never a guess), is vetted by AgentRules.check like any agent tap, and a risky or protected
+     * item stops the replay. The result is checked again by the independent verifier. Returns the spoken result when the job is finished;
+     * null = nothing learned, or the replay did not work, so the normal agent runs (add-only, nothing old is removed).
+     */
+    private fun agentReplayLearned(task: String): String? {
+        if ((AgentTaskLedger(this).latest()?.takeIf { it.id == agentTaskId }?.steps ?: 0) > 0) return null   // resumed job: normal path
+        val store = LearnedRouteStore(this)
+        val route = store.find(task) ?: return null
+        val n = route.steps.size
+        agentNote(tr("Ye kaam pehle verify hua tha. Seekha hua raasta chala raha hoon ($n step, AI plan nahi)", "This job was verified before. Replaying the learned route ($n steps, no AI plan)"))
+        fun giveUp(why: String): String? {
+            try { store.fail(task) } catch (e: Throwable) { }
+            agentReplayNote = "(a learned route was tried first and stopped: $why. Continue normally from the current screen.)"
+            agentNote(tr("Seekha raasta is baar nahi chala ($why). Normal tareeke se kar raha hoon", "The learned route did not work this time ($why). Doing it the normal way"))
+            return null
+        }
+        var lastPkg = ""
+        var lastNodes: List<AgentRules.Node> = emptyList()
+        for ((i, st) in route.steps.withIndex()) {
+            if (agentCancel) return agentFinish(AgentTaskRules.State.CANCELLED, tr("Kaam rok diya", "Task stopped"))
+            val a: AgentRules.Action
+            var node: AgentRules.Node? = null
+            var pkg = ""
+            when (st.act) {
+                "open_app" -> a = AgentRules.Action("open_app", app = st.v)
+                "scroll" -> a = AgentRules.Action("scroll", dir = st.v)
+                "back" -> a = AgentRules.Action("back")
+                "tap" -> {
+                    val snap = NovaAccessibilityService.agentSnapshot() ?: return giveUp("screen nahi padh paya")
+                    pkg = snap.first
+                    if (pkg.isNotEmpty() && Control.blocked(pkg, packageName, "tap")) return giveUp("protected screen")
+                    val idx = LearnedRouteRules.findIndex(snap.second.filter { it.clickable }.map { it.i to AgentRules.label(it) }, st.v)
+                        ?: return giveUp("button screen par nahi mila")
+                    node = snap.second.firstOrNull { it.i == idx }
+                    a = AgentRules.Action("tap", index = idx)
+                }
+                else -> return giveUp("unknown step")
+            }
+            val chk = AgentRules.check(a, node, pkg, packageName)
+            if (chk.v != AgentRules.Verdict.OK) return giveUp("safety: " + chk.why)
+            val saved = try { AgentTaskLedger(this).beginStep(agentTaskId, a.act) != null } catch (e: Exception) { false }
+            if (!saved) return giveUp("step save nahi hua")
+            val before = NovaAccessibilityService.screenSignature()
+            val res = agentDo(a)
+            val after = NovaAccessibilityService.screenSignature()
+            try { AgentTaskLedger(this).recordStep(agentTaskId, "Learned step ${i + 1}: action=${a.act}; result=$res", action = a.act, checkpointCompleted = !res.startsWith("FAILED"),
+                progressLine = AgentTaskRules.progressLine(i + 1, a.act, a.app, !res.startsWith("FAILED"), after != before)) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) }
+            agentNote("learned step ${i + 1}/$n: " + agentDescribe(a, node) + " -> " + res)
+            if (res.startsWith("FAILED")) return giveUp("step fail hua")
+        }
+        agentMark(AgentTaskRules.State.VERIFYING, "Independent screen-result verification of a learned route")
+        val snap = NovaAccessibilityService.agentSnapshot()
+        if (snap != null) { lastPkg = snap.first; lastNodes = snap.second }
+        val ver = agentVerify(task, lastPkg, lastNodes, "learned route replayed", ArrayList())
+        if (ver?.satisfied == true) {
+            try { store.ok(task) } catch (e: Throwable) { }
+            agentMark(AgentTaskRules.State.SUCCEEDED, "Learned route replayed and verified")
+            return agentFinish(AgentTaskRules.State.SUCCEEDED, tr(
+                "Seekha hua raasta chala aur result screen par match hua. ",
+                "The learned route ran and the visible result matches. "
+            ) + ver.reason.take(160))
+        }
+        if (ver == null) return agentFinish(AgentTaskRules.State.REPORTED_COMPLETE, tr(
+            "Seekha raasta chala diya, par screen se result verify nahi ho paya. Aap dekh lo",
+            "I ran the learned route but could not verify the result on screen. Please check"
+        ))
+        return giveUp("result match nahi hua")
     }
 
     /** v6.68: when a job stops early, say how far it got (the last action that worked) so "adhura" is never a mystery. */

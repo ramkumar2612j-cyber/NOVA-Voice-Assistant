@@ -19,6 +19,8 @@ object LearnedMemory {
         if (pb.isNotBlank()) parts.add("ROUTE: " + pb)
         if (st.isNotBlank()) parts.add("SITES: " + st)
         if (cp.isNotBlank()) parts.add("KAMIYAN: " + cp)
+        val lr = try { LearnedRouteStore(app).summary() } catch (e: Exception) { "" }   // v7.143 STEP 3
+        if (lr.isNotBlank()) parts.add("SEEKHE STEP: " + lr)
         parts.joinToString("\n\n").take(1800)
     } catch (e: Throwable) { "" }
 
@@ -29,6 +31,7 @@ object LearnedMemory {
         try { PlaybookStore(app).clear(); n++ } catch (e: Throwable) { ErrLog.add("LearnedMemory", "playbook " + e) }
         try { SiteLearningStore(app).clear(); n++ } catch (e: Throwable) { ErrLog.add("LearnedMemory", "site " + e) }
         try { CapabilityLearningStore(app).clear(); n++ } catch (e: Throwable) { ErrLog.add("LearnedMemory", "capability " + e) }
+        try { LearnedRouteStore(app).clear() } catch (e: Throwable) { ErrLog.add("LearnedMemory", "routes " + e) }   // v7.143 STEP 3: cleared too, but NOT counted: the Settings card expects exactly 3 (see ui.html p7_clr)
         return n
     }
 }
