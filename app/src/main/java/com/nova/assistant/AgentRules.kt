@@ -43,7 +43,9 @@ object AgentRules {
         val sec: Int = 3,
         val say: String = "",
         val note: String = "",
-        val kind: String = ""
+        val kind: String = "",
+        val x: Int = -1,   // v7.144 STEP 4: tap_xy point, per-mille of the picture (0..1000), -1 = none
+        val y: Int = -1
     )
 
     enum class Verdict { OK, CONFIRM, DENY }
@@ -76,7 +78,7 @@ object AgentRules {
     )
 
     private val ACTS = setOf(
-        "open_app", "tap", "long_tap", "type", "scroll", "back", "home", "wait", "ask", "ask_wait", "done", "fail", "screenshot", "zoom_in", "zoom_out"
+        "open_app", "tap", "long_tap", "type", "scroll", "back", "home", "wait", "ask", "ask_wait", "done", "fail", "screenshot", "zoom_in", "zoom_out", "tap_xy"
     )
 
     // ------------------------------------------------------------------ is this sentence a whole task?
@@ -267,7 +269,16 @@ object AgentRules {
         if (act == "open_app" && app.isEmpty()) return null
         if (act == "ask_wait" && say.isBlank()) return null
         val kind = ((MiniJson.field(o, "kind") as? String) ?: "").lowercase().trim().let { if (it == "text") "text" else "choice" }
-        return Action(act, idx, text.take(1500), app, dir, sec, say, note, kind)
+        // v7.144 STEP 4: vision tap point. A fraction like 0.5 is read as per-mille 500; anything outside 0..1000 is invalid.
+        fun pm(v: Any?): Int {
+            val d = (v as? Double) ?: (v as? String)?.trim()?.toDoubleOrNull() ?: return -1
+            val r = if (d > 0.0 && d < 1.0) d * 1000.0 else d
+            return if (r in 0.0..1000.0) r.toInt() else -1
+        }
+        val px = if (act == "tap_xy") pm(MiniJson.field(o, "x")) else -1
+        val py = if (act == "tap_xy") pm(MiniJson.field(o, "y")) else -1
+        if (act == "tap_xy" && (px < 0 || py < 0 || text.isBlank())) return null
+        return Action(act, idx, text.take(1500), app, dir, sec, say, note, kind, px, py)
     }
 
     // ------------------------------------------------------------------ may this action run?
@@ -286,6 +297,16 @@ object AgentRules {
             if (a.index >= 0 && (node == null || !node.editable)) return Check(Verdict.DENY, "not a text box")
             if (node != null && WebOperatorRules.isSecretField(label(node))) return Check(Verdict.DENY, "password or code box")   // v7.107 PART 4
             return Check(Verdict.OK)
+        }
+        if (a.act == "tap_xy") {   // v7.144 STEP 4: no item to read, so the target the model NAMED goes through the same word check as any tap
+            val lab = a.text.trim()
+            if (lab.length < 2) return Check(Verdict.DENY, "no target name")
+            if (!VisionTapRules.insideSafeArea(a.x, a.y)) return Check(Verdict.DENY, "point at the screen edge")
+            val vw = Logic.norm(lab).split(" ").filter { it.isNotEmpty() }
+            if (vw.any { it in HARD }) return Check(Verdict.DENY, "money, account or security item")
+            if (LoginRules.isAccountDanger(lab)) return Check(Verdict.DENY, "account security item")
+            val vr = vw.filter { it in Control.RISKY }
+            return if (vr.isEmpty()) Check(Verdict.OK) else Check(Verdict.CONFIRM, lab.take(40))
         }
         // tap / long_tap
         if (node == null) return Check(Verdict.DENY, "no such item on this screen")

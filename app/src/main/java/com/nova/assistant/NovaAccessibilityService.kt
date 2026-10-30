@@ -610,6 +610,20 @@ class NovaAccessibilityService : AccessibilityService() {
             return holder[0]
         }
 
+        /** v7.144 STEP 4: one short tap at a point given in per-mille (0..1000) of the screen picture. The caller (NovaService + AgentRules.check) decides if it may run. */
+        fun agentTapXY(xPm: Int, yPm: Int): Ctl {
+            val s = instance ?: return Ctl(false, "no_acc")
+            return try {
+                var w = s.resources.displayMetrics.widthPixels
+                var h = s.resources.displayMetrics.heightPixels
+                if (Build.VERSION.SDK_INT >= 30) {
+                    val b = (s.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager).maximumWindowMetrics.bounds
+                    if (b.width() > 0 && b.height() > 0) { w = b.width(); h = b.height() }
+                }
+                gestureTap(s, VisionTapRules.toPixel(xPm, w).toFloat(), VisionTapRules.toPixel(yPm, h).toFloat(), 70L)
+            } catch (e: Exception) { Ctl(false, "failed") }
+        }
+
         private fun gestureTap(s: NovaAccessibilityService, x: Float, y: Float, ms: Long): Ctl {
             val p = Path()
             p.moveTo(x, y)

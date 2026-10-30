@@ -5247,6 +5247,7 @@ class NovaService : Service() {
         "open_app" -> "open_app " + a.app
         "scroll" -> "scroll " + a.dir
         "wait" -> "wait " + a.sec + "s"
+        "tap_xy" -> "tap_xy (" + a.x + "," + a.y + ") '" + a.text.take(30) + "'"   // v7.144 STEP 4
         else -> a.act
     }
 
@@ -5310,6 +5311,11 @@ class NovaService : Service() {
                 if (x.ok) agentSettle(before, 400L, 3500L)
                 if (x.ok) agentRouteApps.add(a.app)   // v7.105 PART 2: only apps that really opened
                 if (x.ok) "opened" else "FAILED: " + x.msg
+            }
+            "tap_xy" -> {   // v7.144 STEP 4: vision tap, already vetted by agentVisionBlock + AgentRules.check
+                val c = NovaAccessibilityService.agentTapXY(a.x, a.y)
+                if (c.ok) agentSettle(before, 200L, 1800L)
+                if (c.ok) "ok" else "FAILED (" + c.code + ")"
             }
             "tap", "long_tap" -> {
                 val c = NovaAccessibilityService.agentTap(a.index, a.act == "long_tap")
@@ -5490,6 +5496,7 @@ class NovaService : Service() {
         var denied = 0
         var askWaits = 0
         var stuckHints = 0
+        var visionTaps = 0   // v7.144 STEP 4
         var failedTaps = 0   // v7.106 PART 3
         var webInjectionWarned = 0   // v7.107 PART 4
         var loginWallSteps = 0   // v7.108 PART 5
@@ -5543,7 +5550,9 @@ class NovaService : Service() {
             val shot = if (shielded) null else NovaAccessibilityService.agentScreenshot()   // protected screens: no picture either
             val parts = JSONArray()
             if (shot != null) parts.put(JSONObject().put("inlineData", JSONObject().put("mimeType", "image/jpeg").put("data", Base64.encodeToString(shot, Base64.NO_WRAP))))
-            parts.put(JSONObject().put("text", prompt))
+            // v7.144 STEP 4: a weak screen (almost nothing tappable) WITH a picture gets the vision-tap hint; text-only answerers never see it.
+            val visionOffered = !shielded && shot != null && VisionTapRules.weakScreen(nodes.count { it.clickable })
+            parts.put(JSONObject().put("text", if (visionOffered) prompt + VisionTapRules.hint() else prompt))
             val body = JSONObject()
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", AgentRules.systemPrompt()))))
                 .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
@@ -5620,7 +5629,8 @@ class NovaService : Service() {
                 }
             }
             val node = nodes.getOrNull(a.index)
-            val chk = AgentRules.check(a, node, pkg, packageName)
+            val visionWhy = if (a.act == "tap_xy") VisionTapRules.block(visionOffered, VisionTapRules.weakScreen(nodes.count { it.clickable }), agentIsGame(pkg), visionTaps, cfg.lang == "en") else null
+            val chk = if (visionWhy != null) AgentRules.Check(AgentRules.Verdict.DENY, visionWhy) else AgentRules.check(a, node, pkg, packageName)
             if (chk.v == AgentRules.Verdict.DENY) {
                 denied++; agentRouteTaint = true
                 hist.add("step $step: " + agentDescribe(a, node) + " -> REFUSED by safety (" + chk.why + ")")
@@ -5643,6 +5653,7 @@ class NovaService : Service() {
                 if (!yes) return agentFinish(AgentTaskRules.State.CANCELLED, tr("Theek hai, kaam yahin rok diya", "Okay, I stopped the task here"))
                 agentMark(AgentTaskRules.State.RUNNING, "Spoken confirmation received")
             }
+            if (a.act == "tap_xy") visionTaps++   // v7.144 STEP 4
             // Write-ahead checkpoint: if Android kills NOVA during tap/type/send, resume must remain blocked.
             val intentSaved = try { AgentTaskLedger(this).beginStep(agentTaskId, a.act) != null } catch (e: Exception) { false }
             if (!intentSaved) return agentFinish(AgentTaskRules.State.FAILED, tr(
@@ -5775,6 +5786,18 @@ class NovaService : Service() {
             "I ran the learned route but could not verify the result on screen. Please check"
         ))
         return giveUp("result match nahi hua")
+    }
+
+    /** v7.144 STEP 4: true = a game, false = not a game, null = could not find out. The owner's rule: NOVA never plays a game. */
+    private fun agentIsGame(pkg: String): Boolean? {
+        if (pkg.isBlank()) return null
+        return try {
+            val ai = packageManager.getApplicationInfo(pkg, 0)
+            @Suppress("DEPRECATION")
+            val flag = (ai.flags and android.content.pm.ApplicationInfo.FLAG_IS_GAME) != 0
+            val cat = Build.VERSION.SDK_INT >= 26 && ai.category == android.content.pm.ApplicationInfo.CATEGORY_GAME
+            flag || cat
+        } catch (e: Throwable) { null }
     }
 
     /** v6.68: when a job stops early, say how far it got (the last action that worked) so "adhura" is never a mystery. */
