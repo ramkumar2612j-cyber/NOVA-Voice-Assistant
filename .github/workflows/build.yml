@@ -43,6 +43,8 @@ jobs:
           gradle-version: '8.7'
       - name: Source contract checks (Python, no Android needed)
         run: ./tools/run_all_checks.sh
+      - name: Fetch sherpa-onnx
+        run: ./tools/fetch_sherpa.sh
       - name: Prepare and validate offline Vosk model
         run: ./tools/prepare_vosk_model.sh
       - name: Run unit tests and assemble debug

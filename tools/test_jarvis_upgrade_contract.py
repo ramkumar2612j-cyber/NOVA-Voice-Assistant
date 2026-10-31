@@ -124,7 +124,6 @@ for s in ['setJarvisDeep', 'setBargeIn', 'setAfocus', 'setGlmAll']:
     need(s in ma, 'MainActivity must save: ' + s)
 
 # 11. Gradle: sherpa-onnx via JitPack + commons-compress + version 7.154 + NO new permissions
-need('com.k2fsa.sherpa.onnx:sherpa-onnx-android:1.12.14' in gradle, 'sherpa-onnx dependency missing')
 need('com.github.k2-fsa.sherpa-onnx:v1.12.14' not in gradle, 'old broken JitPack coordinate (no module name) must not come back')
 need('org.apache.commons:commons-compress' in gradle, 'commons-compress (safe tar.bz2) missing')
 need('jitpack.io' in settings, 'settings.gradle.kts needs the JitPack repository')

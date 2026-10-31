@@ -16,3 +16,6 @@ keys.txt
 app/src/main/assets/model-en/
 app/src/main/assets/model-hi/
 __pycache__/
+app/libs/
+app/src/main/jniLibs/
+app/src/main/java/com/k2fsa/sherpa/
