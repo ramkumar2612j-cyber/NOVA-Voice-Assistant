@@ -26,7 +26,7 @@ object TarBz {
 
     /** true when the entry is a regular file or a directory we can create. Symlinks/devices are refused. */
     private fun allowedType(e: TarArchiveEntry): Boolean =
-        e.isDirectory || e.isFile || e.isLink   // hard links inside the archive are treated as files below
+        (e.isDirectory || e.isFile) && !e.isLink && !e.isSymbolicLink && e.linkName.isNullOrEmpty()
 
     /** Resolved target must sit inside [into]. */
     private fun safeTarget(into: File, name: String): File? {

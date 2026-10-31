@@ -20,7 +20,7 @@ class TarBzTest {
 
     /** Builds a real small tar.bz2 with the given entries. Entries: name -> content (null = directory). */
     private fun build(entries: List<Pair<String, String?>>): File {
-        val f = tmp.newFile("test.tar.bz2")
+        val f = tmp.newFile("t" + System.nanoTime() + ".tar.bz2")
         TarArchiveOutputStream(BZip2CompressorOutputStream(f.outputStream().buffered())).use { out ->
             for ((name, content) in entries) {
                 val e = TarArchiveEntry(if (content == null && !name.endsWith("/")) name + "/" else name)
@@ -94,7 +94,7 @@ class TarBzTest {
         val a = build(listOf("v/x" to "x".repeat(10_000)))
         // keep only the first 200 bytes = a truncated bzip2 stream
         val cut = tmp.newFile("cut.tar.bz2")
-        cut.writeBytes(a.readBytes().copyOfRange(0, 200))
+        cut.writeBytes(a.readBytes().let { it.copyOfRange(0, it.size / 2) })
         val dir = tmp.newFolder()
         val r = TarBz.extract(cut, dir)
         assertTrue(r is TarBz.Outcome.Fail)

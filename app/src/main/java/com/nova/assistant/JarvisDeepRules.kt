@@ -79,7 +79,7 @@ object JarvisDeepRules {
                 c in ".,!?'\"-:;()%&/+*=#@_[]{}<>~^$€₹£¥" || c in "…•·|\\/"
             if (keep) sb.append(c)
         }
-        return sb.toString().replace(Regex("[ ]{3,}"), "  ").trim()
+        return sb.toString().replace(Regex("[ ]{2,}"), " ").trim()
     }
 
     // ---------------------------------------------------------------- barge-in (spoken STOP while NOVA speaks)

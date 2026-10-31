@@ -103,8 +103,8 @@ class FreeVisionTest {
         val r = FreeVision.run("S", "U", listOf("A"), keys, true, cd, { 100L }, 30_000L, { false }) { p, _, _, _ ->
             asked.add(p.id); if (p.id == "groqqwen") answer(401) else answer(200, OK_BODY)
         }
-        assertEquals("openrouter", r.providerId)
-        assertEquals(listOf("groqqwen", "openrouter"), asked)
+        assertEquals("openrouterglm", r.providerId)
+        assertEquals(listOf("groqqwen", "openrouterglm"), asked)
         assertTrue(cd.cooling("groqqwen", 101L))                                  // wrong key: 10 min pause, shared with the text chain
         assertFalse(cd.cooling("openrouter", 101L))
     }
@@ -114,7 +114,7 @@ class FreeVisionTest {
         val r = FreeVision.run("S", "U", listOf("A"), keys, true, cd, { 0L }, 30_000L, { false }) { p, _, _, _ ->
             if (p.id == "groqqwen") answer(429) else answer(200, OK_BODY)
         }
-        assertEquals("openrouter", r.providerId)
+        assertEquals("openrouterglm", r.providerId)
         assertTrue(cd.cooling("groqqwen", 1L))
     }
 
