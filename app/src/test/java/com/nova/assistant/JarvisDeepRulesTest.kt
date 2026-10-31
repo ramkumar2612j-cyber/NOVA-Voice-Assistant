@@ -38,7 +38,7 @@ class JarvisDeepRulesTest {
     }
 
     @Test fun cleanRemovesEmojiKeepsPunctuation() {
-        assertEquals("System check done, sir.", JarvisDeepRules.clean("System check done ✨ sir. 👍"))
+        assertEquals("System check done sir.", JarvisDeepRules.clean("System check done ✨ sir. 👍"))
         assertTrue(JarvisDeepRules.clean("naam ₹500 ka bill").contains("₹500"))
         assertFalse(JarvisDeepRules.clean("hello 🚀 world").contains("🚀"))
         assertEquals("", JarvisDeepRules.clean("✨✨"))
