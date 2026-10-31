@@ -23,9 +23,8 @@ class TarBzTest {
         val f = tmp.newFile("test.tar.bz2")
         TarArchiveOutputStream(BZip2CompressorOutputStream(f.outputStream().buffered())).use { out ->
             for ((name, content) in entries) {
-                val e = TarArchiveEntry(name)
+                val e = TarArchiveEntry(if (content == null && !name.endsWith("/")) name + "/" else name)
                 if (content == null) {
-                    e.isDirectory = true
                     out.putArchiveEntry(e)
                     out.closeArchiveEntry()
                 } else {
