@@ -23,7 +23,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = (System.getenv("NOVA_VERSION_CODE") ?: "37").toIntOrNull() ?: 37
-        versionName = "7.138"
+        versionName = "7.154"   // v7.154 JARVIS UPGRADE: deep voice / barge-in / audio focus / provider check / GLM-everywhere
         // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -61,6 +61,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.1.0")
     implementation("ai.picovoice:porcupine-android:3.0.2")   // v6.56: optional better wake word (needs the owner's AccessKey + nova.ppn); Vosk stays as fallback
+    implementation("com.google.zxing:core:3.5.3")   // v7.153 WIFI KIT: Wi-Fi QR make/read (pure Java, offline, no permissions)
+    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx-android:1.12.14")   // v7.154 JARVIS UPGRADE: offline neural TTS (Piper voice). v7.155 fix: old JitPack line had no module name (group:version only) so Gradle could not resolve it; this is the Maven Central AAR (package com.k2fsa.sherpa.onnx)
+    implementation("org.apache.commons:commons-compress:1.26.2")   // v7.154: safe .tar.bz2 extraction of the voice model (TarBz.kt)
     implementation("androidx.fragment:fragment:1.6.2")
     implementation("androidx.core:core:1.13.1")
     implementation("androidx.work:work-runtime:2.9.1")

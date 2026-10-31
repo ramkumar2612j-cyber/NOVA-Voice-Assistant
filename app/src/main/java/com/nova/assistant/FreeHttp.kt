@@ -16,6 +16,7 @@ object FreeHttp {
     private const val MAX_BODY = 200_000
     private const val CONNECT_MS = 6000
     private const val READ_MS = 10000
+    private const val BRAIN_READ_MS = 45000
 
     fun post(p: FreeProvider, jsonBody: String, key: String, connectMs: Int = CONNECT_MS, readMs: Int = READ_MS): NetAnswer {
         var conn: HttpURLConnection? = null
@@ -26,13 +27,13 @@ object FreeHttp {
             conn = c
             c.requestMethod = "POST"
             c.connectTimeout = connectMs
-            c.readTimeout = readMs
+            c.readTimeout = if (p.brainOnly && readMs == READ_MS) BRAIN_READ_MS else readMs   // v7.151: a reasoning model thinks first, 10 s is too short
             c.instanceFollowRedirects = false
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")
             c.setRequestProperty("Accept", "application/json")
             if (key.isNotEmpty()) c.setRequestProperty("Authorization", "Bearer " + key)
-            if (p.id == "openrouter") {
+            if (p.keyName == "openrouter") {
                 c.setRequestProperty("HTTP-Referer", "https://github.com/nova-assistant")
                 c.setRequestProperty("X-Title", "NOVA")
             }

@@ -19,8 +19,8 @@ def check(name, cond):
 for frag in ['{\\"model\\":', '\\"role\\":\\"system\\"', '\\"role\\":\\"user\\"', '\\"max_tokens\\"', '\\"temperature\\":0.6']:
     check("kotlin buildBody contains " + frag, frag in KT)
 urls = re.findall(r'"(https://[^"]+)"', KT)
-check("7 https endpoints in Kotlin (Qwen row reuses the Groq URL, GLM keys 1-3 share one URL)", len(urls) == 7 and len(set(urls)) == 4 and all(u.startswith("https://") for u in urls))
-check("provider order groq, qwen (groq key), glm (zai key), openrouter, pollinations", re.search(r"listOf\(GROQ, GROQ_QWEN, ZAI, ZAI2, ZAI3, OPENROUTER, POLLINATIONS\)", KT) is not None)
+check("7 https endpoints in Kotlin (Qwen row reuses the Groq URL, GLM keys 1-3 share one URL)", len(urls) == 8 and len(set(urls)) == 4 and all(u.startswith("https://") for u in urls))
+check("provider order groq, qwen (groq key), glm (zai key), openrouter, pollinations", re.search(r"listOf\(GROQ, GROQ_QWEN, ZAI, ZAI2, ZAI3, OPENROUTER, OPENROUTER_GLM, POLLINATIONS\)", KT) is not None)
 check("Groq uses current GPT-OSS model ids, not deprecated Llama ids", 'listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b"), "groq"' in KT and "llama-3.3-70b-versatile" not in KT and "llama-3.1-8b-instant" not in KT)
 check("cooldown key = 600000", re.search(r'"key" -> 600_000L', KT) is not None)
 check("pollinations anonymous (no key slot) on the current gen.pollinations.ai endpoint", re.search(r'listOf\("openai/gpt-5.4-nano", "openai"\), null', KT) is not None and "https://gen.pollinations.ai/v1/chat/completions" in KT and "text.pollinations.ai" not in KT)

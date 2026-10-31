@@ -15,6 +15,10 @@ MAP={'call':'Call karna','whatsapp':'WhatsApp / WhatsApp Business','alarm':'Alar
 'powerguide':'Background me chalte rehna','gmail':'Gmail','agent':'Agent: doosre app me kaam','screenalert':'Screen alert',
 'watchmic':'Watch mic','quiet':'Chup aur Quiet','offlineai':'Phone AI','brainlearn':'Phone AI','leads':'Business leads','limits':'API limits',
 'persona':'Jarvis andaaz','callanswer':'Call uthana / kaatna','calendar':'Aaj ka schedule (calendar)','analysis':'Photo / video ANALYSE karna','roundabout':'Ghuma ke bole kaam','featurestatus':'Apne aap test','photoedit':'Photo edit (professional','sitemedia':'Website ke liye apni photo','chathistory':'Meri chats (history','batterysos':'Battery kam: yaad','waitsec':'Bolne ke baad kitna rukna','musicplay':'Gaana chalana (Spotify','media':'Media: Share karke bhejna','frames':'Video se frames nikalna','switches':'Settings ke 3 switch','safemode':'Safe mode (crash ke baad)','reels':'Reels / Instagram (scroll','familynum':'Family numbers (Papa','webjobs':'Koi bhi website par kaam (Website operator)'}
+MAP.update({'agentscore':'Kaam ka hisaab (agent score)','screenid':'Ye kaun sa game / video hai','smartroute':'Seedha raasta, seekhe raaste, screen tap','mainstall':'Atakna (hang) ki jaanch','blocked':'Kya band hai (NOVA ko kya rok raha)'})   # v7.146
+MAP.update({'aibrain':'GLM 5.3 Flash brain'})   # v7.152: NOVA ka cloud brain (Settings switch LIGHT POPUP bhi Skills me hai: 'Light popup (halka card)')
+MAP.update({'wifi':'WiFi Kit (scan, switch, QR'})   # v7.153: WIFI KIT (Skills entry 'WiFi Kit (scan, switch, QR, doctor)')
+MAP.update({'jdeep':'JARVIS deep voice (offline neural awaaz)','barge':'Bol ke rokna (barge-in)','afocus':'Audio focus (gaana dheema ho jata hai)','provcheck':'AI provider check (abhi ka haal)','glmall':'GLM 5.3 sab jagah (option)'})   # v7.154: JARVIS UPGRADE (deep voice + barge-in + focus + provider check + glm in Skills)
 bad=[]
 for t in topics:
     if t not in MAP: bad.append('help topic without mapping: '+t)

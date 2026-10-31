@@ -162,6 +162,7 @@ class NovaService : Service() {
     @Volatile private var ttsActive = false
     @Volatile private var ttsDeadline = 0L          // watchdog: a lost callback can never block the mic forever
     @Volatile private var curUtt = ""
+    @Volatile private var curSpeakText = ""        // v7.154: the text NOVA is speaking right now (barge-in self-echo guard)
     @Volatile private var confirmUtt = ""
     private val uttSeq = AtomicInteger(0)
 
@@ -282,10 +283,13 @@ class NovaService : Service() {
 
     /** v6.97-wip9: the calling watch's AI button (Bluetooth voice command) = wake word on the WATCH mic. Ignored while the phone is locked. */
     fun wakeFromWatch(): Boolean {
-        if (!alive || busy || lockQuiet()) return false
+        if (!alive) { WatchDiag.add(WatchDiag.SERVICE_OFF); return false }
+        if (busy) { WatchDiag.add(WatchDiag.BUSY); return false }
+        if (lockQuiet()) { WatchDiag.add(WatchDiag.LOCKED); return false }
         val rc = micRef
         Thread({
             val ok = WatchMic.start(this, rc)
+            WatchDiag.add(if (ok) WatchDiag.MIC_WATCH else WatchDiag.MIC_PHONE)   // v7.148
             h.post {
                 if (!alive) return@post
                 sys(if (ok) tr("Watch ka mic chalu. Bolo...", "Watch mic is on. Speak...") else tr("Watch ka mic nahi mila, phone ke mic se sun raha hoon.", "Watch mic not available, listening on the phone mic."))
@@ -437,6 +441,7 @@ class NovaService : Service() {
         ApiUsage.init(this)
         LocalBrains.installEngine(this)
         brain = BrainStore.get(this)
+        WifiKit.Guard.start(this)   // v7.153 WIFI KIT: optional (default OFF) guard tick among the owner's own saved networks
         h.postDelayed(autoCheck, 45_000L)
         h.postDelayed(healLoop, 3L * 60 * 1000)   // self-heal round: first 3 min after start, then every 6 h
         h.postDelayed(selfImproveLoop, 5L * 60 * 1000)   // v6.95: look every 15 min whether the daily 1-hour improve window is open
@@ -557,6 +562,7 @@ class NovaService : Service() {
 
     override fun onDestroy() {
         AutoSetup.stop()
+        WifiKit.Guard.stop()   // v7.153 WIFI KIT: the guard tick dies with the service
         if (agentRunning) {
             agentCancel = true
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "NOVA service stopped") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
@@ -593,6 +599,8 @@ class NovaService : Service() {
         history.clear()
         try { JarvisSpeaker.stop() } catch (e: Throwable) { }
         try { UltronPlayer.stop() } catch (e: Throwable) { }
+        try { JarvisDeepVoice.stop(); JarvisDeepVoice.release() } catch (e: Throwable) { }   // v7.154: free the neural voice engine
+        try { SpeakFocus.abandon() } catch (e: Throwable) { }   // v7.154
         try { tts?.stop(); tts?.shutdown() } catch (e: Exception) { }
         tts = null
         ttsReady = false
@@ -627,6 +635,7 @@ class NovaService : Service() {
     private fun utteranceEnded(id: String?, finished: Boolean) {
         if (id == null || id != curUtt) return
         ttsActive = false
+        if (SpeakFocus.held()) SpeakFocus.abandon()   // v7.154: the music can come back now
         emit("mode", "speak_end")   // v7.12: HUD leaves the speaking state
         if (finished && id == confirmUtt) answerWindow = true
         if (finished && id == replyUtt) {
@@ -647,12 +656,17 @@ class NovaService : Service() {
         // Persistent SILENT suppresses ordinary speech, but never a safety confirmation.
         // Text is still emitted above to chat/HUD so the user can read it.
         if (cfg.silentMode && !confirm) return false
+        val spoken = if (text.contains('\n') || text.contains("```") || text.contains("**")) FreeProviders.speakable(text).ifBlank { text } else text   // v7.3: a long chat answer is read without markdown / code
+        curSpeakText = spoken   // v7.154: what NOVA is saying right now (the barge-in self-echo guard reads this)
+        // v7.154 JARVIS DEEP VOICE: the offline neural voice runs BEFORE the system TTS engine (it does not need it).
+        // JarvisDeepRules.use is false unless the owner turned it ON and the model is installed, so the default
+        // behaviour is exactly v7.153. Any failure falls back to the unchanged voice chain below.
+        if (JarvisDeepRules.use(spoken, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this)) && startDeepVoice(spoken, confirm)) return true
         val t = tts
         if (t == null || !ttsReady) {
             if (confirm) answerWindow = true   // no voice: the user can still read the question and answer
             return false
         }
-        val spoken = if (text.contains('\n') || text.contains("```") || text.contains("**")) FreeProviders.speakable(text).ifBlank { text } else text   // v7.3: a long chat answer is read without markdown / code
         ReplyLang.voiceLang = ReplyLang.langOf(spoken)   // v7.138: English -> Jarvis, Hindi / Hinglish -> a Hindi voice, automatically
         cfg.applyVoiceIfChanged(t)   // v7.139: not on every reply (this runs on the main thread)
         val id = "u" + uttSeq.incrementAndGet()
@@ -662,6 +676,7 @@ class NovaService : Service() {
         nextFollow = false
         ttsActive = true                                 // BEFORE speak(), so the loop can never hear our own voice
         ttsDeadline = System.currentTimeMillis() + minOf(60000L, 4000L + spoken.length * 90L)
+        if (ExtCfg.afocus(this)) SpeakFocus.acquire(this)   // v7.154: music ducks while NOVA speaks (default ON, can be turned off)
         UltronPlayer.stop()                                  // v7.120: a new reply always cuts the old Ultron audio
         JarvisSpeaker.stop()                               // v7.129: ... and the old Jarvis audio
         if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return true
@@ -833,6 +848,47 @@ class NovaService : Service() {
         return true
     }
 
+    // ---- v7.154 JARVIS DEEP VOICE (offline neural, sherpa-onnx + Piper "alan"). First in the chain when ON. ----
+    /** Starts the deep voice on a worker thread. false = could not start, the caller uses the existing voice chain. */
+    private fun startDeepVoice(spoken: String, confirm: Boolean): Boolean {
+        val id = "u" + uttSeq.incrementAndGet()
+        curUtt = id
+        confirmUtt = if (confirm) id else ""
+        replyUtt = if (nextFollow && !confirm) id else ""
+        nextFollow = false
+        ttsActive = true
+        ttsDeadline = System.currentTimeMillis() + minOf(90000L, 8000L + spoken.length * 140L)   // neural synthesis is slower than TTS; deadline is generous
+        if (ExtCfg.afocus(this)) SpeakFocus.acquire(this)
+        UltronPlayer.stop()
+        JarvisSpeaker.stop()
+        JarvisDeepVoice.stop()
+        Thread {
+            var res = JarvisDeepVoice.FAILED
+            try {
+                res = JarvisDeepVoice.speak(this, spoken, cfg.rate) { if (id == curUtt) emit("mode", "speak") }
+            } catch (e: Throwable) { ErrLog.addOnce("DeepVoice", "run " + e.javaClass.simpleName) }
+            if (id != curUtt) return@Thread                     // STOP or a newer reply already took over
+            if (res == JarvisDeepVoice.FAILED) {
+                if (!ttsActive) return@Thread
+                // fall back to the FULL existing v7.153 chain: server Jarvis -> JarvisLocal -> Ultron -> normal TTS
+                try {
+                    val t = tts
+                    if (t == null || !ttsReady) { utteranceEnded(id, false) } else {
+                        cfg.applyVoice(t)
+                        if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return@Thread
+                        if (startJarvisLocal(t, spoken, id)) return@Thread
+                        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
+                        val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                        if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
+                    }
+                } catch (e: Throwable) { utteranceEnded(id, false) }
+            } else {
+                utteranceEnded(id, res == JarvisDeepVoice.DONE)
+            }
+        }.apply { name = "nova-deep-voice"; isDaemon = true }.start()
+        return true
+    }
+
     // ---- v7.39 PART 4 SAFE STOP ----
     @Volatile private var dropHeard = false
 
@@ -848,7 +904,14 @@ class NovaService : Service() {
         Thread { try { runCommand(Logic.Cmd("stop")) } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }.start()
     }
 
-    fun stopSpeaking() { try { JarvisSpeaker.stop() } catch (e: Throwable) { }; try { UltronPlayer.stop() } catch (e: Throwable) { }; try { tts?.stop() } catch (e: Exception) { }; ttsActive = false }
+    fun stopSpeaking() {
+        try { JarvisSpeaker.stop() } catch (e: Throwable) { }
+        try { UltronPlayer.stop() } catch (e: Throwable) { }
+        try { JarvisDeepVoice.stop() } catch (e: Throwable) { }   // v7.154
+        try { SpeakFocus.abandon() } catch (e: Throwable) { }     // v7.154
+        try { tts?.stop() } catch (e: Exception) { }
+        ttsActive = false
+    }
 
     // ---- FIXTEST: hooks for Settings > SELF TEST. They only read state or run harmless local tools.
     fun testState(): String {
@@ -1174,6 +1237,7 @@ class NovaService : Service() {
         var rec: AudioRecord? = null
         var tone: ToneGenerator? = null
         var pw: PorcupineWake? = null
+        var barge: Recognizer? = null   // v7.154: barge-in stop-word recognizer (created lazily, only when the feature is ON)
         try {
             val md = loadModel()
             model = md
@@ -1340,6 +1404,34 @@ class NovaService : Service() {
                 if (RecordSession.active) RecordSession.feed(buf, n)   // PART 6A: background recording takes every chunk, even while NOVA is busy or speaking
 
                 if (ttsActive && System.currentTimeMillis() > ttsDeadline) ttsActive = false // lost callback
+                // v7.154 BARGE-IN (opt-in, default OFF): while NOVA is SPEAKING, a tiny grammar recognizer listens
+                // ONLY for stop words (stop / chup / ruko / khamosh / bas / band karo), so the owner can interrupt by
+                // voice. Everything else is dropped exactly as before (anti-echo). A stop word that NOVA itself is
+                // saying in its own reply is ignored (JarvisDeepRules.echoSafe), so NOVA never stops itself. A spoken
+                // STOP on a locked phone stays allowed, same as the existing locked-phone stop policy.
+                if (ttsActive && ExtCfg.bargeIn(this)) {
+                    val br = barge ?: try {
+                        val nb = Recognizer(md, RATE.toFloat(), JarvisDeepRules.stopGrammar())
+                        try { nb.setWords(true) } catch (t: Throwable) { }
+                        barge = nb
+                        nb
+                    } catch (t: Throwable) { ErrLog.addOnce("BargeIn", "init " + t.javaClass.simpleName); null }
+                    if (br != null) {
+                        var bs = 0.0
+                        for (i in 0 until n) bs += buf[i].toDouble() * buf[i]
+                        val brms = Math.sqrt(bs / n)
+                        if (br.acceptWaveForm(buf, n)) {
+                            val json = br.result
+                            br.reset()
+                            val heardTxt = Logic.extractText(json)
+                            if (JarvisDeepRules.hit(heardTxt, curSpeakText, JarvisDeepRules.minConf(json), brms, JarvisDeepRules.MIN_RMS)) {
+                                stopSpeaking()   // SafeStop semantics: speech stops, service / mic / wake word stay ON
+                                wasBlocked = true   // our own trailing speaker audio must not be taken for a command
+                                continue
+                            }
+                        }
+                    }
+                }
                 // v7.73: busy but NOT speaking = keep listening, a spoken command waits in the queue. Speaking / locked / waiting for a yes-no = dropped as before.
                 val busyListenOk = BusyListenRules.mayListen(
                     ExtCfg.busyListen(this), busy, ttsActive, lockQuiet(),
@@ -1366,6 +1458,7 @@ class NovaService : Service() {
                     pre.clear()
                     wakeHits = 0
                     pw?.reset()
+                    try { barge?.reset() } catch (t: Throwable) { }   // v7.154: the barge-in recognizer too
                     skip = 2
                 }
                 if (skip > 0) { skip--; continue }
@@ -2065,7 +2158,8 @@ class NovaService : Service() {
             { System.currentTimeMillis() },
             budgetMs = 12_000L,
             turns = SmartReplyRules.convo.turns(sender),
-            accept = { t -> SmartReplyRules.parse(t) != null }
+            accept = { t -> SmartReplyRules.parse(t) != null },
+            glmFirst = ExtCfg.glmAll(this)   // v7.154: owner opt-in - GLM 5.3 first for smart replies too
         ) { p, _, body, key -> rankedCall(p, body, key) }
         val res = SmartReplyRules.parse(r.text) ?: return null
         var out = res
@@ -2632,6 +2726,11 @@ class NovaService : Service() {
             lastTurnLocal = true; lastKind = "media"
             return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
         }
+        val screenId = if (text.isBlank()) null else ScreenIdRules.parse(text)   // v7.145 STEP 5: "ye kaun sa game hai" / "ye video ka naam batao" (movies stay on the route above)
+        if (screenId != null) {
+            lastTurnLocal = true; lastKind = "media"
+            return startScreenId(screenId)
+        }
         if (text.isNotBlank() && ScreenVideoRules.isBareAnalyse(text) && AnalysisVoiceRules.parse(text) == AnalysisVoiceRules.Ask.NONE) {   // v7.124: popup / voice "analyse karo" = read the screen now (a movie playing in any app is found), not a chat answer
             lastTurnLocal = true; lastKind = "screen"
             return analyzeScreen(text)
@@ -2693,6 +2792,19 @@ class NovaService : Service() {
             lastTurnLocal = true
             lastKind = "help_guide"
             return HelpGuide.answer(text, cfg.lang == "en")
+        }
+        // v7.149 STEP 9: "nova light popup karo" / "nova dark popup karo": switches the popup theme (next popup).
+        // v7.152: a QUESTION ("popup light hai ya dark?") no longer flips the setting — it falls through to the
+        // FeatureVoice "popuptheme" status route. All the old order phrasings still switch (HudTheme.isQuestion only).
+        if (text.isNotBlank()) {
+            val lp = HudTheme.parse(text)
+            if (lp != null && !HudTheme.isQuestion(text)) {
+                ExtCfg.setLightPopup(this, lp)
+                lastTurnLocal = true
+                lastKind = "popup_theme"
+                return if (lp) tr("Theek hai, ab popup light rahega. Agli baar popup aayega tab dikhega. Settings mein LIGHT POPUP switch se bhi badal sakta hai.", "Okay, the popup is now light. You will see it the next time it opens. The LIGHT POPUP switch in Settings also works.")
+                else tr("Theek hai, popup wapas dark Ultron look me. Settings mein LIGHT POPUP switch se bhi badal sakta hai.", "Okay, the popup is back to the dark Ultron look. The LIGHT POPUP switch in Settings also works.")
+            }
         }
         // Part 5: spoken STATUS of Auto-reply / Routines / Lock Guard / Battery alert / Offline pack / API limits. Read-only: it never changes a setting.
         if (text.isNotBlank()) {
@@ -3481,7 +3593,8 @@ class NovaService : Service() {
             turns = fallbackTurns(),   // v6.70: a backup AI continues the same conversation, not a lone sentence
             rich = rich,
             hedge = true,   // v7.4: voice answers ask the top 2 providers at once; v7.126: long typed answers too, but the 2nd one only joins after 2.5 s
-            hedgeStaggerMs = if (rich) 2500L else 0L
+            hedgeStaggerMs = if (rich) 6000L else 0L,   // v7.151: long typed answers give the GLM 5.3 brain 6 s before Groq joins (was 2.5 s)
+            glmFirst = ExtCfg.glmAll(this)   // v7.154: owner opt-in - GLM 5.3 Flash first for every chat answer (default OFF = v7.151 order)
         ) { p, _, body, key -> rankedCall(p, body, key) }
         }
     }
@@ -3799,7 +3912,63 @@ class NovaService : Service() {
         PersonalMemory.K_FORGET -> memForget(c.arg)
         PersonalMemory.K_FORGET_ALL -> memForgetAll()
         "analyze" -> analyzeScreen(c.arg)      // PART 1B (arg = the spoken sentence, used for "ye kaun si movie hai")
+        in WifiKitRules.KINDS -> WifiKit.handle(this, c, cfg.lang == "en")   // v7.153 WIFI KIT: scan / switch / open / QR / doctor / guard
+        in JarvisDeepRules.KINDS -> jarvisUpgradeReply(c)   // v7.154 JARVIS UPGRADE: deep voice / barge-in / audio focus / provider check / GLM everywhere
         else -> runLocalTool(c)           // PART 1B: torch, volume, brightness, media, global, open_app, settings, camera
+    }
+
+    // ---------------------------------------------------------------- v7.154 JARVIS UPGRADE commands
+
+    /** Deep voice / barge-in / audio focus / provider check / GLM-everywhere commands. Speaks the result itself. */
+    private fun jarvisUpgradeReply(c: Logic.Cmd) {
+        val en = cfg.lang == "en"
+        when (c.kind) {
+            JarvisDeepRules.K_DEEP_ON -> {
+                if (JarvisDeepVoice.ready(this)) {
+                    ExtCfg.setJarvisDeep(this, true)
+                    say(JarvisDeepRules.replyDeepOn(true, en))
+                } else {
+                    say(JarvisDeepRules.replyDeepOn(false, en))   // honest: download first, nothing silently enabled
+                }
+            }
+            JarvisDeepRules.K_DEEP_OFF -> {
+                ExtCfg.setJarvisDeep(this, false)
+                say(JarvisDeepRules.replyDeepOff(en))
+            }
+            JarvisDeepRules.K_DEEP_DL -> {
+                if (JarvisDeepVoice.ready(this)) {
+                    say(JarvisDeepRules.replyDeepDl(en, already = true))
+                } else {
+                    say(JarvisDeepRules.replyDeepDl(en, already = false))
+                    val app = this
+                    Thread {
+                        val err = JarvisDeepVoice.install(app, { }, { false })
+                        h.post {
+                            if (err == null) {
+                                say(if (en) "Deep voice model installed, 20 MB verified. Say: nova deep voice on karo." else "Deep voice model install ho gaya, 20 MB verify karke. Bolo: nova deep voice on karo.")
+                            } else {
+                                say((if (en) "Deep voice download failed: " else "Deep voice download fail: ") + err)
+                            }
+                        }
+                    }.apply { name = "nova-deep-dl"; isDaemon = true }.start()
+                }
+            }
+            JarvisDeepRules.K_DEEP_STATUS -> say(JarvisDeepRules.replyDeepStatus(en, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this)))
+            JarvisDeepRules.K_BARGE_ON -> { ExtCfg.setBargeIn(this, true); say(JarvisDeepRules.replyBarge(en, true)) }
+            JarvisDeepRules.K_BARGE_OFF -> { ExtCfg.setBargeIn(this, false); say(JarvisDeepRules.replyBarge(en, false)) }
+            JarvisDeepRules.K_FOCUS_ON -> { ExtCfg.setAfocus(this, true); say(JarvisDeepRules.replyFocus(en, true)) }
+            JarvisDeepRules.K_FOCUS_OFF -> { ExtCfg.setAfocus(this, false); say(JarvisDeepRules.replyFocus(en, false)) }
+            JarvisDeepRules.K_GLM_ON -> { ExtCfg.setGlmAll(this, true); say(JarvisDeepRules.replyGlm(en, true)) }
+            JarvisDeepRules.K_GLM_OFF -> { ExtCfg.setGlmAll(this, false); say(JarvisDeepRules.replyGlm(en, false)) }
+            JarvisDeepRules.K_PROVCHECK -> {
+                say(if (en) "Checking every configured AI provider..." else "Sab set kiye gaye AI providers check kar raha hoon...")
+                val app = this
+                Thread {
+                    val res = AutoSetup.checkProviders(app)
+                    h.post { say(JarvisDeepRules.replyProviders(en, res)) }
+                }.apply { name = "nova-provcheck"; isDaemon = true }.start()
+            }
+        }
     }
 
     // ---------------------------------------------------------------- public lead capture and one-approval WhatsApp batch
@@ -5380,7 +5549,8 @@ class NovaService : Service() {
             freeCooldowns,
             { System.currentTimeMillis() },
             hedge = true,            // v7.126: agent steps no longer wait for one slow provider
-            hedgeStaggerMs = 2000L
+            hedgeStaggerMs = 2000L,
+            brain = true             // v7.151: GLM 5.3 Flash plans the agent steps first, Groq / Qwen join after 2 s
         ) { p, _, body, key -> rankedCall(p, body, key) }.text
     } catch (t: Throwable) { null }
 
@@ -7462,7 +7632,44 @@ class NovaService : Service() {
         return true
     }
 
-    private fun startMovieScan(): String {
+    /** v7.145 STEP 5: is this installed app a game, according to Android itself (the store category / game flag)? */
+    @Suppress("DEPRECATION")
+    private fun isGameApp(pkg: String): Boolean = try {
+        val ai = packageManager.getApplicationInfo(pkg, 0)
+        (Build.VERSION.SDK_INT >= 26 && ai.category == android.content.pm.ApplicationInfo.CATEGORY_GAME) ||
+            (ai.flags and android.content.pm.ApplicationInfo.FLAG_IS_GAME) != 0
+    } catch (e: Throwable) { false }
+
+    private fun appLabelOf(pkg: String?): String = try {
+        if (pkg == null) "" else packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    } catch (e: Throwable) { "" }
+
+    /**
+     * v7.145 STEP 5: "ye kaun sa game hai" / "ye video ka naam batao". A game whose app Android calls a game is answered at once from the app's own name
+     * (no AI, no internet, no wait). Everything else is the same capture + vision + web search + confidence as the movie scan, with a game / video prompt.
+     * NOVA only LOOKS: it never plays or taps in a game.
+     */
+    private fun startScreenId(kind: ScreenIdRules.Kind): String {
+        val en = cfg.lang == "en"
+        if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
+        try {
+            val prot = NovaAccessibilityService.movieProtected()
+            if (prot == true) return MovieGuessRules.privateText(en)
+            if (prot == false && kind == ScreenIdRules.Kind.GAME) {
+                val pkg = NovaAccessibilityService.reelPackage()
+                if (pkg != null && pkg != packageName && isGameApp(pkg)) {
+                    val name = ScreenIdRules.gameFromApp(appLabelOf(pkg), true)
+                    if (name != null) {
+                        try { ActionLog.add(this, "NOVA SCREEN", "NOVA", "", "sent", "game scan: " + name.take(40) + " | HIGH | app name") } catch (e: Throwable) { ErrLog.addOnce("quiet:NovaService", e.toString()) }
+                        return ScreenIdRules.gameFromAppText(name, en)
+                    }
+                }
+            }
+        } catch (e: Throwable) { ErrLog.add("screenId", e.javaClass.simpleName) }
+        return startMovieScan(kind)
+    }
+
+    private fun startMovieScan(kind: ScreenIdRules.Kind? = null): String {
         val en = cfg.lang == "en"
         if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
         movieScanRunning = true; movieScanCancel = false; movieFrames = emptyList(); movieStage = "CAPTURE 0"
@@ -7501,31 +7708,35 @@ class NovaService : Service() {
                         val line = MovieFrameRules.statusText(MovieFrameRules.Stop.PROTECTED, 0, en)
                         deliverAnalysis(false, line, line, true)
                     } else {
-                        val txt = try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" }
-                        val d = MovieGuessPipeline.run(fr, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> movieStage = "$st $pct" })
+                        val txt0 = try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" }
+                        val head = if (kind == null) "" else try { ScreenIdRules.evidenceHeader(appLabelOf(NovaAccessibilityService.reelPackage()), NovaAccessibilityService.otherWindowTitle()) } catch (e: Throwable) { "" }
+                        val txt = if (head.isEmpty()) txt0 else head + "\n" + txt0
+                        val d = MovieGuessPipeline.run(fr, txt, analysisBrain(), { !movieScanCancel }, { st, pct -> movieStage = "$st $pct" }, kind = kind)
                         movieFrames = emptyList()   // frames are gone as soon as the guess ends
                         movieStage = ""
                         if (d.kind != "CANCELLED" && !movieScanCancel) {
                             val line = when (d.kind) {
-                                "OK" -> MovieGuessRules.resultText(d.outcome, en, d.vision)
+                                "OK" -> if (kind == null) MovieGuessRules.resultText(d.outcome, en, d.vision) else ScreenIdRules.resultText(kind, d.outcome, en, d.vision)
                                 "REFUSED" -> MovieGuessRules.privateText(en)
-                                "NO_AI" -> MovieGuessRules.noAiText(en)
+                                "NO_AI" -> if (kind == null) MovieGuessRules.noAiText(en) else ScreenIdRules.noAiText(kind, en)
                                 "UNREADABLE" -> MovieGuessRules.unreadableText(en)
                                 else -> MovieGuessRules.failedText(d.kind, en, try { OfflineJobQueue.hasInternet(this) } catch (e: Exception) { false })
                             }
-                            val said = if (d.kind == "OK") MovieGuessRules.speech(d.outcome, en, d.vision) else line
+                            val said = if (d.kind == "OK") (if (kind == null) MovieGuessRules.speech(d.outcome, en, d.vision) else ScreenIdRules.speech(kind, d.outcome, en, d.vision)) else line
                             val ok = d.kind == "OK"
                             val om = d.outcome
-                            if (ok && om != null && om.title.length >= 2) lastMovie = LastMovieRules.Saved(om, System.currentTimeMillis())
-                            deliverMovie(line, said, if (ok) MovieGuessRules.card(d.outcome, en) else "", if (ok) MovieGuessRules.historyLine(d.outcome) else "")
-                            if (ok && d.outcome != null && ScreenVideoRules.shouldPopup(d.outcome)) showMoviePopup(d.outcome, ScreenVideoRules.Kind.MOVIE)   // v7.76: popup browser
+                            if (kind == null && ok && om != null && om.title.length >= 2) lastMovie = LastMovieRules.Saved(om, System.currentTimeMillis())
+                            deliverMovie(line, said,
+                                if (!ok) "" else if (kind == null) MovieGuessRules.card(d.outcome, en) else ScreenIdRules.card(kind, d.outcome, en),
+                                if (!ok) "" else if (kind == null) MovieGuessRules.historyLine(d.outcome) else ScreenIdRules.historyLine(kind, d.outcome))
+                            if (kind == null && ok && d.outcome != null && ScreenVideoRules.shouldPopup(d.outcome)) showMoviePopup(d.outcome, ScreenVideoRules.Kind.MOVIE)   // v7.76: popup browser
                         }
                     }
                 }
             } catch (e: Throwable) { ErrLog.add("movieScan", "capture") }
             finally { movieScanRunning = false; movieStage = ""; h.post { laser?.setStage("RESULT 100") }; h.postDelayed({ stopLaser() }, 900) }
         }.start()
-        return MovieFrameRules.startedText(en)
+        return if (kind == null) MovieFrameRules.startedText(en) else ScreenIdRules.startedText(kind, en)
     }
 
     private fun analyseByVoice(text: String, ask: AnalysisVoiceRules.Ask): String? {

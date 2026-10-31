@@ -12,7 +12,7 @@ checks = {
  'agent is instructed to try a different safe route before giving up': 'RECOVERY-FIRST' in agent and 'materially different SAFE route' in agent,
  'does not claim imaginary skills or bypass Android permissions': 'Never claim you installed a skill' in agent and 'Android requires' in agent,
  'unit tests added': (root / 'app/src/test/java/com/nova/assistant/CapabilityLearningRulesTest.kt').exists(),
- 'version updated': any(('versionName = "%s"' % v) in (root / 'app/build.gradle.kts').read_text() for v in ('7.103','7.104','7.105','7.106','7.107','7.108','7.109','7.110','7.113','7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')),
+ 'version updated': any(('versionName = "%s"' % v) in (root / 'app/build.gradle.kts').read_text() for v in ('7.103','7.104','7.105','7.106','7.107','7.108','7.109','7.110','7.113','7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138', '7.153', '7.154')),
 }
 for name, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + name)
 raise SystemExit(0 if all(checks.values()) else 1)

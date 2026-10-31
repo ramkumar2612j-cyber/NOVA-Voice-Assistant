@@ -1,3 +1,5 @@
+> **LATEST (v7.153):** WIFI KIT (legal Wi-Fi tools: scan, best-switch on the owner's own saved networks, open connect, QR share/read, doctor, optional guard). Docs: `PART_STATUS_v7_153_WIFI.md`, `NEXT_ACCOUNT_PROMPT_v7_153.md`, `CHANGELOG.md` (top). Legal line: NOVA never bypasses/cracks/guesses anyone's Wi-Fi (owner's own password only; forbidden-words contract check). Kotlin NOT COMPILED in sandbox (no kotlinc); GitHub Actions / APK / phone NOT RUN.
+
 > **LATEST (v7.116):** `PART_STATUS_v7_116_UI_COMPLETION.md` (kya check hua, kya UI me jodha), `NEXT_ACCOUNT_PROMPT_v7_116.md`, `CHANGELOG.md` (top). Kotlin ab sandbox me compile + JUnit hua; GitHub Actions / APK / phone abhi NOT RUN.
 
 > **LATEST (v7.115):** sabse naye docs: `CHANGELOG.md` (top), `PART_STATUS_v7_115_WAKE_HEAR_SITE.md`, `NEXT_ACCOUNT_PROMPT_v7_115.md`. Features ki list: `docs/FEATURES_v7_115.md`. Neeche ki purani lines history ke liye waise hi hain (add-only). Build / APK / phone abhi NOT RUN.

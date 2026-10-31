@@ -12,7 +12,9 @@ class WatchCommandActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
+            WatchDiag.add(WatchDiag.BUTTON)   // v7.148: proves Android delivered the watch button
             val s = NovaService.instance
+            if (s == null || !NovaService.running) WatchDiag.add(WatchDiag.SERVICE_OFF)
             if (s != null && NovaService.running) s.wakeFromWatch()
         } catch (e: Exception) {
             ErrLog.add("WatchCommand", e.toString())

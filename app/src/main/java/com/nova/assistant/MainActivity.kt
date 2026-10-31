@@ -374,7 +374,23 @@ class MainActivity : Activity() {
             if (MediaIntakeStore.onIntent(this, i)) {
                 i?.action = null   // handled once: a rotation / re-open must not copy the same share again
             }
+            // v7.153 WIFI KIT: a shared Wi-Fi QR photo is decoded locally; the owner's own password is saved encrypted.
+            val quris = shareImageUris(i)
+            if (quris.isNotEmpty()) WifiKit.tryQrShare(applicationContext, quris)
         } catch (e: Throwable) { ErrLog.add("MainActivity", "media intake: " + e.toString()) }
+    }
+
+    /** v7.153 WIFI KIT: the image Uris of a SHARE intent (single or multiple), empty for anything else. */
+    private fun shareImageUris(i: Intent?): List<Uri> {
+        if (i == null) return emptyList()
+        val out = ArrayList<Uri>()
+        try {
+            when (i.action) {
+                Intent.ACTION_SEND -> @Suppress("DEPRECATION") { (i.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))?.let { out.add(it) } }
+                Intent.ACTION_SEND_MULTIPLE -> @Suppress("DEPRECATION") { (i.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM))?.let { out.addAll(it) } }
+            }
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
+        return out.filter { u -> try { (contentResolver.getType(u) ?: "").startsWith("image") } catch (e: Throwable) { false } }
     }
 
     private fun isDefaultAssistant(): Boolean = try {
@@ -475,6 +491,8 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 31 && !granted(Manifest.permission.BLUETOOTH_CONNECT)) ask.add(Manifest.permission.BLUETOOTH_CONNECT)   // v6.97-wip9: watch mic over Bluetooth
         // v7.68 PART 16 missing wire: "call uthao" (PhoneActions.answerCall) needs ANSWER_PHONE_CALLS at runtime (API 26+); it was in the manifest and checked, but never asked for.
         if (Build.VERSION.SDK_INT >= 26 && !granted(Manifest.permission.ANSWER_PHONE_CALLS)) ask.add(Manifest.permission.ANSWER_PHONE_CALLS)
+        // v7.153 WIFI KIT: Wi-Fi scan results reach NOVA only with the Location permission (Android's rule). Asked once in the same dialog.
+        if (!granted(Manifest.permission.ACCESS_FINE_LOCATION)) ask.add(Manifest.permission.ACCESS_FINE_LOCATION)
         val runs = prefs.getInt("setup_runs", 0)
         val opens = specialOpenCounts(prefs)
         val specialMissing = missingSpecial().keys.filter { (opens[it] ?: 0) < SetupChainRules.maxOpens(it) }
@@ -593,6 +611,9 @@ class MainActivity : Activity() {
             MediaIntakeStore.onChanged = { mediaChanged() }
             if (uris.isEmpty()) { runJs("try{onMediaIntake()}catch(e){}"); return }
             MediaIntakeStore.ingest(this, uris, null, null)
+            // v7.153 WIFI KIT: a picked Wi-Fi QR photo is decoded locally too (same rules as a Share).
+            val quris = uris.filter { u -> try { (contentResolver.getType(u) ?: "").startsWith("image") } catch (e: Throwable) { false } }
+            if (quris.isNotEmpty()) WifiKit.tryQrShare(applicationContext, quris)
             runJs("try{onMediaIntake()}catch(e){}")   // shows the busy state at once
         } catch (e: Throwable) { ErrLog.add("MainActivity", "media pick: " + e.toString()) }
     }
@@ -2043,6 +2064,20 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun setConvo(on: Boolean): String { ExtCfg.setConvo(this@MainActivity, on); return "ok" }
 
+        // ---- v7.154 JARVIS UPGRADE: read-only status for the Skills screen dots ----
+
+        @JavascriptInterface
+        fun getJarvisDeep(): Boolean = ExtCfg.jarvisDeep(this@MainActivity)
+
+        @JavascriptInterface
+        fun getBargeIn(): Boolean = ExtCfg.bargeIn(this@MainActivity)
+
+        @JavascriptInterface
+        fun getAfocus(): Boolean = ExtCfg.afocus(this@MainActivity)
+
+        @JavascriptInterface
+        fun getGlmAll(): Boolean = ExtCfg.glmAll(this@MainActivity)
+
         @JavascriptInterface
         fun getAutoModels(): Boolean = ExtCfg.autoModels(this@MainActivity)
 
@@ -2533,6 +2568,30 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun getFeatureStatus(): String = try { FeatureStatus.json(this@MainActivity) } catch (e: Throwable) { "{\"items\":[]}" }
 
+        /** v7.147 step 7: KYA BAND HAI. Read-only list of switched-off permissions / battery / autostart check. Nothing is changed. */
+        @JavascriptInterface
+        fun getBlocked(): String = try {
+            BlockedRules.json(BlockedRules.items(BlockedSnapshot.read(this@MainActivity)), cfg.lang == "en")
+        } catch (e: Throwable) { "{\"items\":[]}" }
+
+        /** v7.147 step 7: opens the exact Settings page for one row of KYA BAND HAI. The owner does the final tap; nothing is switched here. */
+        @JavascriptInterface
+        fun fixBlocked(id: String): String {
+            when (id.take(20)) {
+                "acc" -> openAccessibility()
+                "battery" -> openBatterySettings()
+                "overlay" -> openOverlaySettings()
+                "notifAccess" -> openNotificationAccess()
+                "write" -> openWriteSettings()
+                "dnd" -> openDndAccess()
+                "install" -> openInstallSettings()
+                "autostart" -> return try { openPowerGuide() } catch (e: Throwable) { "" }
+                "mic", "notif", "alarm", "contacts", "calendar" -> openAppInfo()
+                else -> return "unknown"
+            }
+            return "opened"
+        }
+
         private fun totalRamMb(): Long {
             val am = getSystemService(ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return 0L
             val mi = android.app.ActivityManager.MemoryInfo()
@@ -2725,6 +2784,13 @@ class MainActivity : Activity() {
                 .put("localMode", !hasKey)
                 .put("acc", NovaAccessibilityService.isEnabled(this@MainActivity))
                 .put("screenMonitor", cfg.screenMonitor)
+                .put("lightPopup", ExtCfg.lightPopup(this@MainActivity))   // v7.152: the opt-in light popup switch (default OFF)
+                .put("wifiGuard", ExtCfg.wifiGuard(this@MainActivity))   // v7.153 WIFI KIT: opt-in auto-switch among the owner's own saved networks (default OFF)
+                .put("jarvisDeep", ExtCfg.jarvisDeep(this@MainActivity))   // v7.154: offline neural deep voice (default OFF)
+                .put("bargeIn", ExtCfg.bargeIn(this@MainActivity))   // v7.154: spoken STOP while NOVA speaks (default OFF)
+                .put("afocus", ExtCfg.afocus(this@MainActivity))   // v7.154: music ducks while NOVA speaks (default ON)
+                .put("glmAll", ExtCfg.glmAll(this@MainActivity))   // v7.154: GLM 5.3 first for every chat job (default OFF)
+                .put("deepVoiceReady", JarvisDeepVoice.ready(this@MainActivity))   // v7.154: is the 20 MB model installed?
                 .put("contacts", granted(Manifest.permission.READ_CONTACTS))
                 .put("calendar", granted(Manifest.permission.READ_CALENDAR))
                 .put("writeSettings", Settings.System.canWrite(this@MainActivity))
@@ -2757,6 +2823,12 @@ class MainActivity : Activity() {
                     val before = cfg.screenMonitor
                     cfg.screenMonitor = wantMonitor && accOn
                     if (before != cfg.screenMonitor) NovaAccessibilityService.monitorChanged()
+                    ExtCfg.setLightPopup(this@MainActivity, o.optBoolean("lightPopup", false))   // v7.152: opt-in light popup, default OFF, nothing else changes
+                    ExtCfg.setWifiGuard(this@MainActivity, o.optBoolean("wifiGuard", false))   // v7.153 WIFI KIT: opt-in, default OFF
+                    ExtCfg.setJarvisDeep(this@MainActivity, o.optBoolean("jarvisDeep", false))   // v7.154: opt-in, default OFF; turning OFF frees the engine
+                    ExtCfg.setBargeIn(this@MainActivity, o.optBoolean("bargeIn", false))   // v7.154: opt-in, default OFF
+                    ExtCfg.setAfocus(this@MainActivity, o.optBoolean("afocus", true))   // v7.154: default ON
+                    ExtCfg.setGlmAll(this@MainActivity, o.optBoolean("glmAll", false))   // v7.154: opt-in, default OFF
                     NovaService.instance?.reloadVoice()
                     if (wantMonitor && !accOn) "need_acc" else "ok"
                 }

@@ -26,7 +26,7 @@ checks = {
  'old v7.103 learning hooks still present': 'CapabilityLearningStore(this).recordFailure(message)' in svc and 'CapabilityLearningStore(this).guidanceFor()' in svc,
  'hard DENY list untouched': '"pay", "payment", "buy"' in agent and 'Verdict.DENY, "money, account or security item"' in agent,
  'unit test file covers classify/clean/record/prune/hint/decay': all(x in test for x in ('classifiesCommonJobs', 'cleanAppRejects', 'successCreditsAll', 'HopelessRoutesArePruned', 'hintPrefersWorkingRoute', 'oldHistoryDecays')),
- 'version 7.105 or newer (code 32+)': any(('versionName = "%s"' % v) in gradle for v in ('7.105', '7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138')) and any(('"%s"' % c) in gradle for c in ('32', '33', '34', '35', '36', '37')),
+ 'version 7.105 or newer (code 32+)': any(('versionName = "%s"' % v) in gradle for v in ('7.105', '7.106', '7.107', '7.108', '7.109', '7.110', '7.113', '7.114', '7.133', '7.134', '7.135', '7.136', '7.137', '7.138', '7.153', '7.154')) and any(('"%s"' % c) in gradle for c in ('32', '33', '34', '35', '36', '37')),
 }
 for n, ok in checks.items(): print(('PASS' if ok else 'FAIL') + ': ' + n)
 raise SystemExit(0 if all(checks.values()) else 1)

@@ -287,7 +287,7 @@ object SiteGen {
             }
         }
         if (ExtCfg.freeChain(ctx)) {
-            for (provider in FreeProviders.ordered()) {
+            for (provider in FreeProviders.forJob(FreeProviders.ordered(), true)) {   // v7.151: GLM 5.3 Flash builds the site first
                 val key = when (provider.keyName) {
                     "groq" -> SecureStore.getGroq(ctx)
                     "openrouter" -> SecureStore.getSlot(ctx, "openrouter")

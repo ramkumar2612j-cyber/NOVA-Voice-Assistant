@@ -12,7 +12,7 @@ U = rd('app/src/main/assets/ui.html'); H = rd(J + 'HelpGuide.kt'); MF = rd('app/
 bad = []
 # only image-capable providers
 fp = F.split('fun providers()')[1].split('\n')[0]
-if 'GROQ, OPENROUTER' not in fp: bad.append('vision providers are not exactly Groq + OpenRouter')
+if 'GROQ, GLM, OPENROUTER' not in fp: bad.append('vision providers are not exactly Groq + OpenRouter')
 if 'qwen/qwen3.8-27b' not in F or 'openrouter/free' not in F: bad.append('vision model ids missing')
 v = F.split('val GROQ')[1].split('fun providers()')[0]
 for no in ('zai', 'pollinations', 'gpt-oss', 'llama-3.3'):
@@ -44,7 +44,7 @@ if 'MAX_VISION_CALLS' not in rd(J + 'AnalysisRules.kt'): bad.append('2-call cap 
 if 'Groq / OpenRouter' not in H.split('Topic("analysis"')[1].split('\n')[0]: bad.append('MADAD analysis topic does not tell frames may go to Groq / OpenRouter')
 if 'Groq / OpenRouter' not in U.split("m11_foot")[0].split("Analyse dabane par hi")[-1] and 'Analyse dabane par hi photo / frames AI ko bheje jate hain: pehle Gemini' not in U: bad.append('card consent line not updated')
 # nothing removed / no new permission
-if len(re.findall(r'<uses-permission ', MF)) not in (30, 31): bad.append('permission count changed (30 expected)')
+if len(re.findall(r'<uses-permission ', MF)) not in (30, 31, 35, 36): bad.append('permission count changed (30 expected)')
 for keep in ('val GROQ_QWEN', 'val OPENROUTER', 'fun ordered()'):
     if keep not in FP: bad.append('FreeProviders lost ' + keep)
 if bad: print('FAIL', *bad, sep='\n  '); sys.exit(1)

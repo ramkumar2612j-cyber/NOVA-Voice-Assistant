@@ -404,6 +404,12 @@ object Logic {
 
         if (core in setOf("stop", "cancel", "chup", "quiet", "ruko", "be quiet", "shut up") || StopRules.isStop(core)) return Cmd("stop")
 
+        // v7.154 JARVIS UPGRADE: deep voice / barge-in / audio focus / provider check / GLM-everywhere.
+        // Runs EARLY (before the volume/awaaz block) because "awaaz se rokna" would die in it. The grammar is
+        // narrow ("deep" + a voice word, "audio focus", "provider check", "glm sab jagah", "bolke rokna"), so no
+        // older route is stolen; negated orders never match, same rule as the Wi-Fi kit.
+        JarvisDeepRules.parse(text)?.let { return it }
+
         // ---- "unlock" is only a stub that says unlocking was removed (voice / pattern / face unlock no longer exist)
         if (core in setOf("unlock", "unlock phone", "phone unlock", "unlock karo", "phone unlock karo", "unlock the phone", "unlock screen")) return Cmd("unlock")
 
@@ -577,6 +583,10 @@ object Logic {
             "lock", "lock phone", "lock screen", "phone lock", "screen lock" -> return Cmd("global", "lock")
         }
         }
+
+        // v7.153 WIFI KIT: scan / best switch / open connect / QR / doctor / password store. parse() returns null for
+        // plain "wifi on/off karo" and "wifi settings kholo", so the older Android-settings routes below keep working.
+        WifiKitRules.parse(text)?.let { return it }
 
         // Android does not let an app flip Wi-Fi/Bluetooth; we open the settings page and say so.
         if (size <= 3 && has("wifi", "bluetooth") && has("on", "off", "chalu", "band", "bandh")) {

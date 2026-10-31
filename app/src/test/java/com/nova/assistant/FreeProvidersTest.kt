@@ -107,8 +107,9 @@ class FreeProvidersTest {
 
     @Test fun defaultProviderOrderAndShape() {
         val p = FreeProviders.ordered()
-        assertEquals(listOf("groq", "groqqwen", "zai", "zai2", "zai3", "openrouter", "pollinations"), p.map { it.id })
-        assertNull(p[6].keyName)
+        assertEquals(listOf("groq", "groqqwen", "zai", "zai2", "zai3", "openrouter", "openrouterglm", "pollinations"), p.map { it.id })
+        assertNull(p[7].keyName)
+        assertEquals("openrouter", p[6].keyName)   // v7.151: GLM 5.3 Flash rides on the OpenRouter key
         assertEquals("groq", p[0].keyName)
         assertEquals("groq", p[1].keyName)          // Qwen rides on the Groq key: nothing new to set up
         assertEquals("zai", p[2].keyName)           // free Chinese GLM: own key, no card
@@ -416,5 +417,58 @@ class FreeProvidersTest {
         assertEquals(listOf(AiRouter.Step.CLOUD), AiRouter.plan(false || true, false, false, q))
         assertEquals(listOf(AiRouter.Step.CLOUD, AiRouter.Step.LOCAL), AiRouter.plan(true, false, true, q))
         assertEquals(listOf(AiRouter.Step.LOCAL), AiRouter.plan(true, true, true, q))
+    }
+
+    // ---------- v7.151 GLM 5.3 Flash brain (reasoning provider) ----------
+
+    @Test fun glmBrainIsAskedFirstForLongJobsAndSkippedForShortOnes() {
+        val all = FreeProviders.ordered()
+        val brainFirst = FreeProviders.forJob(all, true)
+        assertEquals("openrouterglm", brainFirst[0].id)
+        assertEquals(all.size, brainFirst.size)                      // nothing removed, the rest stay as the fallback
+        assertEquals(all.filter { it.id != "openrouterglm" }.map { it.id }, brainFirst.drop(1).map { it.id })
+        val short = FreeProviders.forJob(all, false)
+        assertTrue(short.none { it.id == "openrouterglm" })          // a short voice command never waits for a thinking model
+    }
+
+    @Test fun glmChosenByHandStillAnswersShortQuestions() {
+        val only = listOf(FreeProviders.OPENROUTER_GLM)
+        assertEquals(1, FreeProviders.forJob(only, false).size)
+    }
+
+    @Test fun glmGetsABigTokenBudgetAndOthersKeepTheirs() {
+        val seen = ArrayList<String>()
+        val r = ProviderChain.run(
+            listOf(FreeProviders.OPENROUTER_GLM), { "k" }, { true }, "s", "u", Cooldowns(), { 0L }, brain = true
+        ) { p, _, body, _ -> seen.add(body); NetAnswer(200, """{"choices":[{"message":{"content":"Theek hai."}}]}""") }
+        assertEquals("openrouterglm", r.providerId)
+        assertTrue(seen[0].contains("\"max_tokens\":4000"))
+        val seen2 = ArrayList<String>()
+        ProviderChain.run(
+            listOf(FreeProviders.GROQ), { "k" }, { true }, "s", "u", Cooldowns(), { 0L }
+        ) { _, _, body, _ -> seen2.add(body); NetAnswer(200, """{"choices":[{"message":{"content":"ok"}}]}""") }
+        assertTrue(seen2[0].contains("\"max_tokens\":350"))
+    }
+
+    @Test fun brainJobFallsBackToTheNextProviderWhenGlmIsOutOfQuota() {
+        val order = ArrayList<String>()
+        val r = ProviderChain.run(
+            listOf(FreeProviders.GROQ, FreeProviders.OPENROUTER_GLM), { "k" }, { true }, "s", "u", Cooldowns(), { 0L }, brain = true
+        ) { p, _, _, _ ->
+            order.add(p.id)
+            if (p.id == "openrouterglm") NetAnswer(429, "{}") else NetAnswer(200, """{"choices":[{"message":{"content":"Groq ka jawab."}}]}""")
+        }
+        assertEquals(listOf("openrouterglm", "groq"), order)
+        assertEquals("Groq ka jawab.", r.text)
+    }
+
+    // v7.152: the GLM 5.3 model id must live in ONE place (FreeProviders.OPENROUTER_GLM). FreeVision.GLM derives
+    // its url and models from it, so an id change on OpenRouter is fixed in one file only.
+    @Test fun glmVisionUsesTheSameSingleSourceOfTruthAsTheBrain() {
+        assertEquals(FreeProviders.OPENROUTER_GLM.url, FreeVision.GLM.url)
+        assertEquals(FreeProviders.OPENROUTER_GLM.models, FreeVision.GLM.models)
+        assertEquals(FreeProviders.OPENROUTER_GLM.id, FreeVision.GLM.id)
+        assertEquals(FreeProviders.OPENROUTER_GLM.keyName, FreeVision.GLM.keyName)
+        assertTrue(FreeVision.providers().none { it.id == FreeVision.GLM.id && it.models.isEmpty() })
     }
 }

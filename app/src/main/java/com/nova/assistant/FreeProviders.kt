@@ -173,7 +173,11 @@ class FreeProvider(
     val models: List<String>,
     val keyName: String?,
     /** Extra top-level JSON members for the request body (without braces), e.g. "thinking":{"type":"disabled"}. "" = none. */
-    val extra: String = ""
+    val extra: String = "",
+    /** v7.151: a REASONING model (always thinks first, so it is slow). Used only for long / hard work (long chat, agent steps, website building, big tasks), never for short voice answers. */
+    val brainOnly: Boolean = false,
+    /** v7.151: lowest max_tokens this provider is ever asked for. A reasoning model spends tokens on hidden thinking, so 350 would leave no answer. 0 = no minimum. */
+    val minTokens: Int = 0
 )
 
 /** One HTTP answer. code 598 = network is down, 599 = timeout / IO error (same convention as Logic.nextStep). */
@@ -254,12 +258,35 @@ object FreeProviders {
         "openrouter", "OpenRouter (free models)", "https://openrouter.ai/api/v1/chat/completions",
         listOf("openrouter/free", "meta-llama/llama-3.3-70b-instruct:free"), "openrouter"
     )
+    /**
+     * v7.151 GLM 5.3 FLASH = the BRAIN for long / hard work (looked up 2026-10-31, not tested on a phone): Z.ai model released 2026-08-26, free on OpenRouter
+     * (`z-ai/glm-5.3-flash:free`, rate limited), 1M context, text + image + video input, tool calling, coding / agent tuned, reasoning always ON.
+     * Own provider id so its quota, cooldown and ApiUsage row are separate from the OpenRouter router. Same OpenRouter key (no new key).
+     * brainOnly: long typed chat, agent steps, website building and big tasks ask it FIRST; short voice commands never wait for it
+     * (unless the owner picks it by hand in the AI chooser). minTokens 4000: the hidden thinking must not eat the whole answer.
+     */
+    val OPENROUTER_GLM = FreeProvider(
+        "openrouterglm", "GLM 5.3 Flash (OpenRouter)", "https://openrouter.ai/api/v1/chat/completions",
+        listOf("z-ai/glm-5.3-flash:free"), "openrouter", "", true, 4000
+    )
     val POLLINATIONS = FreeProvider(
         "pollinations", "Pollinations (anonymous, may need a key)", "https://gen.pollinations.ai/v1/chat/completions",
         listOf("openai/gpt-5.4-nano", "openai"), null
     )
 
-    fun ordered(): List<FreeProvider> = listOf(GROQ, GROQ_QWEN, ZAI, ZAI2, ZAI3, OPENROUTER, POLLINATIONS)
+    fun ordered(): List<FreeProvider> = listOf(GROQ, GROQ_QWEN, ZAI, ZAI2, ZAI3, OPENROUTER, OPENROUTER_GLM, POLLINATIONS)
+
+    /**
+     * v7.151: which providers a job may use and in which order. A normal (short / voice) job drops the reasoning (brainOnly) providers, unless nothing else is left
+     * (the owner picked GLM 5.3 by hand, so it must still answer). A brain job (long chat, agent, website, big task) asks the brainOnly providers FIRST,
+     * the rest keep their order behind them as the fallback.
+     */
+    fun forJob(providers: List<FreeProvider>, brain: Boolean): List<FreeProvider> {
+        if (providers.none { it.brainOnly }) return providers
+        if (brain) return providers.filter { it.brainOnly } + providers.filter { !it.brainOnly }
+        val rest = providers.filter { !it.brainOnly }
+        return if (rest.isEmpty()) providers else rest
+    }
 
     const val MAX_USER_CHARS = 1000
     const val MAX_REPLY_CHARS = 700
@@ -474,13 +501,16 @@ object ProviderChain {
         accept: ((String) -> Boolean)? = null,   // v6.90: a text that fails this check counts as "no answer from this provider" (no cooldown), the next provider tries
         hedge: Boolean = false,   // v7.4 5-second rule: ask the top two providers at the same time (first valid answer wins)
         hedgeStaggerMs: Long = 0L,   // v7.126: > 0 = the 2nd provider starts only if the 1st has not answered after this many ms (faster long answers, no wasted quota when the 1st is quick)
+        brain: Boolean = false,   // v7.151: long / hard job (agent step, big task): the reasoning provider (GLM 5.3 Flash) goes first. rich = true counts as a brain job too
+        glmFirst: Boolean = false,   // v7.154: owner opt-in "GLM sab jagah" - the reasoning provider goes first for EVERY job (same reorder as brain)
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
-        if (hedge) return runHedged(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, rich, hedgeStaggerMs, call)
+        val jobProviders = FreeProviders.forJob(providers, rich || brain || glmFirst)
+        if (hedge) return runHedged(jobProviders, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, rich, hedgeStaggerMs, rich || brain || glmFirst, call)
         val start = now()
         val tried = ArrayList<String>()
         var worst = "nokey"
-        for (p in providers) {
+        for (p in jobProviders) {
             if (!enabled(p.id)) continue
             if (now() - start > budgetMs) {
                 worst = FreeProviders.worse(worst, "slow")
@@ -501,7 +531,7 @@ object ProviderChain {
                     cool = false
                     break
                 }
-                val r = call(p, m, FreeProviders.buildBody(m, system, user, maxTokens = if (rich) FreeProviders.RICH_MAX_TOKENS else 350, extra = p.extra, turns = turns, userCap = if (rich) FreeProviders.MAX_USER_CHARS_RICH else FreeProviders.MAX_USER_CHARS), key)
+                val r = call(p, m, FreeProviders.buildBody(m, system, user, maxTokens = maxOf(p.minTokens, if (rich) FreeProviders.RICH_MAX_TOKENS else 350), extra = p.extra, turns = turns, userCap = if (rich) FreeProviders.MAX_USER_CHARS_RICH else FreeProviders.MAX_USER_CHARS), key)
                 if (r.code in 200..299) {
                     val t = FreeProviders.parseReply(r.body, rich)
                     if (t != null && (accept == null || accept(t))) return ChainResult(t, p.id, m, "", tried)
@@ -539,13 +569,16 @@ object ProviderChain {
         accept: ((String) -> Boolean)? = null,
         rich: Boolean = false,
         staggerMs: Long = 0L,
+        brain: Boolean = false,   // v7.151: see run(); the same rule decides which providers join and their order
+        glmFirst: Boolean = false,   // v7.154: see run() - already-reordered lists simply stay in the same order
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
         val start = now()
-        val usable = providers.filter { p -> enabled(p.id) && !cd.cooling(p.id, now()) && (p.keyName == null || keyOf(p.keyName).trim().isNotEmpty()) }
-        if (usable.size < 2 || width < 2) return run(providers, keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, call = call)
+        val jobProviders = FreeProviders.forJob(providers, rich || brain || glmFirst)
+        val usable = jobProviders.filter { p -> enabled(p.id) && !cd.cooling(p.id, now()) && (p.keyName == null || keyOf(p.keyName).trim().isNotEmpty()) }
+        if (usable.size < 2 || width < 2) return run(jobProviders, keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, brain = brain, glmFirst = glmFirst, call = call)
         val first = usable.take(width)
-        val rest = providers.filter { it !in first }
+        val rest = jobProviders.filter { it !in first }
         val pool = java.util.concurrent.Executors.newFixedThreadPool(first.size)
         val ecs = java.util.concurrent.ExecutorCompletionService<ChainResult>(pool)
         try {
@@ -567,7 +600,7 @@ object ProviderChain {
                         }
                     }
                 }
-                ecs.submit(java.util.concurrent.Callable<ChainResult> { run(listOf(p), keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, call = call) })
+                ecs.submit(java.util.concurrent.Callable<ChainResult> { run(listOf(p), keyOf, enabled, system, user, cd, now, budgetMs, turns, rich = rich, accept = accept, hedge = false, brain = brain, call = call) })
             }
             repeat(first.size - consumed) {
                 val left = budgetMs - (now() - start)
@@ -581,7 +614,7 @@ object ProviderChain {
             if (network) return ChainResult(null, null, null, "network", tried)
             val left = budgetMs - (now() - start)
             if (rest.isNotEmpty() && left > UnderstandBudget.MIN_CALL_MS) {
-                val r = run(rest, keyOf, enabled, system, user, cd, now, left, turns, rich = rich, accept = accept, hedge = false, call = call)
+                val r = run(rest, keyOf, enabled, system, user, cd, now, left, turns, rich = rich, accept = accept, hedge = false, brain = brain, call = call)
                 return ChainResult(r.text, r.providerId, r.model, r.failKind, tried + r.tried)
             }
             return ChainResult(null, null, null, worst, tried)

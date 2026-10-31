@@ -30,7 +30,7 @@ object SourceMap {
         Entry("define", "Kisi shabd ka matlab", "Wiktionary browser", Cost.KEYLESS_WEB, true, "meaning of serendipity", "shabd ka matlab -> Wiktionary"),
         Entry("fact", "Kisi insaan / jagah / cheez ke baare me jankari", "Wikipedia browser, phir DuckDuckGo", Cost.KEYLESS_WEB, true, "taj mahal ke baare me batao", "jankari -> Wikipedia, phir DuckDuckGo"),
         Entry("chat", "Chhoti baat-cheet, simple sawal, hello, joke", "On-device AI (online ho tab bhi pehle ye)", Cost.ON_DEVICE_AI, false, "kaise ho", "chhoti baat -> phone ka offline AI"),
-        Entry("deep", "Lamba / mushkil jawab, code, likhna, translate, analysis, website, image", "Cloud AI (Gemini / Groq / OpenRouter / GLM ...)", Cost.CLOUD_AI, true, "ek email likho boss ko", "lamba ya mushkil -> cloud AI")
+        Entry("deep", "Lamba / mushkil jawab, code, likhna, translate, analysis, website, image", "Cloud AI (Gemini / Groq / OpenRouter / GLM 5.3 Flash brain ...)", Cost.CLOUD_AI, true, "ek email likho boss ko", "lamba ya mushkil -> cloud AI")
     )
 
     private val HEAVY = setOf(

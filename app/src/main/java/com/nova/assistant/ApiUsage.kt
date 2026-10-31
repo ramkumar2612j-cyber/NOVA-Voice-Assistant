@@ -77,6 +77,8 @@ object ApiUsage {
             "Teesri Z.ai key: doosri ke baad chalti hai. Sirf aaj ki ginti dikhti hai."),
         Row("openrouter", "OpenRouter (free)", "brain", 50, "UTC", "official",
             "Free models: 20 request/min. 50 request/din (agar 10 credit se kam kharide), 1,000/din (10+ credit). Agar credit kharide hain to limit yahan badal do."),
+        Row("openrouterglm", "GLM 5.3 Flash (brain)", "brain", 50, "UTC", "official",
+            "Same OpenRouter key aur wahi free limit (50 request/din, 1,000/din agar 10+ credit). Lamba chat, agent aur website ke kaam mein pehle yahi chalta hai. Sirf aaj ki ginti dikhti hai."),
         Row("pollinations", "Pollinations (text)", "brain", 0, "UTC", "none",
             "Bina key wali service, koi fixed limit publish nahi. Kabhi bhi rate-limit ho sakti hai."),
         Row("together", "Together AI (image)", "image", 0, "UTC", "none",

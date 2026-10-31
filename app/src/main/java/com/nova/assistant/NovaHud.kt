@@ -297,11 +297,15 @@ class NovaHud(private val ctx: Context) {
         row.orientation = android.widget.LinearLayout.HORIZONTAL
         row.gravity = Gravity.CENTER_VERTICAL
         row.setPadding((14 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
+        // v7.152: the chat box follows the popup theme (was always dark even with the light popup ON).
+        // Dark keeps the v7.121 Ultron glass; light uses the same HudTheme palette as the light card, with dark ink.
+        val lightBox = try { ExtCfg.lightPopup(ctx) } catch (e: Throwable) { false }
         val bg = android.graphics.drawable.GradientDrawable()
-        bg.setColor(0xF20A1236.toInt())
-        bg.colors = intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt())   // v7.121: same dark neon glass as the Ultron card
+        bg.setColor(if (lightBox) HudTheme.flat(true) else 0xF20A1236.toInt())
+        bg.colors = if (lightBox) HudTheme.fillColors(true, false)
+                    else intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt())   // v7.121: same dark neon glass as the Ultron card
         bg.cornerRadius = 18 * d
-        bg.setStroke((1.5f * d).toInt(), 0xFF27E1FF.toInt())
+        bg.setStroke((1.5f * d).toInt(), if (lightBox) 0xFF3D6FD6.toInt() else 0xFF27E1FF.toInt())
         row.background = bg
         val face = avatarBitmap(ctx, (36 * d).toInt())
         if (face != null) {
@@ -313,8 +317,8 @@ class NovaHud(private val ctx: Context) {
         }
         val et = android.widget.EditText(ctx)
         et.hint = "Type a message\u2026"
-        et.setHintTextColor(0xFF7F95BC.toInt())
-        et.setTextColor(0xFFEAF2FF.toInt())
+        et.setHintTextColor(if (lightBox) 0xFF51658A.toInt() else 0xFF7F95BC.toInt())   // light = HudTheme SOFT, dark = unchanged
+        et.setTextColor(if (lightBox) 0xFF0B1B3A.toInt() else 0xFFEAF2FF.toInt())       // light = HudTheme INK, dark = unchanged
         et.textSize = 15f
         et.background = null
         et.setSingleLine(true)
@@ -403,6 +407,9 @@ class NovaHud(private val ctx: Context) {
 
 private class HudView(ctx: Context) : View(ctx) {
     private val d = ctx.resources.displayMetrics.density
+    private val light = try { ExtCfg.lightPopup(ctx) } catch (e: Throwable) { false }   // v7.149: opt-in light theme
+    private var shimShader: LinearGradient? = null
+    private val shimM = Matrix()
     private val margin = 10f * d                      // room around the card for the glow
     private val cardW = (minOf(ctx.resources.displayMetrics.widthPixels - 24 * d, 332 * d)).toInt()
     private val cardH = (214f * d).toInt()
@@ -752,12 +759,24 @@ private class HudView(ctx: Context) : View(ctx) {
         val cut = 16f * d
         chamfer(left, top, right, pillBottom, cut)
         val fs = fillShader ?: LinearGradient(0f, top, 0f, pillBottom,
-            if (speaking) intArrayOf(0xF2300A16.toInt(), 0xF2180610.toInt(), 0xF2220812.toInt())
-            else intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt()),
+            HudTheme.fillColors(light, speaking),
             floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
         ).also { fillShader = it }
         fill.shader = fs
         c.drawPath(cpath, fill)
+        if (light) {   // v7.149: slow soft shimmer sweep across the light card (no allocation per frame: one shader moved by a matrix)
+            val p = HudTheme.shimmer(now)
+            val bw = (right - left) * 0.45f
+            val sh = shimShader ?: LinearGradient(0f, 0f, bw, 0f, intArrayOf(0x002F7BFF, 0xFF2F7BFF.toInt(), 0x002F7BFF), null, Shader.TileMode.CLAMP).also { shimShader = it }
+            shimM.reset(); shimM.postTranslate(left - bw + (right - left + bw) * p, 0f)
+            sh.setLocalMatrix(shimM)
+            sweep.shader = sh
+            sweep.alpha = (255 * HudTheme.shimmerAlpha(p)).toInt().coerceIn(0, 255)
+            val shSave = c.save()
+            c.clipPath(cpath)
+            c.drawRect(left, top, right, pillBottom, sweep)
+            c.restoreToCount(shSave)
+        }
 
         val gl = HudMath.glowLevel(now, state)
         border.shader = null
@@ -814,12 +833,12 @@ private class HudView(ctx: Context) : View(ctx) {
         val tx = ocx + r + 12f * d
         val textW = btnDots.left - 8f * d - tx
         sub.textSize = 10.5f * d
-        sub.color = sColor
+        sub.color = HudTheme.stateInk(light, sColor)
         sub.letterSpacing = 0.35f
         c.drawText("NOVA", tx, ocy - 14f * d, sub)
         sub.letterSpacing = 0f
         title.textSize = 17f * d
-        title.color = 0xFFFFFFFF.toInt()
+        title.color = HudTheme.ink(light, 0xFFFFFFFF.toInt())
         val head = when (state) {
             "listen" -> "I\u2019m listening\u2026"
             "think" -> "Thinking\u2026"
@@ -828,7 +847,7 @@ private class HudView(ctx: Context) : View(ctx) {
         }
         c.drawText(TextUtils.ellipsize(head, title, textW, TextUtils.TruncateAt.END).toString(), tx, ocy + 4f * d, title)
         sub.textSize = 12f * d
-        sub.color = 0xFFA9BCD9.toInt()
+        sub.color = HudTheme.ink(light, 0xFFA9BCD9.toInt())
         val line = heard.removePrefix("\uD83C\uDFA4").trim().ifBlank {
             when (state) { "listen" -> "Speak now"; "think" -> "Analyzing your request"; "idle" -> "Ready when you are"; else -> "I\u2019m talking now" }
         }
@@ -868,7 +887,7 @@ private class HudView(ctx: Context) : View(ctx) {
             halo.shader = RadialGradient(vcx, vcy, cr * 2.6f, intArrayOf((sColor and 0x00FFFFFF) or 0x33000000, (sColor and 0x00FFFFFF)), null, Shader.TileMode.CLAMP)
             c.drawCircle(vcx, vcy, cr * 2.6f, halo)
             title.textSize = 19f * d
-            title.color = 0xFFFFFFFF.toInt()
+            title.color = HudTheme.ink(light, 0xFFFFFFFF.toInt())
             val ilay = build("How can I help you today?", title, (right - left - 48f * d).toInt(), 2)
             val isv = c.save()
             c.translate(left + 24f * d, vcy - ilay.height / 2f)
@@ -959,6 +978,7 @@ private class HudView(ctx: Context) : View(ctx) {
         // reply text (a row only while there is something to read)
         if (replyOn()) {
             body.textSize = 12.5f * d
+            body.color = HudTheme.ink(light, 0xFFEAF2FF.toInt())
             val lay = build(reply, body, (right - left - 32f * d).toInt(), 2)
             c.save(); c.translate(left + 16f * d, top + 148f * d); lay.draw(c); c.restore()
         }
@@ -1043,7 +1063,7 @@ private class HudView(ctx: Context) : View(ctx) {
         if (menuOpen) {
             val card = RectF(left, pillBottom + 8f * d, right, pillBottom + 8f * d + menuH())
             fill.shader = null
-            fill.color = 0xF20A1236.toInt()
+            fill.color = HudTheme.flat(light)
             c.drawRoundRect(card, 18f * d, 18f * d, fill)
             border.strokeWidth = 1.2f * d
             border.alpha = 200
@@ -1183,7 +1203,7 @@ private class HudView(ctx: Context) : View(ctx) {
         c.scale(sc, sc, w / 2f, h / 2f)
         val box = RectF(left, top, right, bottom)
         fill.shader = null
-        fill.color = 0xF20A1236.toInt()
+        fill.color = HudTheme.flat(light)
         c.drawRoundRect(box, (bottom - top) / 2f, (bottom - top) / 2f, fill)
         controlStroke.alpha = (150f + 90f * pulse).toInt().coerceIn(0, 255)
         controlStroke.strokeWidth = 1.2f * d
@@ -1214,11 +1234,11 @@ private class HudView(ctx: Context) : View(ctx) {
         arc.color = violet
         c.drawArc(oval, -spin * 0.75f + 180f, 100f, false, arc)
         title.textSize = 12.5f * d
-        title.color = 0xFFF4FAFF.toInt()
+        title.color = HudTheme.ink(light, 0xFFF4FAFF.toInt())
         val tx = cx + r + 8f * d
         c.drawText("NOVA", tx, cy - 1f * d, title)
         sub.textSize = 8.5f * d
-        sub.color = 0xFFA9C4E8.toInt()
+        sub.color = HudTheme.ink(light, 0xFFA9C4E8.toInt())
         val stateLabel = when (state) { "listen" -> "LISTENING · TAP TO EXPAND"; "think" -> "THINKING · TAP TO EXPAND"; else -> "TAP TO EXPAND" }
         c.drawText(stateLabel, tx, cy + 12f * d, sub)
         drawControl(c, right - 17f * d, cy, true)

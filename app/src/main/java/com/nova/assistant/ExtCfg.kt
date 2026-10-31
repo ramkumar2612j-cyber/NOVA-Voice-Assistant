@@ -85,6 +85,32 @@ object ExtCfg {
         } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
     }
 
+    private const val LIGHT_POPUP = "light_popup"
+
+    /** v7.149: light popup theme. Default OFF (the dark Ultron card stays). Takes effect on the next popup. */
+    fun lightPopup(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(LIGHT_POPUP, false)
+    } catch (e: Exception) { false }
+
+    fun setLightPopup(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(LIGHT_POPUP, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    private const val WIFI_GUARD = "wifi_guard"
+
+    /** v7.153 WIFI KIT: optional auto-switch among the OWNER'S OWN saved networks when the Wi-Fi gets very weak or drops. Default OFF (opt-in). */
+    fun wifiGuard(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(WIFI_GUARD, false)
+    } catch (e: Exception) { false }
+
+    fun setWifiGuard(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(WIFI_GUARD, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
     private const val LOCK_GUARD = "lock_guard"
 
     /** v6.97-wip9 LOCK GUARD: while the phone is locked NOVA takes no commands, reads no normal messages, and only alerts for calls (phone silent) and Papa / Mummy. Default ON. */
@@ -293,6 +319,61 @@ object ExtCfg {
     fun setPersona(ctx: Context, on: Boolean) {
         try {
             ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(PERSONA, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    // ---------------------------------------------------- v7.154 JARVIS UPGRADE (all add-only, deep voice + barge-in default OFF)
+
+    private const val JARVIS_DEEP = "jarvis_deep_voice"
+
+    /** v7.154: offline neural deep voice (sherpa-onnx + Piper "alan"). Opt-in, default OFF. Any failure falls back to the old voice chain. */
+    fun jarvisDeep(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(JARVIS_DEEP, false)
+    } catch (e: Exception) { false }
+
+    fun setJarvisDeep(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(JARVIS_DEEP, on).apply()
+            if (!on) JarvisDeepVoice.release()   // turning it off frees the engine memory immediately
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    private const val BARGE_IN = "barge_in_stop"
+
+    /** v7.154: while NOVA speaks, the mic keeps listening ONLY for stop words (stop/chup/ruko/bas) so the owner can interrupt by voice. Opt-in, default OFF. */
+    fun bargeIn(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(BARGE_IN, false)
+    } catch (e: Exception) { false }
+
+    fun setBargeIn(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(BARGE_IN, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    private const val AFOCUS = "audio_focus_on"
+
+    /** v7.154: audio focus - music DUCKS while NOVA speaks and comes back after. Default ON (standard assistant behaviour); can be turned off. */
+    fun afocus(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(AFOCUS, true)
+    } catch (e: Exception) { true }
+
+    fun setAfocus(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(AFOCUS, on).apply()
+        } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
+    }
+
+    private const val GLM_ALL = "glm_everywhere"
+
+    /** v7.154: opt-in - GLM 5.3 Flash is tried FIRST for EVERY AI job (before: big jobs only). Default OFF (v7.151 order stays). */
+    fun glmAll(ctx: Context): Boolean = try {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(GLM_ALL, false)
+    } catch (e: Exception) { false }
+
+    fun setGlmAll(ctx: Context, on: Boolean) {
+        try {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(GLM_ALL, on).apply()
         } catch (e: Exception) { ErrLog.add("ExtCfg", e.toString()) }
     }
 }

@@ -101,7 +101,7 @@ object FeatureStatus {
         var zn = 0
         for (s in listOf("zai", "zai2", "zai3")) if (SecureStore.hasSlot(ctx, s)) zn++
         if (zn > 0) names.add(if (zn == 1) "GLM" else "GLM x$zn")
-        if (SecureStore.hasSlot(ctx, "openrouter")) names.add("OpenRouter")
+        if (SecureStore.hasSlot(ctx, "openrouter")) { names.add("OpenRouter"); names.add("GLM 5.3 (brain)") }
         val chainOn = ExtCfg.freeChain(ctx)
         when {
             names.isEmpty() -> row(a, "chain", "Backup AI (Groq / Qwen / GLM / OpenRouter)", "off", "Koi backup key nahi hai: Gemini band ho to bhi jawab dene wala koi nahi", "groq_key")
@@ -178,6 +178,54 @@ object FeatureStatus {
             if (rows != null) for (i in 0 until rows.length()) { val r = rows.optJSONObject(i); if (r != null && r.optInt("percent", -1) >= 90) near++ }
             row(a, "apilimits", "API limits (aaj ka use)", if (near == 0) "ok" else "warn",
                 if (near == 0) "Koi AI limit ke paas nahi (poori list LIMITS screen par)" else "$near AI limit ke paas hai: LIMITS screen dekho", "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+
+        // v7.152: the popup theme state (light popup = opt-in, default OFF). Read-only: nothing is switched here.
+        try {
+            val lp = ExtCfg.lightPopup(ctx)
+            row(a, "popuptheme", "Popup ka rang (light ya dark)", "ok",
+                if (lp) "LIGHT popup ON hai (halka safed-neela card + halka chat box). Wapas dark ke liye: Settings mein LIGHT POPUP untick karo ya bolo \"nova dark popup karo\""
+                else "DARK Ultron popup ON hai (default; chat box bhi dark). Halka popup chahiye to Settings mein LIGHT POPUP tick karo ya bolo \"nova light popup karo\"", "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+
+        // v7.153 WIFI KIT: legal Wi-Fi tools (scan / best switch / open connect / QR / doctor). Read-only state row.
+        try {
+            val wg = ExtCfg.wifiGuard(ctx)
+            row(a, "wifi", "WiFi Kit (scan, switch, QR, doctor)", "ok",
+                if (wg) "WiFi Kit chalu hai. WIFI GUARD ON hai: WiFi bahut kamzor ho ya kat jaye to NOVA aapke hi saved networks me se strong wale pe switch karti hai. Bolo: nova wifi scan karo / nova wifi qr banao / nova wifi theek karo"
+                else "WiFi Kit chalu hai. Bolo: nova wifi scan karo (paas ke networks), nova wifi theek karo (internet issue), nova wifi qr banao (apna WiFi share). WIFI GUARD Settings mein tick karke on hota hai (aapke apne saved networks pe switch)", "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+
+        // v7.154 JARVIS UPGRADE: deep voice / barge-in / audio focus / GLM-everywhere. Read-only state rows.
+        try {
+            val deep = ExtCfg.jarvisDeep(ctx)
+            val deepReady = JarvisDeepVoice.ready(ctx)
+            row(a, "jdeep", "JARVIS deep voice (offline neural awaaz)",
+                if (deep && deepReady) "ok" else if (deepReady) "ok" else "warn",
+                when {
+                    deep && deepReady -> "Deep voice ON + model ready: English / Hinglish jawab is bhaari offline awaaz me. Off karne ko bolo: nova deep voice off karo"
+                    deep && !deepReady -> "Deep voice ON hai PAR 20 MB model missing hai (abhi purani awaaz chal rahi hai). Bolo: nova deep voice download karo"
+                    deepReady -> "Deep voice OFF hai, model ready hai. On karne ko bolo: nova deep voice on karo"
+                    else -> "Deep voice OFF hai, model bhi download nahi hai. Bolo: nova deep voice download karo (20 MB, ek baar)"
+                }, "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+        try {
+            val barg = ExtCfg.bargeIn(ctx)
+            row(a, "barge", "Bol ke rokna (barge-in)", "ok",
+                if (barg) "Barge-in ON: main bolte waqt 'stop', 'chup', 'ruko', 'bas' bolo to turant chup. Off: nova bol ke rokna off karo"
+                else "Barge-in OFF: bolte waqt rokna ho to STOP button ya chat me 'stop'. On: nova bol ke rokna on karo", "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+        try {
+            val af = ExtCfg.afocus(ctx)
+            row(a, "afocus", "Audio focus (gaana duck)", "ok",
+                if (af) "Audio focus ON: main bolte waqt gaana dheema ho jata hai. Off karne ko bolo: nova audio focus off karo"
+                else "Audio focus OFF: gaana bolte waqt bhi poore volume pe chalta hai. On: nova audio focus on karo", "")
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
+        try {
+            val glm = ExtCfg.glmAll(ctx)
+            row(a, "glmall", "GLM 5.3 sab jagah", "ok",
+                if (glm) "GLM 5.3 Flash har chat / agent / smart reply me pehle try hota hai (jawab thode slow). Wapas: nova glm sab jagah off karo"
+                else "GLM 5.3 sirf bade kaam me pehle (default). Sab jagah pehle karne ko bolo: nova glm sab jagah on karo", "")
         } catch (e: Throwable) { ErrLog.addOnce("quiet:FeatureStatus", e.toString()) }
 
         // v7.57 (Part 13B-2d): photo / video ANALYSE. Reads only the real saved keys + the free-chain switch; nothing is started.

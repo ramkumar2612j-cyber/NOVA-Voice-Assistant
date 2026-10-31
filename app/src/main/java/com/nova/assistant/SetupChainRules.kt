@@ -11,7 +11,7 @@ package com.nova.assistant
  */
 object SetupChainRules {
     /** Raise this when a release adds a permission / special access, so every phone gets one more round. */
-    const val VERSION = 2   // v7.68 PART 16: 2 = ANSWER_PHONE_CALLS added to the permission round ("call uthao"); old phones get one more round
+    const val VERSION = 3   // v7.153 WIFI KIT: 3 = ACCESS_FINE_LOCATION added to the permission round (Wi-Fi scan needs it); old phones get one more round
     const val MAX_RUNS = 4
     const val MAX_OPENS = 3
 

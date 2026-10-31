@@ -54,7 +54,7 @@ for stg in ('INTAKE', 'FRAMES', 'VISION', 'DONE'):
     if 'AnalysisStage.' + stg not in P: bad.append('stage not emitted: ' + stg)
 # permissions unchanged
 perms = re.findall(r'uses-permission android:name="([^"]+)"', MF)
-if len(perms) not in (30, 31): bad.append('permission count is %d (was 30)' % len(perms))
+if len(perms) not in (30, 31, 35, 36): bad.append('permission count is %d (was 30)' % len(perms))
 # UI wiring (13B-1)
 import json
 for fn in ('analysisStart', 'analysisStatus', 'analysisCancel', 'analysisResultText'):

@@ -17,7 +17,8 @@ object MovieGuessPipeline {
 
     fun run(
         frames: List<ByteArray>, screenText: String, brain: AnalysisPipeline.Brain,
-        alive: () -> Boolean, stage: (String, Int) -> Unit, now: () -> Long = { System.currentTimeMillis() }
+        alive: () -> Boolean, stage: (String, Int) -> Unit, now: () -> Long = { System.currentTimeMillis() },
+        kind: ScreenIdRules.Kind? = null   // v7.145 STEP 5: GAME / VIDEO scan; null = the movie scan, unchanged
     ): Done {
         val en = brain.en()
         if (frames.isEmpty()) return Done("OTHER", null, null)
@@ -29,7 +30,7 @@ object MovieGuessPipeline {
         stage(ST_VISION, 25)
         val blocked = brain.blocked()
         if (blocked.isNotEmpty() && !brain.freeVisionReady()) return Done(if (blocked == "LIMIT") "LIMIT" else "NO_AI", null, null)
-        val sys = MovieGuessRules.systemPrompt(en)
+        val sys = if (kind == null) MovieGuessRules.systemPrompt(en) else ScreenIdRules.systemPrompt(kind, en)
         var useFree = blocked.isNotEmpty()
         var vision: MovieGuessRules.Vision? = null
         var failKind = ""
@@ -37,7 +38,7 @@ object MovieGuessPipeline {
         val b64 = ArrayList<String>()
         try {
             for (f in frames.take(AnalysisRules.VISION_FRAMES_PER_CALL)) b64.add(enc.encodeToString(f))
-            val ut0 = MovieGuessRules.userPrompt(text, b64.size, en)
+            val ut0 = if (kind == null) MovieGuessRules.userPrompt(text, b64.size, en) else ScreenIdRules.userPrompt(kind, text, b64.size, en)
             for (attempt in 0..1) {
                 val ut = if (attempt == 0) ut0 else ut0 + AnalysisPipelineRules.retryNote(en)
                 var res: Pair<Int, String> = Pair(0, "")
@@ -66,7 +67,7 @@ object MovieGuessPipeline {
 
         // ---- SEARCH (only short title queries leave the phone; no picture, no screen text)
         stage(ST_SEARCH, 55)
-        val queries = MovieGuessRules.searchQueries(v.candidates)
+        val queries = if (kind == null) MovieGuessRules.searchQueries(v.candidates) else ScreenIdRules.searchQueries(kind, v.candidates)
         var found: List<AnalysisRules.Result> = emptyList()
         var ran = false
         if (queries.isNotEmpty() && alive()) {

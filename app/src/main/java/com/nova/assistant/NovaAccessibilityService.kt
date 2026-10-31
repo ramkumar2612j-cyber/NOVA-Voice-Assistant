@@ -86,6 +86,16 @@ class NovaAccessibilityService : AccessibilityService() {
 
         fun foregroundPackage(): String? = instance?.rootInActiveWindow?.packageName?.toString()
 
+        /** v7.145 STEP 5: title of the top app window that is NOT NOVA (e.g. the video / game window name). Text only, "" when unknown. */
+        fun otherWindowTitle(): String = try {
+            val s = instance
+            if (s == null) "" else s.windows
+                .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION }
+                .sortedByDescending { it.layer }
+                .firstOrNull { it.root?.packageName?.toString() != s.packageName }
+                ?.title?.toString() ?: ""
+        } catch (e: Exception) { "" }
+
         /**
          * v7.64 PART 14B-2: movie scan. null = service not running; true = the app on screen is protected (bank, payment, settings, installer ...) or cannot be told;
          * false = fine to capture. NOVA's own window is skipped (the user speaks to NOVA while the reel is on top), the same way readScreen() does it.

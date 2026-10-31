@@ -20,10 +20,14 @@ object FeatureVoice {
         "batteryalert" to listOf("battery alert", "battery warning", "battery kam alert"),
         "offlinepack" to listOf("offline pack", "offline ai pack", "offline ai"),
         "apilimits" to listOf("api limit", "api limits", "limit kitni", "api use"),
-        "agentscore" to listOf("kaam ka hisaab", "agent ka hisaab", "task ka hisaab", "agent score", "kaam ka score", "agent history", "task history")   // v7.141
+        "agentscore" to listOf("kaam ka hisaab", "agent ka hisaab", "task ka hisaab", "agent score", "kaam ka score", "agent history", "task history"),   // v7.141
+        "mainstall" to listOf("atakna", "atakne", "atka", "hang ka", "hang hua", "hang status", "hang history", "app freeze"),   // v7.146
+        "blocked" to listOf("kya band hai", "kaun si permission", "kya rok raha", "kya rok rahi", "nova ko kya rok"),   // v7.147
+        "watchdiag" to listOf("watch ka haal", "watch ka status", "watch button", "watch signal", "watch se kaam", "watch mic ka"),   // v7.148
+        "popuptheme" to listOf("popup ka rang", "popup kaun sa rang", "popup ka look", "popup light", "popup dark", "popup halka", "popup kaun sa theme", "popup theme")   // v7.152: read-only state of the popup theme (the ORDER "light popup karo" is answered earlier by HudTheme.isQuestion)
     )
     private val STATUS_CUE = listOf("status", "kya hai", "on hai", "off hai", "chalu hai", "band hai", "chal raha", "chal rha", "check", "jaanch",
-        "batao", "bata do", "bataiye", "hisaab", "score", "history", "is it on", "is it off", "kitni bachi", "kitna use", "how much", "tell me")
+        "batao", "bata do", "bataiye", "hisaab", "score", "history", "is it on", "is it off", "kitni bachi", "kitna use", "how much", "tell me", "rok raha", "rok rahi", "baaki hai", "hai ya")   // v7.152 "hai ya": "popup light hai ya dark?" (needs a feature name too, so normal chat never matches)
     private val ORDER_WORDS = listOf("karo", "kar do", "kardo", "karna", "enable", "disable", "turn", "set ", "shuru", "start", "stop", "ruko", "delete", "hatao",
         "bhejo", "send", "call", "banao", "create", "add", "remove", "on kar", "off kar", "band kar", "chalu kar")
 
@@ -52,6 +56,12 @@ object FeatureVoice {
             "apilimits" -> if (s.on) t("Kuch AI limit ke paas hai: ${s.note}. LIMITS screen dekho.", "Some AI limits are close: ${s.note}. See the LIMITS screen.")
                            else t("Koi AI limit ke paas nahi hai. Poori list LIMITS screen par hai.", "No AI is near its limit. The full list is on the LIMITS screen.")
             "agentscore" -> s.note
+            "mainstall" -> s.note   // v7.146
+            "blocked" -> s.note   // v7.147
+            "watchdiag" -> s.note   // v7.148
+            "popuptheme" ->   // v7.152: honest state + the exact next tap
+                if (s.on) t("Popup abhi LIGHT hai (halka safed-neela card). Wapas dark Ultron look ke liye bolo: nova dark popup karo, ya Settings mein LIGHT POPUP untick karo.", "The popup is LIGHT right now. Say: nova dark popup karo, or untick LIGHT POPUP in Settings.")
+                else t("Popup abhi DARK Ultron look me hai (default). Halka light popup chahiye to bolo: nova light popup karo, ya Settings mein LIGHT POPUP tick karo.", "The popup is in the DARK Ultron look (default). Say: nova light popup karo, or tick LIGHT POPUP in Settings.")
             else -> ""
         }
     }
@@ -81,6 +91,19 @@ object FeatureVoice {
             "agentscore" -> {   // v7.141: counts the task ledger; read-only
                 val rows = AgentTaskLedger(ctx).history().map { AgentScore.Row(it.summary, it.state.name, it.steps) }
                 State(rows.isNotEmpty(), AgentScore.reply(rows, Cfg(ctx).lang == "en"))
+            }
+            "blocked" -> {   // v7.147: reads the real switches; read-only
+                val l = BlockedRules.items(BlockedSnapshot.read(ctx))
+                State(l.any { it.level != "check" }, BlockedRules.reply(l, Cfg(ctx).lang == "en"))
+            }
+            "watchdiag" -> {   // v7.148: reads the in-memory watch events; read-only
+                val l = WatchDiag.all()
+                State(l.isNotEmpty(), WatchDiag.reply(l, Cfg(ctx).lang == "en"))
+            }
+            "popuptheme" -> State(ExtCfg.lightPopup(ctx))   // v7.152: reads the saved theme switch; read-only, changes nothing
+            "mainstall" -> {   // v7.146: reads the saved freeze lines; read-only
+                val list = MainStallWatchdog.read(ctx)
+                State(list.isNotEmpty(), StallRules.reply(list, Cfg(ctx).lang == "en"))
             }
             else -> State(false)
         }

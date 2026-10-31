@@ -26,8 +26,18 @@ object FreeVision {
         listOf("openrouter/free"), "openrouter"
     )
 
-    /** Order: Groq first (fast, a model that is known to see images), then OpenRouter's free router. */
-    fun providers(): List<FreeProvider> = listOf(GROQ, OPENROUTER)
+    /**
+     * v7.151: GLM 5.3 Flash is natively multimodal (text, image, video input), free on OpenRouter. Same key, own provider id "openrouterglm".
+     * v7.152: the model id lives in ONE place only — FreeProviders.OPENROUTER_GLM. If OpenRouter ever changes the id,
+     * fixing it there is enough (the v7.151 next-account prompt asked for exactly this).
+     */
+    val GLM = FreeProvider(
+        "openrouterglm", "GLM 5.3 Flash vision (OpenRouter)", FreeProviders.OPENROUTER_GLM.url,
+        FreeProviders.OPENROUTER_GLM.models, "openrouter", "", true, 4000
+    )
+
+    /** Order: Groq first (fast, a model that is known to see images), then GLM 5.3 Flash (sees images, thinks first), then OpenRouter's free router. */
+    fun providers(): List<FreeProvider> = listOf(GROQ, GLM, OPENROUTER)
 
     /** Only Groq documents JSON mode for images. */
     fun jsonModeFor(p: FreeProvider): Boolean = p.keyName == "groq"
@@ -123,7 +133,7 @@ object FreeVision {
             for (m in p.models) {
                 if (stop()) return ChainResult(null, null, null, "other", tried)
                 if (now() - start > budgetMs) { kind = "slow"; cool = false; break }
-                val r = call(p, m, requestJson(m, system, userText, framesB64, jsonModeFor(p)), key)
+                val r = call(p, m, requestJson(m, system, userText, framesB64, jsonModeFor(p), maxOf(AnalysisPipelineRules.MAX_OUT_TOKENS, p.minTokens)), key)
                 if (r.code in 200..299) {
                     val t = replyText(r.body)
                     if (t != null) return ChainResult(t, p.id, m, "", tried)

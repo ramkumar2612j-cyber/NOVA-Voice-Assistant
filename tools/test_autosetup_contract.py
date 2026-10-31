@@ -14,7 +14,7 @@ def need(c, m):
 # provider order + Qwen
 m = re.search(r'fun ordered\(\): List<FreeProvider> = listOf\((.*?)\)', FP)
 order = [x.strip() for x in m.group(1).split(',')]
-need(order == ['GROQ', 'GROQ_QWEN', 'ZAI', 'ZAI2', 'ZAI3', 'OPENROUTER', 'POLLINATIONS'], 'order Groq -> Qwen -> GLM -> OpenRouter -> Pollinations, got %s' % order)
+need(order == ['GROQ', 'GROQ_QWEN', 'ZAI', 'ZAI2', 'ZAI3', 'OPENROUTER', 'OPENROUTER_GLM', 'POLLINATIONS'], 'order Groq -> Qwen -> GLM -> OpenRouter -> Pollinations, got %s' % order)
 q = re.search(r'val GROQ_QWEN = FreeProvider\((.*?)\n    \)', FP, re.S).group(1)
 need('"groq"' in q.split('QWEN_MODELS_GROQ')[1], 'Qwen uses the existing Groq key (no new key)')
 need('api.groq.com/openai/v1/chat/completions' in q, 'Qwen goes to the Groq endpoint')

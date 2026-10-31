@@ -84,5 +84,6 @@ class NovaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashNote.install(this)
+        MainStallWatchdog.start(this)   // v7.146 step 6: records main-thread freezes, never interrupts anything
     }
 }

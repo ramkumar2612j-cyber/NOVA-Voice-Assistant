@@ -40,7 +40,7 @@ object CloudTaskText {
                 else -> ""
             } },
             { id -> id != "pollinations" || ExtCfg.freeKeyless(ctx) },
-            system.take(1600), cleanUser.take(FreeProviders.MAX_USER_CHARS), cool, { System.currentTimeMillis() }, budgetMs = 90_000L
+            system.take(1600), cleanUser.take(FreeProviders.MAX_USER_CHARS), cool, { System.currentTimeMillis() }, budgetMs = 90_000L, brain = true   // v7.151
         ) { p, _, body, key -> FreeHttp.post(p, body, key) }
         return response.text?.take(maxChars)?.takeIf(String::isNotBlank)
     }

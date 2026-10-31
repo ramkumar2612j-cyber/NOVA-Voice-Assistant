@@ -15,7 +15,8 @@ class FreeVisionTest {
     private val groqOnly = { n: String -> if (n == "groq") "gk" else "" }
 
     @Test fun onlyImageCapableProvidersAreUsed() {
-        assertEquals(listOf("groqqwen", "openrouter"), FreeVision.providers().map { it.id })
+        assertEquals(listOf("groqqwen", "openrouterglm", "openrouter"), FreeVision.providers().map { it.id })
+        assertEquals(listOf("z-ai/glm-5.3-flash:free"), FreeVision.GLM.models)
         assertEquals(listOf("qwen/qwen3.8-27b"), FreeVision.GROQ.models)
         assertEquals(listOf("openrouter/free"), FreeVision.OPENROUTER.models)
         // text-only / foreign providers never get a picture

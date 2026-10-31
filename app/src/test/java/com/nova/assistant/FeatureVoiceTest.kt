@@ -32,4 +32,20 @@ class FeatureVoiceTest {
         assertTrue(FeatureVoice.reply("autoreply", FeatureVoice.State(false), false).contains("OFF"))
         assertTrue(FeatureVoice.reply("apilimits", FeatureVoice.State(true, "Gemini"), true).contains("Gemini"))
     }
+
+    // v7.152: the popup theme question ("popup light hai ya dark?") is a STATUS question, not an order.
+    @Test fun popupThemeQuestionIsAStatusQuestion() {
+        assertEquals("popuptheme", FeatureVoice.key("popup light hai ya dark"))
+        assertEquals("popuptheme", FeatureVoice.key("popup ka rang kya hai"))
+        assertEquals("popuptheme", FeatureVoice.key("popup kaun sa theme hai batao"))
+        assertNull(FeatureVoice.key("light popup karo"))          // order: HudTheme switches it, FeatureVoice never does
+        assertNull(FeatureVoice.key("popup ki permission on hai")) // a permission question is not the theme question
+    }
+
+    @Test fun popupThemeReplyNamesTheStateAndTheNextTap() {
+        val light = FeatureVoice.reply("popuptheme", FeatureVoice.State(true), false)
+        assertTrue(light.contains("LIGHT") && light.contains("nova dark popup karo"))
+        val dark = FeatureVoice.reply("popuptheme", FeatureVoice.State(false), false)
+        assertTrue(dark.contains("DARK") && dark.contains("nova light popup karo"))
+    }
 }
