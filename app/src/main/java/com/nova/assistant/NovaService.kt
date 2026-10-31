@@ -3920,26 +3920,26 @@ class NovaService : Service() {
     // ---------------------------------------------------------------- v7.154 JARVIS UPGRADE commands
 
     /** Deep voice / barge-in / audio focus / provider check / GLM-everywhere commands. Speaks the result itself. */
-    private fun jarvisUpgradeReply(c: Logic.Cmd) {
+    private fun jarvisUpgradeReply(c: Logic.Cmd): String {
         val en = cfg.lang == "en"
-        when (c.kind) {
+        return when (c.kind) {
             JarvisDeepRules.K_DEEP_ON -> {
                 if (JarvisDeepVoice.ready(this)) {
                     ExtCfg.setJarvisDeep(this, true)
-                    say(JarvisDeepRules.replyDeepOn(true, en))
+                    JarvisDeepRules.replyDeepOn(true, en)
                 } else {
-                    say(JarvisDeepRules.replyDeepOn(false, en))   // honest: download first, nothing silently enabled
+                    JarvisDeepRules.replyDeepOn(false, en)   // honest: download first, nothing silently enabled
                 }
             }
             JarvisDeepRules.K_DEEP_OFF -> {
                 ExtCfg.setJarvisDeep(this, false)
-                say(JarvisDeepRules.replyDeepOff(en))
+                JarvisDeepRules.replyDeepOff(en)
             }
             JarvisDeepRules.K_DEEP_DL -> {
                 if (JarvisDeepVoice.ready(this)) {
-                    say(JarvisDeepRules.replyDeepDl(en, already = true))
+                    JarvisDeepRules.replyDeepDl(en, already = true)
                 } else {
-                    say(JarvisDeepRules.replyDeepDl(en, already = false))
+                    val first = JarvisDeepRules.replyDeepDl(en, already = false)
                     val app = this
                     Thread {
                         val err = JarvisDeepVoice.install(app, { }, { false })
@@ -3951,23 +3951,25 @@ class NovaService : Service() {
                             }
                         }
                     }.apply { name = "nova-deep-dl"; isDaemon = true }.start()
+                    first
                 }
             }
-            JarvisDeepRules.K_DEEP_STATUS -> say(JarvisDeepRules.replyDeepStatus(en, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this)))
-            JarvisDeepRules.K_BARGE_ON -> { ExtCfg.setBargeIn(this, true); say(JarvisDeepRules.replyBarge(en, true)) }
-            JarvisDeepRules.K_BARGE_OFF -> { ExtCfg.setBargeIn(this, false); say(JarvisDeepRules.replyBarge(en, false)) }
-            JarvisDeepRules.K_FOCUS_ON -> { ExtCfg.setAfocus(this, true); say(JarvisDeepRules.replyFocus(en, true)) }
-            JarvisDeepRules.K_FOCUS_OFF -> { ExtCfg.setAfocus(this, false); say(JarvisDeepRules.replyFocus(en, false)) }
-            JarvisDeepRules.K_GLM_ON -> { ExtCfg.setGlmAll(this, true); say(JarvisDeepRules.replyGlm(en, true)) }
-            JarvisDeepRules.K_GLM_OFF -> { ExtCfg.setGlmAll(this, false); say(JarvisDeepRules.replyGlm(en, false)) }
+            JarvisDeepRules.K_DEEP_STATUS -> JarvisDeepRules.replyDeepStatus(en, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this))
+            JarvisDeepRules.K_BARGE_ON -> { ExtCfg.setBargeIn(this, true); JarvisDeepRules.replyBarge(en, true) }
+            JarvisDeepRules.K_BARGE_OFF -> { ExtCfg.setBargeIn(this, false); JarvisDeepRules.replyBarge(en, false) }
+            JarvisDeepRules.K_FOCUS_ON -> { ExtCfg.setAfocus(this, true); JarvisDeepRules.replyFocus(en, true) }
+            JarvisDeepRules.K_FOCUS_OFF -> { ExtCfg.setAfocus(this, false); JarvisDeepRules.replyFocus(en, false) }
+            JarvisDeepRules.K_GLM_ON -> { ExtCfg.setGlmAll(this, true); JarvisDeepRules.replyGlm(en, true) }
+            JarvisDeepRules.K_GLM_OFF -> { ExtCfg.setGlmAll(this, false); JarvisDeepRules.replyGlm(en, false) }
             JarvisDeepRules.K_PROVCHECK -> {
-                say(if (en) "Checking every configured AI provider..." else "Sab set kiye gaye AI providers check kar raha hoon...")
                 val app = this
                 Thread {
                     val res = AutoSetup.checkProviders(app)
                     h.post { say(JarvisDeepRules.replyProviders(en, res)) }
                 }.apply { name = "nova-provcheck"; isDaemon = true }.start()
+                if (en) "Checking every configured AI provider..." else "Sab set kiye gaye AI providers check kar raha hoon..."
             }
+            else -> ""
         }
     }
 

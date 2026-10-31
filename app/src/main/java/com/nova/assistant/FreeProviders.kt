@@ -506,7 +506,7 @@ object ProviderChain {
         call: (FreeProvider, String, String, String) -> NetAnswer
     ): ChainResult {
         val jobProviders = FreeProviders.forJob(providers, rich || brain || glmFirst)
-        if (hedge) return runHedged(jobProviders, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, rich, hedgeStaggerMs, rich || brain || glmFirst, call)
+        if (hedge) return runHedged(jobProviders, keyOf, enabled, system, user, cd, now, budgetMs, turns, UnderstandBudget.HEDGE_WIDTH, accept, rich, hedgeStaggerMs, rich || brain || glmFirst, glmFirst, call)
         val start = now()
         val tried = ArrayList<String>()
         var worst = "nokey"

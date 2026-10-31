@@ -134,7 +134,7 @@ object JarvisDeepVoice {
         var t: AudioTrack? = null
         var playedAny = false
         try {
-            val sampleRate = eng.sampleRate
+            val sampleRate = eng.sampleRate()
             if (sampleRate < 8000) return FAILED
             val attr = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -153,7 +153,7 @@ object JarvisDeepVoice {
             t.play()
             var res = DONE
             var written = 0
-            eng.generateWithCallback(text = clean, sid = 0, speed = speed) { samples, _ ->
+            eng.generateWithCallback(text = clean, sid = 0, speed = speed) { samples ->
                 if (stopFlag) return@generateWithCallback 0
                 if (!playedAny) { playedAny = true; onPlayStart() }
                 var pos = 0

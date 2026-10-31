@@ -201,7 +201,8 @@ object WifiKit {
     } catch (e: Throwable) { ErrLog.add("WifiKit", e.toString()); null }
 
     /** Reads a Wi-Fi QR from one image Uri (the owner's own QR photo). null = no Wi-Fi QR found. */
-    fun readQr(ctx: Context, uri: Uri): WifiKitRules.QrWifi? = try {
+    fun readQr(ctx: Context, uri: Uri): WifiKitRules.QrWifi? {
+    return try {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -222,6 +223,7 @@ object WifiKit {
         }
         txt?.let { WifiKitRules.parseQr(it) }
     } catch (e: Throwable) { ErrLog.addOnce("quiet:WifiKit", e.toString()); null }
+    }
 
     /**
      * Called when photo(s) arrive (Share -> NOVA or MEDIA picker): if one of them is a Wi-Fi QR, the password of
