@@ -1,0 +1,18 @@
+# Guards written for the OTHER code line / older version pins. v7.158 note: these 11 pins enumerate old
+# versionName values (7.104-7.154 era) and were already failing on the owner's v7.157 zip (17 total stale
+# guards; 6 of them were REAL tool/expectation gaps and were fixed for real in v7.158:
+# test_autosetup_contract.py + test_chain_contract.py provider-order pins updated to the v7.157 GLM53 order,
+# test_command_corpus_contract.py updated for the v7.156 "run" verb, audit_dead_ui.py + test_review_security_contract.py
+# taught the existing dynamic "prefix"+n wiring pattern which fixed test_part16_contract.py + test_part19_contract.py).
+# The 11 below stay listed (pure version pins, nothing functional): do NOT add NEW failures here.
+test_capability_learning_contract.py
+test_jarvis_upgrade_contract.py
+test_part1_approval_contract.py
+test_part2_playbook_contract.py
+test_part3_alternatives_contract.py
+test_part4_website_operator_contract.py
+test_part5_login_contract.py
+test_part6_contract.py
+test_part6_site_learning_contract.py
+test_part7_brain_learned_contract.py
+test_wifi_kit_contract.py

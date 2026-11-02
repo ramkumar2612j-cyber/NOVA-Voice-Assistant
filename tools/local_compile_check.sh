@@ -1,0 +1,37 @@
+#!/bin/bash
+# Real Kotlin compile + unit-test run WITHOUT Gradle (sandbox check). NOT a replacement for GitHub Actions CI.
+# Needs: java 17+, internet to github.com. Downloads kotlinc 1.9.24 and an android-34 android.jar, then compiles
+# app/src/main + app/src/test against small stubs for vosk / androidx / junit (tools/local_stubs).
+set -e
+W=${1:-/tmp/nova_check}; mkdir -p $W; cd $W
+[ -d kotlinc ] || { curl -sL -o k.zip https://github.com/JetBrains/kotlin/releases/download/v1.9.24/kotlin-compiler-1.9.24.zip && unzip -q k.zip; }
+[ -f android.jar ] || curl -sL -o android.jar https://raw.githubusercontent.com/Reginer/aosp-android-jar/main/android-34/android.jar   # if raw.githubusercontent.com is blocked: git clone --depth 1 --filter=blob:none --sparse https://github.com/Reginer/aosp-android-jar.git and copy android-34/android.jar here
+R=$(cd "$(dirname "$0")/.." && pwd); S=$R/tools/local_stubs
+# v7.71 PART 19: the 29 "org.json stub" JUnit failures were a harness gap (android.jar only has throwing stubs). If JSON_JAR is not given, build the REAL org.json from GitHub source (Maven Central is often blocked in the sandbox; github.com works).
+if [ -z "$JSON_JAR" ]; then
+  if [ ! -f $W/json.jar ] && command -v git >/dev/null && command -v javac >/dev/null; then
+    ( rm -rf $W/jj $W/jjout; git clone -q --depth 1 --branch 20240303 https://github.com/stleary/JSON-java $W/jj && mkdir -p $W/jjout && javac -nowarn -d $W/jjout $(find $W/jj/src/main/java -name '*.java') 2>/dev/null && (cd $W/jjout && jar cf ../json.jar org) ) || echo "real org.json not built: old stub failures may show"
+  fi
+  [ -f $W/json.jar ] && JSON_JAR=$W/json.jar
+fi
+export JAVA_OPTS="-Xmx2500m -Xss16m"; K=$W/kotlinc/lib/kotlin-stdlib.jar
+rm -rf stubsrc mainsrc; mkdir -p stubsrc && cp -r $S/org stubsrc/ 2>/dev/null || true; cp $S/*.kt $S/extra/*.kt stubsrc/
+# LlamaBrain.kt needs jars that are not available offline -> harness uses extra/LlamaBrainStub.kt instead
+cp -r $R/app/src/main/java mainsrc; rm -f mainsrc/com/nova/assistant/LlamaBrain.kt
+# v7.158: TarBzTest builds a REAL .tar.bz2 with commons-compress output classes (sandbox has no Maven).
+# It still runs in the GitHub CI Gradle build (real org.apache.commons:commons-compress there); the sandbox
+# compile check only skips it, like LlamaBrain above. Everything else stays in the local run.
+TESTSRC=$(mktemp -d); cp -r $R/app/src/test/java/. $TESTSRC/; rm -f $TESTSRC/com/nova/assistant/TarBzTest.kt
+$W/kotlinc/bin/kotlinc -jvm-target 17 -no-stdlib -cp $W/android.jar:$K -d out_main mainsrc stubsrc
+# JSON_JAR=/path/org.json.jar puts the real org.json before android.jar (android.jar only has throwing stubs; Gradle uses testImplementation org.json:json).
+# Prefer the REAL JUnit 4.13.2 (bundled in /opt/gradle*/lib or JUNIT_JAR/HAMCREST_JAR); fall back to the small stub.
+JU=${JUNIT_JAR:-$(ls /opt/gradle*/lib/junit-4.13.2.jar 2>/dev/null | head -1)}; HC=${HAMCREST_JAR:-$(ls /opt/gradle*/lib/hamcrest-core-1.3.jar 2>/dev/null | head -1)}
+if [ -n "$JU" ] && [ -n "$HC" ]; then
+  $W/kotlinc/bin/kotlinc -jvm-target 17 -no-stdlib -Xfriend-paths=$W/out_main -cp $W/android.jar:$K:out_main:$JU -d out_test $TESTSRC
+  CLASSES=$(cd out_test && find . -name '*Test.class' | sed 's#^\./##; s#\.class$##; s#/#.#g' | sort | tr '\n' ' ')
+  cd $R/app && java -cp $W/out_test:$W/out_main:${JSON_JAR:+$JSON_JAR:}$W/android.jar:$K:$JU:$HC org.junit.runner.JUnitCore $CLASSES
+else
+  $W/kotlinc/bin/kotlinc -jvm-target 17 -no-stdlib -Xfriend-paths=$W/out_main -cp $W/android.jar:$K:out_main -d out_test $TESTSRC $S/junit
+  mkdir -p out_junit && java -m jdk.compiler/com.sun.tools.javac.Main -d out_junit $S/junit/org/junit/*.java $S/Run.java
+  cd $R/app && java -cp $W/out_junit:$W/out_test:$W/out_main:$W/android.jar:$K Run $W/out_test
+fi

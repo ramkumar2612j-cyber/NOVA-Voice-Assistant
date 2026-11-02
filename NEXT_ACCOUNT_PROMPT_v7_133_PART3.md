@@ -1,0 +1,11 @@
+Project: NOVA Voice Assistant (com.nova.assistant, Kotlin + WebView assets/ui.html). Source zip: NOVA-v7_133-PART2.zip. Read PART_STATUS_v7_133_PART2.md (section FINAL) first, then PART_STATUS_v7_132_AUDIT_PART1.md.
+Owner rules: short Hinglish, simple words, numbered steps. Android phone only, no PC commands. Additive only, never remove a feature. Never say "working" without proof: PASS / FAIL / NOT TESTED. Start with one line, keep a task list with % done, finish with: what changed, files, one next step. Do not make the owner re-explain.
+Owner request (3 parts): wire everything to UI, test every testable feature, find bugs. Part 1 and Part 2 are DONE (Part 2: compiled, 1644 JUnit OK, versionName 7.133). Owner decided: no emergency-number work, no one-time scheduled message.
+The sandbox CAN compile (recipe in PART_STATUS_v7_133_PART2.md): bash tools/local_compile_check.sh <ABSOLUTE dir>.
+PART 3 to do:
+1) Re-run compile + JUnit + tools/run_all_checks.sh (it is slow, run it in the background and poll). Baseline: JUnit 1644 OK.
+2) [UPDATE: items below were WRITTEN in PART_STATUS_v7_133_PART2_FINAL.md but NOT compiled - compile + fix first, do not rebuild them] Build what is still open (list under FINAL in PART_STATUS_v7_133_PART2.md): calendar-read voice question ("meeting kab hai", "aaj kya schedule hai"), trade words (stop loss, usd inr, "trade close" must not be a PLACE request), "reel pause / reel dekhna band karo", verb-first call "phone karo papa ko", VoiSpark STOP race (take generation on the calling thread) and findAudio preferring "audio" keys. Add JUnit for each.
+3) Update CHANGELOG, docs, OWNER_PHONE_TEST_LIST (add: WhatsApp natural order "Anand ko WhatsApp bhejo ki ...", "phir se" not splitting, play store pe download, reel kholo = app / chrome me reel kholo = Chrome, VoiSpark check).
+4) Deliver the final GitHub-ready ZIP NOVA-v7_134-PART3.zip and a short Hinglish phone test list. Report PASS / FAIL / NOT TESTED honestly.
+
+FIRST STEP for Part 3: compile + JUnit (expect 1644 + 5 new). If it fails, fix only the new code (ReelStopRules, CalendarQueryRules, TradeRules, Logic call regex, VoiSpark edits, NovaService wiring). Phone test list: OWNER_PHONE_TEST_LIST_v7_133.md.

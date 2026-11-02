@@ -1,0 +1,4 @@
+Project: NOVA Voice Assistant (com.nova.assistant, Kotlin + WebView assets/ui.html). Source zip: NOVA-v7_136.zip. Read PART_STATUS_v7_134_PART3.md first.
+Owner rules: short Hinglish, simple words, numbered steps. Android phone only, no PC commands. Additive only, never remove a feature. Never say "working" without proof: PASS / FAIL / NOT TESTED. Start with one line, keep a task list, finish with: what changed, files, one next step.
+State: audit Parts 1-3 are DONE. Compile PASS, JUnit 1650 OK, 163 Python guards PASS (sandbox). Phone: NOT TESTED. Next: owner runs OWNER_PHONE_TEST_LIST_v7_134.md and sends PASS/FAIL per number; fix only the FAIL lines. Optional later: items under "Still open" in PART_STATUS_v7_134_PART3.md.
+Sandbox compile recipe: PART_STATUS_v7_133_PART2.md (bash tools/local_compile_check.sh <ABSOLUTE dir>).

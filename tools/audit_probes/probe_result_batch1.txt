@@ -1,0 +1,138 @@
+web | youtube chrome pe kholo |  | web_open
+web | youtube google aur flipkart kholo |  | web_open
+web | flipkart kholo |  | local:open_app:flipkart
+web | amazon.in kholo |  | web_open
+web | google.com open karo |  | web_open
+web | chrome mein instagram kholo |  | web_open
+web | chrome me gmail aur youtube kholo |  | web_open
+web | open github in chrome |  | web_open
+web | naukri.com kholo |  | web_open
+web | irctc kholo |  | local:open_app:irctc
+web | irctc website kholo |  | web_open
+web | chatgpt kholo |  | local:open_app:chatgpt
+web | open amazon and flipkart in chrome |  | web_open
+web | youtube kholo |  | local:open_app:youtube
+web | whatsapp kholo |  | local:open_app:whatsapp
+web | wikipedia kholo |  | local:open_app:wikipedia
+web | news.google.com kholo |  | web_open
+web | youtube aur google kholo |  | web_open
+web | chrome me flipkart khol do |  | web_open
+web | browser me amazon kholo |  | web_open
+web | open youtube in chrome |  | web_open
+web | youtube ko chrome me kholo |  | web_open
+web | meesho kholo chrome par |  | web_open
+web | gmail.com kholo |  | web_open
+web | facebook aur instagram aur youtube kholo chrome mein |  | web_open
+dl | whatsapp download karo |  | app_download
+dl | instagram download kar do |  | app_download
+dl | phonepe install karo |  | app_download
+dl | telegram download karo play store se |  | app_download
+dl | download karo spotify |  | app_download
+dl | mx player download karo |  | app_download
+dl | paytm install kar do |  | app_download
+dl | truecaller download karo |  | app_download
+dl | zomato app download karo |  | app_download
+dl | snapchat install karo |  | app_download
+dl | app install karo whatsapp |  | app_download
+dl | play store se facebook download karo |  | app_download
+dl | arattai download karo |  | app_download
+dl | install youtube music |  | AI
+dl | download whatsapp business |  | app_download
+dl | pubg download karo |  | app_download
+dl | whatsapp download karna hai |  | app_download
+dl | mujhe instagram download karna hai |  | app_download
+dl | swiggy install kardo |  | app_download
+dl | download kar do google pay |  | app_download
+dl | whatsapp ko download karo |  | app_download
+dl | install karo kuku fm |  | app_download
+call | papa ko call karo |  | local:call:papa
+call | mummy ko phone lagao |  | local:call:mummy
+call | anand ko call karo |  | local:call:anand
+call | call anand |  | local:call:anand
+call | rahul ko call lagao |  | local:call:rahul
+call | mummy ko call kar do |  | local:call:mummy
+call | 100 par call karo |  | local:call:100 par
+call | 9876543210 ko call karo |  | local:call:9876543210
+call | call 9876543210 |  | local:call:9876543210
+call | bhai ko phone karo |  | local:call:bhai
+call | didi ko phone lagao |  | local:call:didi
+call | whatsapp pe anand ko call karo |  | whatsapp_call_unsupported
+call | anand ko dial karo |  | local:call:anand
+call | phone karo papa ko |  | AI
+call | papa ko phone laga do |  | local:call:papa
+call | call mummy |  | local:call:mummy
+call | emergency number lagao |  | local_skill
+call | usko call karo |  | clarify_who
+call | wo jo kal wale the unko call karo |  | clarify_who
+wa | Anand ko WhatsApp bhejo ki main late aaunga |  | AI
+wa | whatsapp pe rahul ko message bhejo hello |  | whatsapp_send(app:whatsapp)
+wa | mummy ko whatsapp karo ki khana ban gaya |  | AI
+wa | papa ko whatsapp pe bolo main aa raha hu |  | AI
+wa | anand ko msg karo kal milte hain |  | AI
+wa | whatsapp business pe anand ko message bhejo namaste |  | whatsapp_send(app:whatsapp_business)
+wa | send whatsapp to rahul saying hi |  | AI
+wa | rahul ko hi bhejo whatsapp par |  | AI
+wa | anand ko bolo ki call kare |  | AI
+wa | whatsapp kholo rahul ka chat |  | agent
+wa | anand ko whatsapp pe good morning bhejo |  | AI
+wa | anand ko WhatsApp bhejo |  | AI
+wa | message bhejo anand ko ki meeting 5 baje hai |  | AI
+wa | whatsapp par anand ko likho ki main aa gaya |  | whatsapp_send(app:whatsapp)
+wa | anand ko sms karo main late hu |  | AI
+wa | anand ko text karo hello |  | AI
+wa | papa ko message karo ki paise bhej do |  | AI
+wa | mummy ko whatsapp pe voice message bhejo |  | agent
+sch | kal subah 9 baje meeting set karo |  | local:calendar_add:Meeting|1793331000000|1|
+sch | aaj shaam 5 baje team meeting rakho |  | local:calendar_add:Team Meeting|17932734000
+sch | kal 3 baje doctor ki appointment calendar me daalo |  | local:calendar_add:Doctor Appointment|17933
+sch | roz subah 7 baje pani peene ka reminder lagao |  | local:schedule_create:Nw.MA.MQ.UkVNSU5ERVI.cGF
+sch | har somvar 10 baje report bhejna yaad dilao |  | local:schedule_create:MTA.MA.MQ.UkVNSU5ERVI.cm
+sch | 10 minute baad yaad dilana chai banani hai |  | local:timer:chai banani hai
+sch | parso 11 baje client call schedule karo |  | local:schedule_create:MTE.MA.MA.UkVNSU5ERVI.cG
+sch | alarm laga do subah 6 baje |  | local:alarm
+sch | timer 5 minute ka lagao |  | local:timer
+sch | meeting kab hai |  | AI
+sch | aaj ki meeting dikhao |  | AI
+sch | mere kal ke schedule me kya hai |  | AI
+sch | remind me at 6 pm to call mom |  | AI
+sch | set a meeting tomorrow at 4 pm with rahul |  | local:calendar_add:Meeting|1793356200000|1|
+sch | shaam ko 7 baje gym jana yaad dilao |  | local:schedule_create:MTk.MA.MA.UkVNSU5ERVI.Z3
+sch | roz raat 10 baje whatsapp anand ko good night bhejo |  | local:schedule_create:MjI.MA.MQ.U0VORF9NRVNTQU
+sch | kal subah 8 baje anand ko call karna yaad dilao |  | local:schedule_create:OA.MA.MA.UkVNSU5ERVI.a2F
+sch | schedule karo kal 10 baje papa ko message |  | local:schedule_create:MTA.MA.MA.UkVNSU5ERVI.a2
+sch | calendar me meeting add karo kal 11 baje |  | local:calendar_add:Meeting|1793338200000|1|
+sch | 5 baje alarm |  | local:alarm_any
+tr | gold ka analysis karo |  | trade_analysis
+tr | eurusd buy lena chahiye |  | trade_analysis
+tr | nova bitcoin kaisa lag raha hai |  | trade_analysis
+tr | xauusd ka signal do |  | trade_analysis
+tr | mt5 kholo |  | local:open_app:mt5
+tr | trade karo gold par |  | trade_analysis
+tr | demo account pe eurusd buy karo |  | trade_analysis
+tr | aaj market kaisa hai |  | AI
+tr | nifty ka view batao |  | trade_analysis
+tr | stop loss kitna rakhu gold me |  | AI
+tr | mt5 pe practice trade lagao |  | trade_analysis
+tr | gold sell karun ya buy |  | trade_analysis
+tr | usd inr ka analysis |  | AI
+tr | metatrader kholo |  | local:open_app:metatrader
+tr | gold buy karo |  | trade_analysis
+tr | silver ka analysis batao |  | trade_analysis
+tr | btc usd trade analysis |  | trade_analysis
+tr | gold ab buy karna sahi hai kya |  | trade_analysis
+reel | agli reel |  | reel_plan
+reel | reel scroll karo |  | reel_plan
+reel | is reel ko like karo |  | reel_plan
+reel | rahul_sharma ki 5 reels pe like aur comment karo |  | reel_plan
+reel | reels dekho 10 minute |  | screen_video
+reel | jaise hi rahul_sharma post kare mujhe batao |  | AI
+reel | reel pe comment karo nice |  | reel_plan
+reel | reel save karo |  | reel_plan
+reel | is reel ko share karo anand ko |  | reel_plan
+reel | pichli reel pe jao |  | reel_plan
+reel | reels scroll karna band karo |  | reel_plan
+reel | instagram reels kholo |  | web_open
+reel | 10 reels like karo |  | reel_plan
+reel | next reel |  | reel_plan
+reel | reel ko like kar do |  | reel_plan
+reel | reels chalao |  | AI

@@ -1,0 +1,4 @@
+NOVA v7.71 zip (repo skfashion142/NOVA-Voice-Assistant). Part 1-19 done. Padho PART19_STATUS_v7_71.md + NOVA_20_PARTS_PLAN.md. Ab PART 20 = FINAL: final docs (README, OWNER_SETUP_AND_APK_STEPS.md), handover prompt, final zip, owner phone-test list (Parts 16-18 + checkpoints), CHECKPOINT 4. Add-only, Hinglish, honest PASS / FAIL / NOT RUN, har 5% par % batao, 95% par ruko mat.
+Compile: bash /ABS/PATH/tools/local_compile_check.sh /tmp/nova_check (background; real org.json ab khud banta hai; android.jar curl se na aaye to Reginer/aosp-android-jar ko sparse git clone karo, android-34/android.jar). bash tools/run_all_checks.sh (background ~7 min). Naye version par 4 version-pinned guards me versionName add karo.
+Owner faisla pending (bina poochhe mat badlo): voice command busy NOVA par queue nahi hota; wb_ll locked phone par wake word.
+Link: https://github.com/skfashion142/NOVA-Voice-Assistant/actions

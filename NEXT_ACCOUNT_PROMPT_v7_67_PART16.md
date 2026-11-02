@@ -1,0 +1,3 @@
+NOVA v7.67 zip (repo skfashion142/NOVA-Voice-Assistant). Part 1-15 done in code (CHECKPOINT 3). Kotlin main compile 0 errors, 18 new JUnit pass. Padho PART14B1_STATUS_v7_63.md + NOVA_20_PARTS_PLAN.md (PART 16 MISSING WIRES: autopsy gaps, SocialReplyRules, nc_on ...).
+Compile: bash /ABS/PATH/tools/local_compile_check.sh /tmp/nova_check (ABSOLUTE path; background me chalao, 5 min lagta hai; purane test files stub junit se fail = harness; apni test files alag compile karo).
+Rules: add-only, Hinglish, honest PASS / FAIL / NOT RUN, har 5% par % batao, 95% par ruko mat, hissa poora hone par zip + preview + direct link https://github.com/skfashion142/NOVA-Voice-Assistant/actions

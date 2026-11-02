@@ -1,0 +1,3 @@
+Project: NOVA Voice Assistant (com.nova.assistant). Source: NOVA-v7_120-ULTRON.zip.
+v7.120 added an optional Ultron voice (UltronFx.kt, UltronPlayer.kt, NovaService.startUltron, Settings ULTRON switch + strength slider). It was written WITHOUT a Gradle build or phone test.
+Next: 1) run the real build and the unit tests (UltronFxTest etc.), fix any compile error; 2) tune UltronFx constants (PITCH, ring 55 Hz, echo 75 ms, mix levels) from the owner's feedback; 3) keep OFF-by-default and the fallback to the normal voice; 4) do not remove or replace any existing feature; 5) report build/test status in simple Hindi, deliver full ZIP + next prompt.

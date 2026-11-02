@@ -1,0 +1,42 @@
+name: Chat perf fix (one time)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add chat speed style block to ui.html (add-only)
+        run: |
+          python3 - <<'PY'
+          p = 'app/src/main/assets/ui.html'
+          s = open(p, encoding='utf-8').read()
+          if 'id="v77_chat_perf"' in s:
+              print('already added, nothing to do')
+          else:
+              css = ('<style id="v77_chat_perf">\n'
+                     '/* v7.77 chat speed (add-only): no blur on every chat bubble, GPU layer hints off. Delete this one block to undo. */\n'
+                     '#clog .msg,html:not(.lowfx) #clog .msg{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;will-change:auto!important}\n'
+                     '</style>\n')
+              assert s.count('</body>') == 1
+              s = s.replace('</body>', css + '</body>')
+              open(p, 'w', encoding='utf-8').write(s)
+              print('block added')
+          PY
+      - name: Commit and start the build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then echo "no change"; exit 0; fi
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/ui.html
+          git commit -m "v7.77 chat speed: no blur per bubble (add-only)"
+          git push
+          gh workflow run "NOVA Android CI" --ref "${GITHUB_REF_NAME}"

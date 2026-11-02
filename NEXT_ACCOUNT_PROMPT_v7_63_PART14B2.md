@@ -1,0 +1,4 @@
+NOVA v7.63 zip (Kotlin Android, repo skfashion142/NOVA-Voice-Assistant). Part 13 + 14 done in code. PART 14B-1 (sentence "ye kon si movie hai" -> MovieScanRules, NovaService route) code + contract PASS (run_all_checks 127 PASS / 0 FAIL); Kotlin compile + JUnit NOT RUN (pichle sandbox me internet nahi tha). Padho: PART14B1_STATUS_v7_63.md, NOVA_20_PARTS_PLAN.md (PART 14B).
+Pehle: tools/local_compile_check.sh /ABS/PATH (compile + MovieScanRulesTest). Phir 14B-2 live screen capture (NovaAccessibilityService.takeScreenshot, protected screen gate, frames save nahi) -> 14B-3 -> 14B-4 -> 14B-5 -> parts 15-20.
+Owner maksad: reel dekhte hue "nova ye kon si movie hai" -> live screen scan, movie naam + bharosa + sources. Chehre se actor ka naam KABHI nahi. Bank / password / OTP screen kabhi nahi.
+Rules: add-only, Hinglish, honest PASS / FAIL / NOT RUN, bina saboot DONE nahi, har 5% par batao, ek hissa poora hone par zip + agla prompt.
