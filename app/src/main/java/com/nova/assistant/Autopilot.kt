@@ -1123,7 +1123,7 @@ object Autopilot {
     fun scheduleForUri(ctx: Context, uri: Uri) {
         try {
             val req = OneTimeWorkRequestBuilder<AutopilotWorker>()
-                .setConstraints(Constraints.Builder().addContentUriTrigger(Constraints.ContentUriTrigger(uri, true)).build())
+                .setConstraints(Constraints.Builder().addContentUriTrigger(uri, true).build())
                 .setInitialDelay(5, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(ctx.applicationContext).enqueue(req)

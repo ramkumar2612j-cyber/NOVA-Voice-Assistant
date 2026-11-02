@@ -115,10 +115,10 @@ object AutopilotMedia {
             if (nineBySixteen) {
                 // 9:16 canvas (1080x1920), the frame zoomed to fill = the blurred layer,
                 // then the sharp original overlaid on top (the classic reel look).
-                videoEffects.add(Presentation.createForWidthAndHeight(1080, 1920, androidx.media3.common.C.RESIZE_MODE_ZOOM))
+                videoEffects.add(Presentation.createForWidthAndHeight(1080, 1920, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP))
                 videoEffects.add(GaussianBlurWithFrameOverlaid(BLUR_SIGMA, 1f, 1f))
             }
-            val effects = Effects(videoEffects, emptyList())
+            val effects = Effects(emptyList(), videoEffects)
             val item = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(src)))
                 .setEffects(effects)
                 .build()
@@ -134,7 +134,7 @@ object AutopilotMedia {
                     override fun onError(composition: androidx.media3.transformer.Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
                         why[0] = exportException.message ?: "export fail"; code.set(2); latch.countDown()
                     }
-                }, android.os.Looper.getMainLooper())
+                })
                 .build()
             transformer.start(item, out.absolutePath)
             if (!latch.await(REENCODE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
