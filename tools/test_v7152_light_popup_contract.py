@@ -42,7 +42,8 @@ for t in ['popupThemeQuestionIsAStatusQuestion', 'popupThemeReplyNamesTheStateAn
 
 # 3. Light chat box: the dark Ultron colours must stay as the else-branch, light uses HudTheme
 need('if (lightBox) HudTheme.fillColors(true, false)' in nh, 'NovaHud.openChat: light gradient missing')
-need('0xF2081A48.toInt()' in nh, 'NovaHud.openChat: dark Ultron glass must stay for the dark popup')
+need(('0xF2081A48.toInt()' in nh or '0xF2480808.toInt()' in nh),  # v7.174: dark glass is red since v7.121
+      'NovaHud.openChat: dark Ultron glass must stay for the dark popup')
 need('val lightBox = try { ExtCfg.lightPopup(ctx) } catch (e: Throwable) { false }' in nh, 'NovaHud.openChat: theme read missing (default dark)')
 need('HudTheme.flat(true)' in nh, 'NovaHud.openChat: light flat colour missing')
 

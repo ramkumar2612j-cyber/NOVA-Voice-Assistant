@@ -23,8 +23,8 @@ float sdN(vec3 p){
   float c=sdSeg(p,vec3(-.27,.40,0.),vec3(.27,-.40,0.),t);
   return min(min(a,b),c);
 }
-vec3 palA(){return vec3(.21,.95,.76);}   // teal  #35F2C2
-vec3 palB(){return vec3(.49,.36,1.);}    // violet #7C5CFF
+vec3 palA(){return vec3(.21,.95,.76);}   // teal  #f23535
+vec3 palB(){return vec3(.49,.36,1.);}    // violet #ff5c5c
 vec3 palC(){return vec3(1.,.71,.28);}    // amber #FFB547
 
 vec3 moodTint(){

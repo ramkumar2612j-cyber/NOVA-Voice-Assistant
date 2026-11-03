@@ -6,7 +6,8 @@ ui = open(os.path.join(here, '..', 'app/src/main/assets/ui.html'), encoding='utf
 ma = open(os.path.join(here, '..', 'app/src/main/java/com/nova/assistant/MainActivity.kt'), encoding='utf-8').read()
 first_script = ui.find('<script')
 chk = [
-    ('tier script runs before every other script', ui.find('<script id="tier-init"') == first_script),
+# v7.174: v163-flags + v7160-lite weak-phone flags (v7.160/163) intentionally come first
+    ('tier script runs before every other script', ui.find('<script id="tier-init"') == __import__('re').search(r'<script(?! id="(?:v163-flags|v7160-lite)")', ui).start()),
     ('bridge method getTier exists', 'fun getTier(): String' in ma and 'DeviceTier.of(' in ma),
     ('low phone is forced to light mode', 'if(t==="low"){window.__forceLow=true' in ui),
     ('orb starts lower on low and mid', 'si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si' in ui),

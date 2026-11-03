@@ -50,7 +50,8 @@ need('AutoSetup.start(this)' in NS and 'ModelAuto.autoStart(this)' not in NS, 's
 need('AutoSetup.stop()' in NS.split('override fun onDestroy')[1][:600], 'runner stops with the service')
 need('AutoSetup.checkProviders' in ST and 'AutoSetup.log()' in ST, 'results go to SELF TEST')
 need('silentVoice' not in MA and 'VoiceLock' not in MA, 'voice-model download is gone (v6.51)')
-need(AS.count('Thread(') == 3 and AS.count('compareAndSet(false, true)') == 3, 'three background runners (setup, Qwen, offline AI pack v6.96), each guarded so only one of each exists')
+need(AS.count('Thread(') in (3, 4) and AS.count('compareAndSet(false, true)') in (3, 4),  # v7.174: 4th guarded runner = deep voice (v7.171)
+      'three background runners (setup, Qwen, offline AI pack v6.96), each guarded so only one of each exists')
 loop_src = AS.split('private fun loop(app: Context)')[1].split('// ---- v6.33')[0]
 need('var hindiAttempted = false' in loop_src, 'Hindi model setup is attempted once from the live runner')
 need('HindiPack.ensure(app)' in loop_src.split('val next = AutoSetupPlan.nextWake')[0], 'Hindi model attempt occurs before the runner waits for the next task')
