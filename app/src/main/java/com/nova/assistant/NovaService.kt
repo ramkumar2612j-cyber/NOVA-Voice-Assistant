@@ -2180,8 +2180,8 @@ class NovaService : Service() {
 
     fun isEnglish(): Boolean = cfg.lang == "en"
 
-    /** v7.170 PAYMENT CHECK: language flag for PayKit (it has no cfg). */
-    fun isEnglish(): Boolean = cfg.lang == "en"
+    /** v7.170 PAYMENT CHECK: language flag for PayKit (it has no cfg). v7.174: same function already exists just above (duplicate caused "Conflicting overloads"), so this copy is kept as a comment only. */
+    // fun isEnglish(): Boolean = cfg.lang == "en"
 
     /** v7.170 PAYMENT CHECK: a credit alert / timeout. Spoken when idle; when NOVA is busy or locked it still shows in the chat. */
     fun onPayAlert(text: String) {
