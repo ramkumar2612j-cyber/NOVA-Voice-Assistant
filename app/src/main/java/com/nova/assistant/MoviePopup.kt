@@ -42,7 +42,7 @@ class MoviePopup(private val ctx: Context) {
             val box = LinearLayout(ctx)
             box.orientation = LinearLayout.VERTICAL
             val bg = GradientDrawable()
-            bg.setColor(Color.rgb(12, 16, 20)); bg.cornerRadius = 16f * d
+            bg.setColor(Color.rgb(20, 12, 12)); bg.cornerRadius = 16f * d
             bg.setStroke((1.5f * d).toInt(), Color.rgb(57, 255, 120))
             box.background = bg
             box.setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt())
@@ -66,7 +66,7 @@ class MoviePopup(private val ctx: Context) {
             }
             val lpB = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             lpB.leftMargin = (6 * d).toInt()
-            bar.addView(btn(browserLabel, Color.rgb(40, 90, 170)) { try { onOpenBrowser(web?.url ?: url) } catch (e: Throwable) { ErrLog.addOnce("quiet:MoviePopup", e.toString()) } ; destroy() }, lpB)
+            bar.addView(btn(browserLabel, Color.rgb(170, 40, 40)) { try { onOpenBrowser(web?.url ?: url) } catch (e: Throwable) { ErrLog.addOnce("quiet:MoviePopup", e.toString()) } ; destroy() }, lpB)
             bar.addView(btn(closeLabel, Color.rgb(190, 30, 40)) { destroy() }, lpB)
             box.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -95,7 +95,7 @@ class MoviePopup(private val ctx: Context) {
 
             if (note.isNotBlank()) {   // what NOVA saw in the video, 3 lines at most (tap to read more)
                 val nt = TextView(ctx)
-                nt.text = note.take(400); nt.setTextColor(Color.rgb(205, 215, 225)); nt.textSize = 12f; nt.maxLines = 3
+                nt.text = note.take(400); nt.setTextColor(Color.rgb(225, 205, 205)); nt.textSize = 12f; nt.maxLines = 3
                 nt.ellipsize = android.text.TextUtils.TruncateAt.END
                 nt.setPadding((4 * d).toInt(), (6 * d).toInt(), (4 * d).toInt(), 0)
                 var open = false

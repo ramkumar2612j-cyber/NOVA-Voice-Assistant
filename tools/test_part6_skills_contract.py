@@ -20,6 +20,7 @@ MAP.update({'aibrain':'GLM 5.3 Flash brain'})   # v7.152: NOVA ka cloud brain (S
 MAP.update({'wifi':'WiFi Kit (scan, switch, QR'})   # v7.153: WIFI KIT (Skills entry 'WiFi Kit (scan, switch, QR, doctor)')
 MAP.update({'jdeep':'JARVIS deep voice (offline neural awaaz)','barge':'Bol ke rokna (barge-in)','afocus':'Audio focus (gaana dheema ho jata hai)','provcheck':'AI provider check (abhi ka haal)','glmall':'GLM 5.3 sab jagah (option)'})   # v7.154: JARVIS UPGRADE (deep voice + barge-in + focus + provider check + glm in Skills)
 MAP.update({'autopilot':'AUTOPILOT (group se website + Instagram + YouTube)'})   # v7.158 Part 4: AUTOPILOT (Skills screen, COMM section)
+MAP.update({'payqr':'PAYMENT QR + payment check'})   # v7.173: Skills entry added in v7.170 (PAYQR)
 bad=[]
 for t in topics:
     if t not in MAP: bad.append('help topic without mapping: '+t)

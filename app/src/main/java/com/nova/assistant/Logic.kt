@@ -413,6 +413,8 @@ object Logic {
         // v7.158 AUTOPILOT voice grammar (on/off/status, aaj kya post hua, orders, offer, abhi post karo,
         // story lagao, setup, order status). Same narrow-grammar rule: negated orders never match, and every
         // route needs an autopilot word (or nova + an autopilot noun) - normal chat is never captured.
+        BizRules.parse(text)?.let { return it }   // v7.169 business profile / lead finder / advance payment (needs the words "nova biz")
+        PayRules.parse(text)?.let { return it }   // v7.170 payment QR / payment check (needs a QR or payment word; normal chat is never captured)
         AutopilotVoiceRules.parse(text)?.let { return it }
 
         // ---- "unlock" is only a stub that says unlocking was removed (voice / pattern / face unlock no longer exist)

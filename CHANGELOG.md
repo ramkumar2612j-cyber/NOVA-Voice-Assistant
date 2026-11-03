@@ -1,3 +1,62 @@
+## v7.172 WIFI GUARD default ON (add-only)
+- ExtCfg.wifiGuard default true: weak signal -> switch to the best of the owner's OWN saved networks (max 1 switch / 10 min). Still off-able: Settings switch or "nova wifi guard off karo". Kotlin NOT compiled, phone NOT tested.
+
+## v7.171 AUTO ON (add-only)
+- AutoSetup.startDeep: JARVIS deep voice model (20 MB) installs by itself on Wi-Fi when the voice is ON and not installed. PayStore.watch default now ON.
+- Already default ON from v7.156: deep voice, bol ke rokna (barge-in), GLM sab jagah, audio focus. Wi-Fi Guard stays OFF on purpose (it switches networks). Android permissions (Notification access, Accessibility, Overlay) cannot be switched on by an app. Kotlin NOT compiled, phone NOT tested.
+
+## v7.170 PAYMENT QR + PAYMENT CHECK (add-only)
+- PayRules.kt (voice grammar, UPI link, credit-alert parser, matching, wording), PayKit.kt (PayStore + QR image via zxing, alert watcher, status, gallery save), PayRulesTest.kt.
+- Hooks: Logic.parse (after BizRules), NovaService dispatch (pay_qr / pay_status / pay_watch / pay_screen) + isEnglish() + onPayAlert(), NovaNotificationService.onNotificationPosted -> PayKit.onNotification, MainActivity bridge (payStatus, payLastQr, payMakeQr, payWatch, payCancel, paySaveQr, payNotifAccess) + PayKit.ui.
+- ui.html: PAYMENT QR screen (#payScr, window.__payOpen / onPayEvent), Home card + features-list entry; HelpGuide topic "payqr".
+- Honest limits: reads only UPI-app / SMS credit alerts (Notification access needed); no direct bank check; SMS can be faked. Kotlin NOT compiled, phone NOT tested.
+
+## v7.169 BUSINESS AUTOMATION (3 Nov 2026)
+- NAYA (add-only): owner apna business NOVA ko ek baar bolta hai - koi bhi product/business: `nova biz product <naam>`, `price <n>`, `advance <percent>`, `upi <id>`, `payee <naam>`, `delivery 3 din`, `city <sheher>`, `category <jaise boutique>`, `leads <5-10>`, `nova biz status`.
+- LEADS: `nova biz placeskey <Google Places key>` (encrypted SecureStore slot, key chat me echo nahi) -> `nova biz leads now` ya `nova biz leads on` (roz 1 baar). Google Places (New) Text Search "<category> in <city>" -> filter: OPERATIONAL, Indian mobile number, rating >= 3.5, reviews >= 3, duplicate/pehle se lead nahi -> LeadStore me draft (owner ka pitch, "STOP" line ke saath). KUCH BHEJA NAHI JATA: purana approve -> "lead bhejo" flow (daily cap) hi bhejta hai. Roz max 5-10 (BizRules.MIN/MAX_LEADS).
+- ORDER + ADVANCE: DM order confirm (haan) hote hi, agar owner ne price + advance% + UPI id diya hai, customer ko advance rakam + UPI id + upi://pay link + "screenshot bhejo" jata hai, aur delivery time (jaise 3 din) ka promise BizStore me. Kuch missing ho to kuch nahi banta/bheja jata (kuch invent nahi).
+- DELIVERY: promise ka time aate hi owner ko ek baar alert (Autopilot 15-min pass se).
+- Files: BizRules.kt, LeadFinderRules.kt (pure), BizStore.kt, LeadFinder.kt, tests BizRulesTest/LeadFinderRulesTest. Hooks (add-only): Logic.kt (parse), NovaService.kt (when + onBizNote), Autopilot.kt (concierge + pass).
+- Evidence: asli kotlinc compile + 1829 JUnit OK (sandbox, GitHub-source harness). NOT TESTED: asli phone, asli Google Places call (key nahi mili), WhatsApp/Instagram par asli payment message, GitHub Actions.
+- HONEST LIMITS: QR IMAGE nahi bheji jati (DM sirf text) - UPI id + link jata hai (link se kisi bhi UPI app me payment). Payment aayi ya nahi AUTO verify NAHI hoti - owner khud dekhta hai. Maps se bulk scraping nahi; sirf Google Places API (owner ki apni key). WhatsApp par bina permission cold message spam hai - isliye approval zaroori.
+
+## v7.168 CLEANUP (3 Nov 2026)
+- Zip safai: 233 purane versioned docs/status/prompt/audit files + docs/ui_shots (5.8 MB purane screenshots, tests dobara bana lete hain) + docs/retired_guards hata diye. Koi app code, asset, test, build.yml, workflow nahi hata. Pehle har file check hui: koi test/build/Kotlin unka naam nahi padhta tha.
+- Baad me contract suite: 152 pass / 18 fail (11 known-stale + 7 pehle se wale) - safai se koi naya fail nahi.
+
+## v7.167 SPEED (3 Nov 2026)
+- Owner: "NOVA sochne me bahut time leti hai, jaldi karo". FreeHttp.BRAIN_READ_MS 45 s -> 10 s (GLM 5.3 ko sirf 10 s, phir agla provider). NovaService typed-chat hedge stagger 6 s -> 2.5 s (Groq jaldi join). Kotlin compile + phone: NOT TESTED; asli speed phone par measure NAHI hui. Trade-off: GLM kabhi-kabhi 10 s me nahi bolega.
+
+## v7.166 CHECKS + BRIDGE CAP (3 Nov 2026)
+- Contract suite (tools/run_all_checks.sh) chalayi. REAL gap mila: openingVoice(text) bridge me String length cap nahi tha -> MainActivity.kt me 1 line add (text.length > 400 -> return). Ab test_bridge_caps_contract PASS (115 checked, 0 uncapped).
+- test_part4_fx_render / test_part6_smooth: canvas "empty" fail - v7.165 live blocks hata kar bhi same fail aaya => purana/headless (swiftshader) issue, v7.165 ki wajah se nahi. Fix nahi kiya.
+- test_part20 = CHANGELOG version-pin (stale). Kotlin compile, GitHub Actions, asli phone, Ultron awaaz: NOT TESTED.
+- Opening video (10.5 s, 390x844) ke frames dekhe: NOVA particles se banta hai, radar + boot-log + quote typing + bars dikhe. Chhota issue: boot-log ki pehli line me "v7.165" ke baad "OK" chipak jata hai (cosmetic, nahi badla).
+
+## v7.165 LIVE OPENING (3 Nov 2026)
+- Opening ab photo jaisi nahi: photo slides dim ho gayi (hati nahi) aur unke upar ek LIVE canvas layer (#lv) chalti hai: laal digital rain, scan beam, radar (sweep + blips + NEURAL SCAN %), boot-log typing (BOOT / MIC GUARD / NEURAL LINK / VOICE ENGINE...), hex stream, aur ~700 particles jo ud kar NOVA title ban-te hain; slam par burst, finale par explode.
+- Ultron quote: bada, glow wala box + har letter par glitch flicker + caret par sparks + voice-bars (decrypt tail purani logic se). Quote text ka typing aur voice sync pehle jaisa (OpeningVoice.kt, Ultron effect) - Kotlin me KUCH BADLA NAHI.
+- Slow phone: agar Ultron voice 'start' ki khabar abhi tak nahi aayi to opening max 2 s ruk kar voice ka intezaar karti hai (taaki voice home screen par na bole). Voice band (SOUND off) ho to koi intezaar nahi.
+- 3D NOVA letters ab particles ke ban-ne ke baad (2.7 s par) slam hote hain (pehle 1.1 s par aate the).
+- Add-only: purana intro, WebGL tunnel, lite mode, skip (tap), back sab waise hi. ui.html me 2 chhote hook (window.__nvOpen read-only state, __nvOnOpen) + naya <style>/<script> end me.
+- Evidence: headless Chromium, virtual clock (30 fps frame-by-frame), 0 JS error. Video: silent (sandbox me TTS nahi). Kotlin compile / GitHub Actions / PHONE TEST: NOT DONE.
+
+## v7.162 SHOCK OPENING (3 Nov 2026)
+- Opening ab surprise-style: black screen se CRT line + shutter khulna, NOVA title slam par screen shake + shockwave, RGB glitch, quote "decrypt" effect (random chars se saaf text), side HUD tickers, scanlines.
+- Finale: white flash + shockwave + NOVA letters camera ki taraf phat kar dashboard. Naye sounds: zap (start), hit (slam). Add-only, skip/back/lite waise hi.
+- Evidence: headless Chromium frames dekhe, 0 JS error (ek cold run me ek baar canvas gradient error aaya, 7 reruns me dobara nahi aaya, NOT root-caused). Kotlin compile + phone test NOT DONE.
+
+## v7.161 OPENING (3 Nov 2026)
+- App kholte hi opening animation me 3D NOVA title (letters depth se aate hain, rotating rings, light glint) + quote typing: "Keep your friends rich and your enemies rich, and wait to find out which is which."
+- Quote Ultron voice me bolta hai (existing UltronFx pipeline, OpeningVoice.kt, apna TTS, mic kabhi nahi). Animation voice ki lambai ke hisab se ruk-ti hai, phir normal finale. Tap = skip (voice bhi band).
+- Add-only: purana intro, WebGL tunnel, lite mode, skip/back sab waise hi. Evidence: headless Chromium run, 0 JS error. Kotlin compile + phone test NOT DONE.
+
+## v7.159 FIXES (2 Nov 2026)
+- media3 1.4.1 + WorkManager 2.9.1 API calls fixed (CI build compiled red before).
+- JARVIS tab: click handler restored (was calling AP_OPEN -> 'Kuch gadbad hui').
+- Hindi voice: Hinglish no longer goes to the English-only deep voice; HindiSpeak.kt speaks Hinglish in Devanagari via the Hindi voice. Fewer heavy neural syntheses (hang suspect).
+- Sandbox stubs now match the real media3/WorkManager APIs.
+
 ## v7.158 AUTOPILOT (WhatsApp Business group -> website + Instagram + YouTube + DM concierge + viral engine + JARVIS voice + holographic HUD; 4 parts)
 - NEW AUTOPILOT: owner ke WhatsApp Business GROUP me photo/video aate hi NOVA khud (1) website par daalti hai (GitHub Pages gallery + feed, ya Vercel/Shopify/WooCommerce/Wix), (2) Instagram par POST + REEL + STORY (2-10 photo = ek CAROUSEL), (3) YouTube par SHORTS (<= 3 min; lambi video sirf YT). 90 second ke andar aayi cheezein = ek batch (ek caption pack). File-hash de-dupe: wahi file kabhi dobara post nahi hoti. Caps: 6 IG feed / 15 story / 5 YT roz + 45 min spacing (configurable). Best-time IST slots (9:00/12:30/15:30/18:30/20:30/22:00) jo khud tune hote hain (24 ghante baad asli reach se seekh kar; 3x reach = viral signal -> owner ko bolke bataya jata hai). Video ka format galat ho to Media3 Transformer 1.4.1 se re-encode - SIRF charging + WiFi par; horizontal video ke liye 9:16 blurred background; bhaiari video (>45 MB) sirf YouTube par. Photo/video ke liye vision caption (jo dikhta hai wahi likha jata hai).
 - NEW DM CONCIERGE: customer ka DM NOVA khud sambhalti hai - discount ka jawab SIRF live website offer se (nova-offer.json; website aur chat kabhi alag nahi), order machine (ITEM->SIZE->QTY->NAME->PHONE->ADDRESS->CONFIRM), business lead LeadStore me + owner ko ek baar. Confirmed order par owner ka webhook bhi fire (Zapier/n8n/Make se Google Sheet). "mera order kab aayega" ka jawab SIRF owner-store ki hui baat se - delivery date kabhi nahi banti. GROUPS kabhi answer nahi + owner ka khud ka reply AI ko side me rakhta hai.
@@ -1110,3 +1169,16 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - NEW tools/jarvis_server/: server.py (standard library only; real VoxCPM2 engine written from the model card's Usage example + a FAKE test engine), test_server.py, README_HINGLISH.md, requirements.txt.
 - Tests: JarvisVoiceApiTest (5: address rules, wav / English checks, wants() decision, client against a local HTTP server incl. token-host pin, stop / pause). Compile PASS, JUnit 1656 OK. Server contract test PASS (fake engine). REAL model engine: NOT TESTED (no GPU / weights). Phone: NOT TESTED.
 - v7.136 add-on: tools/jarvis_server/NOVA_Jarvis_Colab.ipynb (free Google Colab T4 + Cloudflare quick tunnel; auto token; phone recording converted to wav by ffmpeg) + EASY_STEPS_HINGLISH.md. Notebook cells 1-5 PASS in the sandbox with the FAKE engine; tunnel and real model NOT TESTED.
+
+## v7.160 (add-only; NOT compiled, NOT phone-tested)
+- ui.html: v7160-home-fix patch added (one Ultron, scrolling home, nothing blocks taps).
+- ui.html: v7160-real-look (glass/metal materials, glossy ACTIVATE, tactile press) + one post-intro finale (header drop, hero focus, stagger, light sweep) - transform/opacity only.
+- Smooth open: weak phones (<=4 cores / <=3 GB) skip the WebGL tunnel; watchdog jumps intro to finale if <20 fps for 1.5 s; intro layer GPU-contained.
+- Security: CSP meta (no object/frame/base/form), WebView mixedContent NEVER_ALLOW, WebContents debugging off.
+- v7.163: red opening, eye hero, AI-is-alive overlay, live brain panel (ui.html patch) - see NEXT_ACCOUNT_PROMPT_v7_163.md
+
+## v7.173 OPENING FX2
+- ui.html: add-only #lv2 layer (HUD brackets, shockwave rings, lightning arcs, circular voice wave, vignette pulse). Syntax + mock smoke test only; phone untested.
+
+## v7.173 STEP 2 VOICE
+- Ultron/Jarvis voice style: JarvisFx.kt, VoiceStyle.kt, Cfg.voiceStyle, bridge get/setVoiceStyle (capped), Settings button #s_vstyle, OpeningVoice + NovaService use the style. Compile/phone untested.

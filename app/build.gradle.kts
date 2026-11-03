@@ -23,7 +23,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = (System.getenv("NOVA_VERSION_CODE") ?: "37").toIntOrNull() ?: 37
-        versionName = "7.158"   // v7.158 AUTOPILOT: WhatsApp Business group -> website + Instagram + YouTube, concierge, viral engine (Part 1: core + intake)
+        versionName = "7.162"   // v7.162 SHOCK OPENING (CRT shutter, title slam + shake, glitch, decrypt quote, flash + shockwave). (v7.161 OPENING: 3D NOVA title + Ultron-voice quote. (v7.160 HOME FIX + REAL LOOK + SECURE + SMOOTH OPEN. (v7.159 FIXES: JARVIS tab click, Hindi voice, media3 API. (v7.158 AUTOPILOT: WhatsApp Business group -> website + Instagram + YouTube, concierge, viral engine (Part 1: core + intake)
         // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

@@ -20,8 +20,8 @@ class HudThemeTest {
     @Test fun darkThemeChangesNothing() {
         assertEquals(0xFFFFFFFF.toInt(), HudTheme.ink(false, 0xFFFFFFFF.toInt()))
         assertEquals(0xFF27E1FF.toInt(), HudTheme.stateInk(false, 0xFF27E1FF.toInt()))
-        assertEquals(0xF20A1236.toInt(), HudTheme.flat(false))
-        assertEquals(0xF2081A48.toInt(), HudTheme.fillColors(false, false)[0])
+        assertEquals(0xF2360A0A.toInt(), HudTheme.flat(false))
+        assertEquals(0xF2480808.toInt(), HudTheme.fillColors(false, false)[0])
     }
 
     @Test fun lightTextIsDarkAndUnknownColoursPassThrough() {

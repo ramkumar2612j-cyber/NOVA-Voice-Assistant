@@ -28,6 +28,7 @@ object AutoSetup {
     /** Called when the mic service is running (permissions given). Safe to call again: only one runner exists. */
     fun start(ctx: Context) {
         startQwen(ctx.applicationContext)   // v6.33: the offline brain has its own runner, it no longer waits behind the other tasks
+        startDeep(ctx.applicationContext)   // v7.171: the 20 MB JARVIS deep voice model installs by itself (Wi-Fi only)
         startPack(ctx.applicationContext)   // v6.96: five more offline AI models, one after another, Wi-Fi only
         if (!started.compareAndSet(false, true)) { stopFlag = false; return }   // already running (maybe about to stop): keep it
         stopFlag = false
@@ -143,6 +144,25 @@ object AutoSetup {
         val caps = cm.getNetworkCapabilities(cm.activeNetwork)
         caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     } catch (e: Throwable) { false }
+
+    private val deepStarted = AtomicBoolean(false)
+
+    /** v7.171: JARVIS deep voice model (20 MB, SHA-256 checked) downloads once by itself on Wi-Fi when the voice is ON and not installed yet. Failure just means "try at the next start". */
+    private fun startDeep(app: Context) {
+        try {
+            if (!ExtCfg.jarvisDeep(app) || JarvisDeepVoice.ready(app)) return
+            if (!AutopilotMedia.onWifi(app)) return
+            if (!deepStarted.compareAndSet(false, true)) return
+            Thread({
+                try {
+                    val err = JarvisDeepVoice.install(app, { }, { stopFlag })
+                    add(if (err == null) "OK Deep voice model install ho gaya" else "WARN Deep voice download fail - " + err.take(80))
+                } catch (e: Throwable) {
+                    add("WARN Deep voice download ruk gaya - " + e.javaClass.simpleName)
+                } finally { deepStarted.set(false) }
+            }, "nova-deep-auto").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+        } catch (e: Throwable) { ErrLog.add("AutoSetup", "deep: $e") }
+    }
 
     private fun startPack(app: Context) {
         if (!ExtCfg.autoModels(app)) return

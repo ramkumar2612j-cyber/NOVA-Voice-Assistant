@@ -736,8 +736,9 @@ class NovaService : Service() {
         JarvisSpeaker.stop()                               // v7.129: ... and the old Jarvis audio
         if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return true
         if (startJarvisLocal(t, spoken, id)) return true   // v7.138
-        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return true
-        val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
+        val voiceText = HindiSpeak.forVoice(spoken)   // v7.159: Hinglish -> Devanagari so the Hindi voice pronounces it properly (chat / HUD text stay unchanged)
+        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return true
+        val r = try { t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
             ttsActive = false
             if (confirm) answerWindow = true
@@ -786,8 +787,8 @@ class NovaService : Service() {
         val latch = CountDownLatch(1)
         try {
             cfg.voiceKey = ""
-            t.setPitch(UltronFx.PITCH)
-            t.setSpeechRate(minOf(cfg.rate, UltronFx.MAX_RATE))
+            t.setPitch(VoiceStyle.pitch(cfg.voiceStyle))
+            t.setSpeechRate(minOf(cfg.rate, VoiceStyle.maxRate(cfg.voiceStyle)))
             fxOk = false
             fxLatch = latch
             fxId = name
@@ -802,6 +803,7 @@ class NovaService : Service() {
         }
         ttsDeadline += 8000L + 1500L * parts.size
         val amount = cfg.ultronAmount
+        val style = cfg.voiceStyle
         Thread {
             var res = UltronPlayer.FAILED
             var rest: String? = null   // set when a later piece could not be made: the normal voice reads from there
@@ -809,7 +811,7 @@ class NovaService : Service() {
                 if (latch.await(20, TimeUnit.SECONDS) && fxOk && id == curUtt) {
                     val w = WavPcm.parse(f.readBytes())
                     if (w != null) {
-                        val fx = UltronFx.process(UltronFx.toShorts(w.pcm), w.rate, amount)
+                        val fx = VoiceStyle.process(style, UltronFx.toShorts(w.pcm), w.rate, amount)
                         if (id == curUtt) {
                             emit("mode", "speak")
                             res = UltronPlayer.play(fx, w.rate)
@@ -821,7 +823,7 @@ class NovaService : Service() {
                     val w2 = if (ultronSynth(t, parts[i], "$name-$i", f)) WavPcm.parse(f.readBytes()) else null
                     if (id != curUtt || !ttsActive) break                      // STOP or a newer reply came while the piece was being made
                     if (w2 == null) { rest = parts.drop(i).joinToString(" "); break }
-                    val fx2 = UltronFx.process(UltronFx.toShorts(w2.pcm), w2.rate, amount)
+                    val fx2 = VoiceStyle.process(style, UltronFx.toShorts(w2.pcm), w2.rate, amount)
                     if (id != curUtt || !ttsActive) break
                     res = UltronPlayer.play(fx2, w2.rate)
                     i++
@@ -892,8 +894,9 @@ class NovaService : Service() {
                 try {
                     cfg.applyVoice(t)
                     if (startJarvisLocal(t, spoken, id)) return@Thread   // v7.138
-                    if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
-                    val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                    val voiceText = HindiSpeak.forVoice(spoken)   // v7.159
+                    if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return@Thread
+                    val r = t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id)
                     if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                 } catch (e: Throwable) { utteranceEnded(id, false) }
             } else {
@@ -932,8 +935,9 @@ class NovaService : Service() {
                         cfg.applyVoice(t)
                         if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return@Thread
                         if (startJarvisLocal(t, spoken, id)) return@Thread
-                        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
-                        val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                        val voiceText = HindiSpeak.forVoice(spoken)   // v7.159
+                        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return@Thread
+                        val r = t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id)
                         if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                     }
                 } catch (e: Throwable) { utteranceEnded(id, false) }
@@ -2176,6 +2180,15 @@ class NovaService : Service() {
 
     fun isEnglish(): Boolean = cfg.lang == "en"
 
+    /** v7.170 PAYMENT CHECK: language flag for PayKit (it has no cfg). */
+    fun isEnglish(): Boolean = cfg.lang == "en"
+
+    /** v7.170 PAYMENT CHECK: a credit alert / timeout. Spoken when idle; when NOVA is busy or locked it still shows in the chat. */
+    fun onPayAlert(text: String) {
+        if (!alive) return
+        if (!announceIfIdle(text)) emit("ai", ChatText.clean(text))
+    }
+
     fun onBizUrgent(sender: String, text: String) {
         if (!alive) return
         announceIfIdle(tr("$sender ka zaruri message: $text", "Important message from $sender: $text"))
@@ -2377,6 +2390,13 @@ class NovaService : Service() {
             GmailStore.notifyPhone(this, tr("NOVA: business lead", "NOVA: business lead"),
                 tr("$who ne wholesale / collab jaisi baat poochi hai. LeadStore me save kar di - jawab aap dena.", "$who asked about wholesale / collaboration. Saved in the lead store."))
         } catch (e: Throwable) { }
+    }
+
+    /** v7.169: a lead-finder result or a delivery that is due - one short owner line + phone notification. */
+    fun onBizNote(msg: String) {
+        if (!alive || msg.isBlank()) return
+        announceIfIdle(msg)
+        try { GmailStore.notifyPhone(this, "NOVA", msg) } catch (e: Throwable) { }
     }
 
     /** A customer asked about their order and nothing was stored - the owner is told once. */
@@ -3828,7 +3848,7 @@ class NovaService : Service() {
             turns = fallbackTurns(),   // v6.70: a backup AI continues the same conversation, not a lone sentence
             rich = rich,
             hedge = true,   // v7.4: voice answers ask the top 2 providers at once; v7.126: long typed answers too, but the 2nd one only joins after 2.5 s
-            hedgeStaggerMs = if (rich) 6000L else 0L,   // v7.151: long typed answers give the GLM 5.3 brain 6 s before Groq joins (was 2.5 s)
+            hedgeStaggerMs = if (rich) 2500L else 0L,   // v7.166: faster Groq join (was 6 s);   // v7.151: long typed answers give the GLM 5.3 brain 6 s before Groq joins (was 2.5 s)
             glmFirst = ExtCfg.glmAll(this)   // v7.154: owner opt-in - GLM 5.3 Flash first for every chat answer (default OFF = v7.151 order)
         ) { p, _, body, key -> rankedCall(p, body, key) }
         }
@@ -4190,6 +4210,37 @@ class NovaService : Service() {
                 }
             }
             JarvisDeepRules.K_DEEP_STATUS -> JarvisDeepRules.replyDeepStatus(en, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this))
+            // ---------------------------------------------------------------- v7.169 BIZ (profile, lead finder, advance payment)
+            BizRules.K_BIZ_SET -> {
+                val r = BizRules.apply(BizStore.profile(this), c.arg, en)
+                if (r.first != BizStore.profile(this)) BizStore.saveProfile(this, r.first)
+                r.second
+            }
+            BizRules.K_BIZ_STATUS -> BizRules.statusLine(BizStore.profile(this), en) +
+                (if (LeadFinder.hasKey(this)) "" else (if (en) " Google Places key: not saved." else " Google Places key: save nahi."))
+            BizRules.K_BIZ_KEY -> if (SecureStore.saveSlot(this, BizStore.SLOT_PLACES, c.arg))
+                tr("Google Places key save ho gayi (encrypted). Chat se ye line delete kar dena.", "Google Places key saved (encrypted). Please delete this line from the chat.")
+            else tr("Key save nahi ho payi.", "Could not save the key.")
+            BizRules.K_BIZ_LEADS_ONOFF -> {
+                val on = c.arg == "on"
+                val prof = BizStore.profile(this)
+                val miss = BizRules.missingForLeads(prof)
+                if (on && (miss.isNotEmpty() || !LeadFinder.hasKey(this)))
+                    tr("Pehle ye bharo: ", "First set: ") + (miss + (if (LeadFinder.hasKey(this)) emptyList() else listOf("placeskey"))).joinToString(", ")
+                else { BizStore.saveProfile(this, prof.copy(leadsOn = on)); if (on) tr("Roz ${prof.perDay} leads ON. Aap approve karoge tabhi message jayega.", "Daily ${prof.perDay} leads ON. Nothing is sent until you approve.") else tr("Daily leads OFF.", "Daily leads OFF.") }
+            }
+            BizRules.K_BIZ_LEADS_NOW -> {
+                Thread {
+                    val r = LeadFinder.run(this, en, true)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { announceIfIdle(r.message) }
+                }.apply { name = "nova-biz-leads"; isDaemon = true }.start()
+                tr("Google Maps se leads dhundh rahi hoon...", "Searching Google Maps for leads...")
+            }
+            // ---------------------------------------------------------------- v7.170 PAYMENT QR + PAYMENT CHECK
+            PayRules.K_PAY_QR -> PayKit.cmdQr(this, c.arg, en)
+            PayRules.K_PAY_STATUS -> PayKit.statusText(this, en)
+            PayRules.K_PAY_WATCH -> PayKit.cmdWatch(this, c.arg == "on", en)
+            PayRules.K_PAY_SCREEN -> { PayKit.openScreen(); tr("Payment QR screen khol di.", "Opened the payment QR screen.") }
             // ---------------------------------------------------------------- v7.158 AUTOPILOT voice (task H)
             AutopilotVoiceRules.K_AP_ON -> autopilotVoiceOn(true)
             AutopilotVoiceRules.K_AP_OFF -> autopilotVoiceOn(false)

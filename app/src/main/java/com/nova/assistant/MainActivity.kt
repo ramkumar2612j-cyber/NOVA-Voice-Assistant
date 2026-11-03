@@ -61,6 +61,7 @@ class MainActivity : Activity() {
             }
         }
         NovaService.learnListener = { runJs("onLearn()") }
+        PayKit.ui = { js -> runJs(js) }   // v7.170 PAYMENT QR screen refresh / open from voice
         NovaService.publishListener = { ok, msg, url ->
             runJs("onPublish(" + ok + "," + JSONObject.quote(msg) + "," + JSONObject.quote(url) + ")")
         }
@@ -145,6 +146,8 @@ class MainActivity : Activity() {
         s.allowFileAccessFromFileURLs = false
         s.allowUniversalAccessFromFileURLs = false
         s.setGeolocationEnabled(false)
+        s.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW   // v7.160: no http content inside the page, ever
+        try { WebView.setWebContentsDebuggingEnabled(false) } catch (ignored: Throwable) { }   // v7.160: page can never be inspected from a PC
         s.javaScriptCanOpenWindowsAutomatically = false
         s.setSupportMultipleWindows(false)
         s.textZoom = s.textZoom.coerceAtMost(115)   // v6.38: big system font sizes no longer push buttons off small screens
@@ -294,6 +297,7 @@ class MainActivity : Activity() {
     }
 
     override fun onStop() {
+        try { OpeningVoice.stop() } catch (e: Throwable) { }
         try { web.onPause() } catch (e: Throwable) { ErrLog.addOnce("quiet:MainActivity", e.toString()) }
         super.onStop()
     }
@@ -973,6 +977,20 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun vibrate(ms: Int) { vibe(ms.toLong().coerceIn(5L, 400L)) }
 
+        /** v7.161: opening animation line in the Ultron voice. The page gets onOpeningVoice(ms) when it starts (ms = 0: no voice). */
+        @JavascriptInterface
+        fun openingVoice(text: String) {
+            if (text.length > 400) return // v7.166: bridge String cap (page passes a short/empty arg; voice text is fixed in OpeningVoice.QUOTE)
+            try {
+                OpeningVoice.start(this@MainActivity, OpeningVoice.QUOTE, cfg.ultronAmount, cfg.voiceStyle) { ms ->
+                    runOnUiThread { try { runJs("onOpeningVoice(" + ms + ")") } catch (e: Throwable) { } }
+                }
+            } catch (e: Throwable) { ErrLog.add("MainActivity", "openingVoice: $e") }
+        }
+
+        @JavascriptInterface
+        fun openingVoiceStop() { try { OpeningVoice.stop() } catch (e: Throwable) { } }
+
         /** Opens the phone's own voice typing (the same engine the keyboard mic uses). The text comes back through onSystemVoice(). */
         @JavascriptInterface
         fun systemVoice(): String = try {
@@ -1174,6 +1192,16 @@ class MainActivity : Activity() {
         fun setUltronAmount(v: Float): Float {
             cfg.ultronAmount = v
             return cfg.ultronAmount
+        }
+
+        /** v7.173: robot voice style, "ultron" or "jarvis". */
+        @JavascriptInterface
+        fun getVoiceStyle(): String = cfg.voiceStyle
+
+        @JavascriptInterface
+        fun setVoiceStyle(v: String): String {
+            cfg.voiceStyle = v.take(16)   // bridge String cap
+            return cfg.voiceStyle
         }
 
         @JavascriptInterface
@@ -1875,6 +1903,32 @@ class MainActivity : Activity() {
         // ---------------------------------------------------------------- v7.158 AUTOPILOT bridge
         // Tokens are only ever WRITTEN through these methods and never sent back to the page (hasX = boolean).
         // Everything slow (scan / offer write) runs on its own thread; the page gets the result via a callback.
+
+        // ---- v7.170 PAYMENT QR + PAYMENT CHECK (PAYMENT QR screen)
+        @JavascriptInterface
+        fun payStatus(): String = try { PayKit.snapshotJson(this@MainActivity) } catch (e: Throwable) { "{}" }
+
+        @JavascriptInterface
+        fun payLastQr(): String = try { PayKit.lastQrJson(this@MainActivity) } catch (e: Throwable) { "{\"ok\":false}" }
+
+        @JavascriptInterface
+        fun payMakeQr(upi: String, payee: String, amount: String, note: String): String = try {
+            PayKit.makeJson(this@MainActivity, upi.take(80), payee.take(60), amount.take(14), note.take(40))
+        } catch (e: Throwable) { "{\"ok\":false,\"err\":\"QR nahi bana\"}" }
+
+        @JavascriptInterface
+        fun payWatch(on: Boolean): String = try { PayKit.cmdWatch(this@MainActivity, on, false) } catch (e: Throwable) { "fail" }
+
+        @JavascriptInterface
+        fun payCancel(id: String): String = try { PayKit.cancel(this@MainActivity, id.take(40)); "ok" } catch (e: Throwable) { "fail" }
+
+        @JavascriptInterface
+        fun paySaveQr(): String = try { PayKit.saveLastToGallery(this@MainActivity) } catch (e: Throwable) { "Save nahi hua." }
+
+        @JavascriptInterface
+        fun payNotifAccess(): String = try {
+            this@MainActivity.startActivity(android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); "ok"
+        } catch (e: Throwable) { "fail" }
 
         @JavascriptInterface
         fun autopilotStatus(): String = try { Autopilot.snapshotJson(this@MainActivity) } catch (e: Throwable) { "{\"on\":false,\"queue\":[],\"orders\":[],\"armed\":\"status nahi mila\"}" }

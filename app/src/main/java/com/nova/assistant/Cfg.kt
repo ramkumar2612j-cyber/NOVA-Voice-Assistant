@@ -84,6 +84,11 @@ class Cfg(ctx: Context) {
         get() = UltronFx.clampAmount(p.getFloat("ultronAmount", UltronFx.DEFAULT_AMOUNT))
         set(v) { p.edit().putFloat("ultronAmount", UltronFx.clampAmount(v)).apply() }
 
+    /** v7.173: robot voice style, "ultron" (default) or "jarvis". */
+    var voiceStyle: String
+        get() = VoiceStyle.normalize(p.getString("voiceStyle", VoiceStyle.ULTRON))
+        set(v) { p.edit().putString("voiceStyle", VoiceStyle.normalize(v)).apply() }
+
     /** Default OFF: NOVA never opens the mic by itself to ask "shall I remember this shortcut?" after a command. */
     var nudges: Boolean
         get() = p.getBoolean("nudges", false)

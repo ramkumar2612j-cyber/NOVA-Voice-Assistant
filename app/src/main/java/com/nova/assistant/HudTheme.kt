@@ -13,21 +13,21 @@ object HudTheme {
     /** Three-stop card gradient. Light = frosted white-blue (rose tint while speaking); dark = the v7.121 Ultron colours. */
     fun fillColors(light: Boolean, speaking: Boolean): IntArray = when {
         light && speaking -> intArrayOf(0xF7FFF1F3.toInt(), 0xF7FFE4E9.toInt(), 0xF7FFEEF1.toInt())
-        light -> intArrayOf(0xF7F8FBFF.toInt(), 0xF7E8F1FF.toInt(), 0xF7F3F7FF.toInt())
+        light -> intArrayOf(0xF7FFF8F8.toInt(), 0xF7FFE8E8.toInt(), 0xF7FFF3F3.toInt())
         speaking -> intArrayOf(0xF2300A16.toInt(), 0xF2180610.toInt(), 0xF2220812.toInt())
-        else -> intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt())
+        else -> intArrayOf(0xF2480808.toInt(), 0xF22C0505.toInt(), 0xF2340808.toInt())
     }
 
     /** Flat panel colour (menu card, minimized pill). */
-    fun flat(light: Boolean): Int = if (light) 0xF7F2F6FF.toInt() else 0xF20A1236.toInt()
+    fun flat(light: Boolean): Int = if (light) 0xF7FFF2F2.toInt() else 0xF2360A0A.toInt()
 
     /** Dark-theme text colour -> readable colour for the theme. Unknown colours pass through unchanged. */
     fun ink(light: Boolean, c: Int): Int {
         if (!light) return c
         return when (c) {
-            WHITE, 0xFFF4FAFF.toInt() -> INK
-            0xFFEAF2FF.toInt() -> 0xFF12234A.toInt()
-            0xFFA9BCD9.toInt(), 0xFFA9C4E8.toInt(), 0xFF9FB4D6.toInt() -> SOFT
+            WHITE, 0xFFF4FAFF.toInt(), 0xFFFFF4F4.toInt() -> INK
+            0xFFEAF2FF.toInt(), 0xFFFFEAEA.toInt() -> 0xFF12234A.toInt()
+            0xFFA9BCD9.toInt(), 0xFFA9C4E8.toInt(), 0xFF9FB4D6.toInt(), 0xFFD9A9A9.toInt(), 0xFFE8A9A9.toInt(), 0xFFD69F9F.toInt() -> SOFT
             else -> c
         }
     }

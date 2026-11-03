@@ -19,7 +19,7 @@ class Constraints {
         fun setRequiresBatteryNotLow(b: Boolean) = this
         fun setRequiresCharging(b: Boolean) = this
         fun setRequiresStorageNotLow(b: Boolean) = this
-        fun addContentUriTrigger(t: ContentUriTrigger) = this
+        fun addContentUriTrigger(uri: Uri, triggerForDescendants: Boolean) = this   // real WorkManager 2.9.1 signature
         fun setTriggerContentMaxDelay(d: Long, u: TimeUnit) = this
         fun setTriggerContentUpdateDelay(d: Long, u: TimeUnit) = this
         fun build() = Constraints()

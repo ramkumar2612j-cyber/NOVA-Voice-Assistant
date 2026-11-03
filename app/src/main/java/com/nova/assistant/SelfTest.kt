@@ -307,7 +307,7 @@ object SelfTest {
         }
 
         // ---- 6e. v6.97: packed files, source-map rules, offline AI and the five key-less browsers (real requests, no key, only a tiny sample topic is sent)
-        for (f in listOf("ui.html", "knowledge.json", "orb_poster.png")) {
+        for (f in listOf("ui.html", "knowledge.json", "orb_poster.png", "nova_eye.jpg", "nova_alive.jpg", "nova_brain.jpg", "nova_neural.jpg", "nova_reactor.jpg", "nova_holo.jpg")) {
             val ok = try { ctx.assets.open(f).use { it.read() >= 0 } } catch (e: Exception) { false }
             rec(if (ok) "PASS" else "FAIL", "File: " + f, if (ok) "" else "APK me ye file nahi mili (build me file missing)")
         }

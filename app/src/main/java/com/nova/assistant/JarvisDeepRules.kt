@@ -41,12 +41,13 @@ object JarvisDeepRules {
 
     /**
      * May the deep voice speak this text? true only when the feature is ON, the model is installed and the text
-     * is Latin-script (English / Hinglish in Roman letters). Devanagari (Hindi) replies must use the existing
+     * is Latin-script ENGLISH (v7.159: Hinglish and Devanagari both use the Hindi voice). Devanagari (Hindi) replies must use the existing
      * Hindi voice chain - the Piper "alan" model is English-only, exactly like the v7.129 server Jarvis voice.
      */
     fun use(text: String, on: Boolean, modelReady: Boolean): Boolean {
         if (!on || !modelReady) return false
         if (text.isBlank() || text.length > MAX_LEN) return false
+        if (ReplyLang.isHindi(text)) return false   // v7.159: Hinglish ("battery 9 percent hai") is HINDI: the English-only "alan" model mispronounced it. It goes to the Hindi voice (see HindiSpeak).
         return latinOk(text)
     }
 
@@ -220,8 +221,8 @@ object JarvisDeepRules {
     private fun tr(hi: String, en: String, english: Boolean): String = if (english) en else hi
 
     fun replyDeepOn(ready: Boolean, english: Boolean): String = if (ready)
-        tr("Jarvis deep voice ON. Ab main English aur Hinglish jawab is bhaari offline awaaz me bologa. Hindi (Devanagari) jawab waise hi Hindi awaaz me honge.",
-            "Jarvis deep voice is ON. English and Hinglish replies now use this heavy offline voice. Hindi (Devanagari) replies keep the Hindi voice.", english)
+        tr("Jarvis deep voice ON. Ab English jawab is bhaari offline awaaz me honge. Hindi aur Hinglish jawab saaf Hindi awaaz me bolenge.",
+            "Jarvis deep voice is ON. English replies now use this heavy offline voice. Hindi and Hinglish replies use the Hindi voice.", english)
     else
         tr("Deep voice ka 20 MB model abhi phone me nahi hai. Bolo: nova deep voice download karo. Jab tak download nahi hota, purani awaaz hi chalegi.",
             "The 20 MB deep-voice model is not on the phone yet. Say: nova deep voice download karo. Until then the existing voice stays.", english)

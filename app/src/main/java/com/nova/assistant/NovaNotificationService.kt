@@ -135,6 +135,8 @@ class NovaNotificationService : NotificationListenerService() {
             try { if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "biz: $e") }
             // v7.158 AUTOPILOT: the watched group's media notifications only set a timestamp mark (O(1), no I/O,
             // never blocks this thread); the scan itself runs on the AutopilotWorker.
+            // v7.170 PAYMENT CHECK: only UPI-app / SMS credit alerts, only while the owner has auto check ON; isolated like every helper here.
+            try { PayKit.onNotification(this, sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "pay: $e") }
             try { markGroupMedia(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "apmark: $e") }
             try { if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "gmail: $e") }
             try { if (sbn.packageName == "com.instagram.android") ReelRunner.onNotification(this, sbn) { p -> NovaService.reelWatchFire(p) } } catch (e: Throwable) { ErrLog.add("NotifListener", "reelwatch: $e") }   // v7.114: a watched friend posted

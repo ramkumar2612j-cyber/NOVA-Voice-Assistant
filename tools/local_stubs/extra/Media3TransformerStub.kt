@@ -16,7 +16,8 @@ class ExportResult
 class ExportException(message: String) : Exception(message)
 class Composition
 
-class Effects(videoEffects: List<androidx.media3.common.Effect>, audioProcessors: List<Any?>)
+interface AudioProcessorStub
+class Effects(audioProcessors: List<AudioProcessorStub>, videoEffects: List<androidx.media3.common.Effect>)   // real order: audio first, then video
 
 class EditedMediaItem private constructor() {
     class Builder(mediaItem: androidx.media3.common.MediaItem) {
@@ -37,7 +38,7 @@ class Transformer private constructor() {
 
     class Builder(private val context: Context) {
         fun setTransformationRequest(request: TransformationRequest): Builder = this
-        fun addListener(listener: Listener, looper: Looper): Builder = this
+        fun addListener(listener: Listener): Builder = this   // real media3 1.4.1: one argument
         fun build(): Transformer = Transformer()
     }
 }

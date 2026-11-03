@@ -301,11 +301,11 @@ class NovaHud(private val ctx: Context) {
         // Dark keeps the v7.121 Ultron glass; light uses the same HudTheme palette as the light card, with dark ink.
         val lightBox = try { ExtCfg.lightPopup(ctx) } catch (e: Throwable) { false }
         val bg = android.graphics.drawable.GradientDrawable()
-        bg.setColor(if (lightBox) HudTheme.flat(true) else 0xF20A1236.toInt())
+        bg.setColor(if (lightBox) HudTheme.flat(true) else 0xF2360A0A.toInt())
         bg.colors = if (lightBox) HudTheme.fillColors(true, false)
-                    else intArrayOf(0xF2081A48.toInt(), 0xF2050D2C.toInt(), 0xF2081034.toInt())   // v7.121: same dark neon glass as the Ultron card
+                    else intArrayOf(0xF2480808.toInt(), 0xF22C0505.toInt(), 0xF2340808.toInt())   // v7.121: same dark neon glass as the Ultron card
         bg.cornerRadius = 18 * d
-        bg.setStroke((1.5f * d).toInt(), if (lightBox) 0xFF3D6FD6.toInt() else 0xFF27E1FF.toInt())
+        bg.setStroke((1.5f * d).toInt(), if (lightBox) 0xFFD63D3D.toInt() else 0xFFFF2727.toInt())
         row.background = bg
         val face = avatarBitmap(ctx, (36 * d).toInt())
         if (face != null) {
@@ -317,8 +317,8 @@ class NovaHud(private val ctx: Context) {
         }
         val et = android.widget.EditText(ctx)
         et.hint = "Type a message\u2026"
-        et.setHintTextColor(if (lightBox) 0xFF51658A.toInt() else 0xFF7F95BC.toInt())   // light = HudTheme SOFT, dark = unchanged
-        et.setTextColor(if (lightBox) 0xFF0B1B3A.toInt() else 0xFFEAF2FF.toInt())       // light = HudTheme INK, dark = unchanged
+        et.setHintTextColor(if (lightBox) 0xFF8A5151.toInt() else 0xFFBC7F7F.toInt())   // light = HudTheme SOFT, dark = unchanged
+        et.setTextColor(if (lightBox) 0xFF3A0B0B.toInt() else 0xFFFFEAEA.toInt())       // light = HudTheme INK, dark = unchanged
         et.textSize = 15f
         et.background = null
         et.setSingleLine(true)
@@ -348,9 +348,9 @@ class NovaHud(private val ctx: Context) {
             val r = try { onTyped?.invoke(text) } catch (e: Throwable) { null }
             if (r == "busy") { view?.let { it.reply = "NOVA abhi kaam kar raha hai, thoda ruko"; it.invalidate() } }
         }
-        val send = pill("SEND", 0xFF1B6DFF.toInt(), (62 * d).toInt())
+        val send = pill("SEND", 0xFFFF1B1B.toInt(), (62 * d).toInt())
         send.setOnClickListener { doSend() }
-        val close = pill("\u2715", 0xFF3A4B7A.toInt(), (40 * d).toInt())
+        val close = pill("\u2715", 0xFF7A3A3A.toInt(), (40 * d).toInt())
         close.setOnClickListener { closeChat() }
         et.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) { doSend(); true } else false
@@ -467,9 +467,9 @@ private class HudView(ctx: Context) : View(ctx) {
     private var anim: ValueAnimator? = null
     private var ticker: ValueAnimator? = null
 
-    private val cyan = 0xFF27E1FF.toInt()
-    private val blue = 0xFF2F7BFF.toInt()
-    private val violet = 0xFFA35CFF.toInt()
+    private val cyan = 0xFFFF2727.toInt()
+    private val blue = 0xFFFF2F2F.toInt()
+    private val violet = 0xFFFF5C85.toInt()
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -480,12 +480,12 @@ private class HudView(ctx: Context) : View(ctx) {
     private val halo = Paint(Paint.ANTI_ALIAS_FLAG)
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
     private val title = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 18f * d; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
-    private val sub = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF9FB4D6.toInt(); textSize = 12.5f * d }
-    private val body = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFEAF2FF.toInt(); textSize = 14.5f * d }
-    private val hint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF9FB4D6.toInt(); textSize = 13f * d }
-    private val controlFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x88304A8D.toInt() }
-    private val controlStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.2f * d; color = 0xAA8CEBFF.toInt() }
-    private val controlLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.8f * d; strokeCap = Paint.Cap.ROUND; color = 0xFFEAF7FF.toInt() }
+    private val sub = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFD69F9F.toInt(); textSize = 12.5f * d }
+    private val body = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFEAEA.toInt(); textSize = 14.5f * d }
+    private val hint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFD69F9F.toInt(); textSize = 13f * d }
+    private val controlFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x888D3030.toInt() }
+    private val controlStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.2f * d; color = 0xAAFF8C8C.toInt() }
+    private val controlLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.8f * d; strokeCap = Paint.Cap.ROUND; color = 0xFFFFEAEA.toInt() }
     private val sweep = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shock = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val rect = RectF()
@@ -724,7 +724,7 @@ private class HudView(ctx: Context) : View(ctx) {
     }
 
     private fun stateColor(): Int = when (state) {
-        "think" -> 0xFF35A8FF.toInt()
+        "think" -> 0xFFFF3535.toInt()
         "listen", "idle" -> cyan
         else -> redC
     }
@@ -767,7 +767,7 @@ private class HudView(ctx: Context) : View(ctx) {
         if (light) {   // v7.149: slow soft shimmer sweep across the light card (no allocation per frame: one shader moved by a matrix)
             val p = HudTheme.shimmer(now)
             val bw = (right - left) * 0.45f
-            val sh = shimShader ?: LinearGradient(0f, 0f, bw, 0f, intArrayOf(0x002F7BFF, 0xFF2F7BFF.toInt(), 0x002F7BFF), null, Shader.TileMode.CLAMP).also { shimShader = it }
+            val sh = shimShader ?: LinearGradient(0f, 0f, bw, 0f, intArrayOf(0x00FF2F2F, 0xFFFF2F2F.toInt(), 0x00FF2F2F), null, Shader.TileMode.CLAMP).also { shimShader = it }
             shimM.reset(); shimM.postTranslate(left - bw + (right - left + bw) * p, 0f)
             sh.setLocalMatrix(shimM)
             sweep.shader = sh
@@ -821,7 +821,7 @@ private class HudView(ctx: Context) : View(ctx) {
             }
         } else {
             orbFill.shader = RadialGradient(ocx - r * 0.25f, ocy - r * 0.3f, r,
-                intArrayOf(0xFF1B2C6B.toInt(), 0xFF070D27.toInt()), null, Shader.TileMode.CLAMP)
+                intArrayOf(0xFF6B1B1B.toInt(), 0xFF270707.toInt()), null, Shader.TileMode.CLAMP)
             c.drawCircle(ocx, ocy, r * 0.9f, orbFill)
         }
         ring.color = sColor
@@ -847,7 +847,7 @@ private class HudView(ctx: Context) : View(ctx) {
         }
         c.drawText(TextUtils.ellipsize(head, title, textW, TextUtils.TruncateAt.END).toString(), tx, ocy + 4f * d, title)
         sub.textSize = 12f * d
-        sub.color = HudTheme.ink(light, 0xFFA9BCD9.toInt())
+        sub.color = HudTheme.ink(light, 0xFFD9A9A9.toInt())
         val line = heard.removePrefix("\uD83C\uDFA4").trim().ifBlank {
             when (state) { "listen" -> "Speak now"; "think" -> "Analyzing your request"; "idle" -> "Ready when you are"; else -> "I\u2019m talking now" }
         }
@@ -856,7 +856,7 @@ private class HudView(ctx: Context) : View(ctx) {
         // close X and three dots (top right)
         val xSaved = c.save()
         if (pressedControl == 9) c.scale(0.9f, 0.9f, btnX.centerX(), btnX.centerY())
-        controlFill.color = 0xCC061230.toInt()
+        controlFill.color = 0xCC300606.toInt()
         controlFill.alpha = 230
         c.drawRoundRect(btnX, 9f * d, 9f * d, controlFill)
         controlStroke.color = sColor
@@ -869,15 +869,15 @@ private class HudView(ctx: Context) : View(ctx) {
         c.restoreToCount(xSaved)
         val dotsSaved = c.save()
         if (pressedControl == 5) c.scale(0.9f, 0.9f, btnDots.centerX(), btnDots.centerY())
-        controlFill.color = if (menuOpen || pressedControl == 5) 0xCC2873B8.toInt() else 0xCC061230.toInt()
+        controlFill.color = if (menuOpen || pressedControl == 5) 0xCCB82828.toInt() else 0xCC300606.toInt()
         controlFill.alpha = 230
         c.drawRoundRect(btnDots, 9f * d, 9f * d, controlFill)
         c.drawRoundRect(btnDots, 9f * d, 9f * d, controlStroke)
         dot.shader = null
-        dot.color = 0xFFEAF7FF.toInt()
+        dot.color = 0xFFFFEAEA.toInt()
         for (k in -1..1) c.drawCircle(btnDots.centerX(), btnDots.centerY() + k * 5.5f * d, 1.9f * d, dot)
         c.restoreToCount(dotsSaved)
-        controlStroke.color = 0xAA8CEBFF.toInt()   // back to the colour the minimised chip uses
+        controlStroke.color = 0xAAFF8C8C.toInt()   // back to the colour the minimised chip uses
 
         // centre visual
         val vcx = (left + right) / 2f
@@ -895,9 +895,9 @@ private class HudView(ctx: Context) : View(ctx) {
             c.restoreToCount(isv)
         } else if (state == "think") {
             val gr = 22f * d
-            iconP.color = 0xFF6EC8FF.toInt()
+            iconP.color = 0xFFFF6E6E.toInt()
             iconP.strokeWidth = 1.4f * d
-            halo.shader = RadialGradient(vcx, vcy, gr * 2.4f, intArrayOf(0x4435A8FF, 0x0035A8FF), null, Shader.TileMode.CLAMP)
+            halo.shader = RadialGradient(vcx, vcy, gr * 2.4f, intArrayOf(0x44FF3535, 0x00FF3535), null, Shader.TileMode.CLAMP)
             c.drawCircle(vcx, vcy, gr * 2.4f, halo)
             c.drawCircle(vcx, vcy, gr, iconP)
             oval.set(vcx - gr, vcy - gr * 0.38f, vcx + gr, vcy + gr * 0.38f)
@@ -943,7 +943,7 @@ private class HudView(ctx: Context) : View(ctx) {
                 c.drawRoundRect(rect, 1.3f * d, 1.3f * d, bar)
             }
             orbFill.shader = RadialGradient(vcx, vcy, cr,
-                if (speaking) intArrayOf(0xFF3A0A16.toInt(), 0xFF14040A.toInt()) else intArrayOf(0xFF0B1B45.toInt(), 0xFF050A1E.toInt()),
+                if (speaking) intArrayOf(0xFF3A0A16.toInt(), 0xFF14040A.toInt()) else intArrayOf(0xFF450B0B.toInt(), 0xFF1E0505.toInt()),
                 null, Shader.TileMode.CLAMP)
             c.drawCircle(vcx, vcy, cr, orbFill)
             ring.color = sColor
@@ -978,7 +978,7 @@ private class HudView(ctx: Context) : View(ctx) {
         // reply text (a row only while there is something to read)
         if (replyOn()) {
             body.textSize = 12.5f * d
-            body.color = HudTheme.ink(light, 0xFFEAF2FF.toInt())
+            body.color = HudTheme.ink(light, 0xFFFFEAEA.toInt())
             val lay = build(reply, body, (right - left - 32f * d).toInt(), 2)
             c.save(); c.translate(left + 16f * d, top + 148f * d); lay.draw(c); c.restore()
         }
@@ -992,11 +992,11 @@ private class HudView(ctx: Context) : View(ctx) {
         val silentGreen = !speaking && silentOn
         btnPaint.style = Paint.Style.FILL
         btnPaint.shader = LinearGradient(0f, btnMain.top, 0f, btnMain.bottom,
-            if (speaking) intArrayOf(0xFF5A0A18.toInt(), 0xFF2A0610.toInt()) else intArrayOf(0xFF0F2A66.toInt(), 0xFF081840.toInt()),
+            if (speaking) intArrayOf(0xFF5A0A18.toInt(), 0xFF2A0610.toInt()) else intArrayOf(0xFF660F0F.toInt(), 0xFF400808.toInt()),
             null, Shader.TileMode.CLAMP)
         c.drawPath(bpath, btnPaint)
         btnPaint.shader = null
-        border.color = if (silentGreen) 0xFF16B58A.toInt() else sColor
+        border.color = if (silentGreen) 0xFFB51616.toInt() else sColor
         border.strokeWidth = 1.8f * d
         border.alpha = 255
         c.drawPath(bpath, border)
@@ -1048,9 +1048,9 @@ private class HudView(ctx: Context) : View(ctx) {
         // HAAN / NAHI (only while NOVA waits for a yes/no)
         if (askMode) {
             btnPaint.style = Paint.Style.FILL
-            btnPaint.color = 0xFF16B58A.toInt()
+            btnPaint.color = 0xFFB51616.toInt()
             c.drawRoundRect(btnYes, 12f * d, 12f * d, btnPaint)
-            btnPaint.color = 0xFF3A4B7A.toInt()
+            btnPaint.color = 0xFF7A3A3A.toInt()
             c.drawRoundRect(btnNo, 12f * d, 12f * d, btnPaint)
             btnText.textSize = 16f * d
             val ty = btnYes.centerY() - (btnText.descent() + btnText.ascent()) / 2f
@@ -1068,9 +1068,9 @@ private class HudView(ctx: Context) : View(ctx) {
             border.strokeWidth = 1.2f * d
             border.alpha = 200
             c.drawRoundRect(card, 18f * d, 18f * d, border)
-            drawChip(c, mSilent, if (silentOn) "SILENT ON" else "SILENT OFF", if (silentOn) 0xFF187B70.toInt() else 0xFF304A8D.toInt(), 4)
-            drawChip(c, mChat, "CHAT", 0xFF2F5FD0.toInt(), 6)
-            drawChip(c, mMin, "CHHOTA KARO", 0xFF304A8D.toInt(), 1)
+            drawChip(c, mSilent, if (silentOn) "SILENT ON" else "SILENT OFF", if (silentOn) 0xFF7B1818.toInt() else 0xFF8D3030.toInt(), 4)
+            drawChip(c, mChat, "CHAT", 0xFFD02F2F.toInt(), 6)
+            drawChip(c, mMin, "CHHOTA KARO", 0xFF8D3030.toInt(), 1)
             drawChip(c, mClose, "BAND KARO", 0xFF5A2A56.toInt(), 2)
         }
 
@@ -1084,7 +1084,7 @@ private class HudView(ctx: Context) : View(ctx) {
             c.drawPath(cpath, border)
             val sx = left + (right - left) * (-0.25f + 1.5f * t)
             sweep.shader = LinearGradient(sx - 70f * d, top, sx + 70f * d, pillBottom,
-                intArrayOf(0x00FFFFFF, 0x66CFF4FF, 0x00FFFFFF), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
+                intArrayOf(0x00FFFFFF, 0x66FFCFCF, 0x00FFFFFF), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
             c.drawPath(cpath, sweep)
             sweep.shader = null
             val g = margin * 0.9f * t
@@ -1108,7 +1108,7 @@ private class HudView(ctx: Context) : View(ctx) {
             if (pressedControl == ids[n]) c.scale(0.95f, 0.95f, r.centerX(), r.centerY())
             hexPath(r, 10f * d)
             btnPaint.style = Paint.Style.FILL
-            btnPaint.shader = LinearGradient(0f, r.top, 0f, r.bottom, intArrayOf(0xFF0F2A66.toInt(), 0xFF081840.toInt()), null, Shader.TileMode.CLAMP)
+            btnPaint.shader = LinearGradient(0f, r.top, 0f, r.bottom, intArrayOf(0xFF660F0F.toInt(), 0xFF400808.toInt()), null, Shader.TileMode.CLAMP)
             c.drawPath(bpath, btnPaint)
             btnPaint.shader = null
             border.color = sColor
@@ -1174,7 +1174,7 @@ private class HudView(ctx: Context) : View(ctx) {
         val saved = c.save()
         if (pressed) c.scale(0.86f, 0.86f, cx, cy)
         controlFill.alpha = if (pressed) 255 else 220
-        controlFill.color = if (pressed) 0xCC2873B8.toInt() else 0x88304A8D.toInt()
+        controlFill.color = if (pressed) 0xCCB82828.toInt() else 0x888D3030.toInt()
         c.drawRoundRect(box, 5f * d, 5f * d, controlFill)
         controlStroke.alpha = if (pressed) 255 else 220
         controlStroke.strokeWidth = (if (pressed) 1.8f else 1.2f) * d
@@ -1224,7 +1224,7 @@ private class HudView(ctx: Context) : View(ctx) {
         ring.strokeWidth = 1.5f * d
         c.drawCircle(cx, cy, r + 2f * d + (pulse - 0.72f) * 8f * d, ring)
         orbFill.shader = RadialGradient(cx - r * 0.25f, cy - r * 0.25f, r,
-            intArrayOf(0xFF355CC8.toInt(), 0xFF070D27.toInt()), null, Shader.TileMode.CLAMP)
+            intArrayOf(0xFFC83535.toInt(), 0xFF270707.toInt()), null, Shader.TileMode.CLAMP)
         c.drawCircle(cx, cy, r, orbFill)
         val spin = (now % 1800L) / 1800f * 360f
         oval.set(cx - r, cy - r, cx + r, cy + r)
@@ -1234,11 +1234,11 @@ private class HudView(ctx: Context) : View(ctx) {
         arc.color = violet
         c.drawArc(oval, -spin * 0.75f + 180f, 100f, false, arc)
         title.textSize = 12.5f * d
-        title.color = HudTheme.ink(light, 0xFFF4FAFF.toInt())
+        title.color = HudTheme.ink(light, 0xFFFFF4F4.toInt())
         val tx = cx + r + 8f * d
         c.drawText("NOVA", tx, cy - 1f * d, title)
         sub.textSize = 8.5f * d
-        sub.color = HudTheme.ink(light, 0xFFA9C4E8.toInt())
+        sub.color = HudTheme.ink(light, 0xFFE8A9A9.toInt())
         val stateLabel = when (state) { "listen" -> "LISTENING · TAP TO EXPAND"; "think" -> "THINKING · TAP TO EXPAND"; else -> "TAP TO EXPAND" }
         c.drawText(stateLabel, tx, cy + 12f * d, sub)
         drawControl(c, right - 17f * d, cy, true)

@@ -67,12 +67,12 @@ class CameraEyeActivity : Activity() {
         front = intent?.getStringExtra(EXTRA_FACING) == CameraEyeRules.Facing.FRONT.name
         val d = resources.displayMetrics.density
         val root = FrameLayout(this)
-        root.setBackgroundColor(Color.rgb(5, 8, 12))
+        root.setBackgroundColor(Color.rgb(12, 5, 5))
         val col = LinearLayout(this)
         col.orientation = LinearLayout.VERTICAL
         col.gravity = Gravity.CENTER
         val tv = TextView(this)
-        tv.setTextColor(Color.rgb(53, 242, 194)); tv.textSize = 20f; tv.gravity = Gravity.CENTER
+        tv.setTextColor(Color.rgb(242, 53, 53)); tv.textSize = 20f; tv.gravity = Gravity.CENTER
         tv.text = if (front) "NOVA dekh raha hai\n(front camera)" else "NOVA dekh raha hai\n(peeche wala camera)"
         label = tv
         col.addView(tv)

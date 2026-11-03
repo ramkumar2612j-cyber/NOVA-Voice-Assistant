@@ -22,7 +22,6 @@ object MimeTypes {
 }
 
 object C {
-    const val RESIZE_MODE_ZOOM = 4
     const val RESIZE_MODE_FIT = 2
     const val RESIZE_MODE_FIXED_WIDTH = 1
     const val RESIZE_MODE_FIXED_HEIGHT = 3
