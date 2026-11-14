@@ -22,7 +22,7 @@ class AppBuilderRulesTest {
         assertEquals(A.K_APP_INSTALL, A.parse("nova banayi hui app install karo")?.kind)
     }
     @Test fun facts_need_a_source_and_matching_numbers() {
-        val plan = A.Plan("T", true, listOf(A.Section("s1", "Days", "q")))
+        val plan = AppBuilderRules.Plan("T", true, listOf(AppBuilderRules.Section("s1", "Days", "q")))
         val srcs = A.mergeSources(listOf(listOf(Triple("A", "https://example.org/a", "Chhath has four days and a 36 hours fast."))))
         val sheet = A.parseSheet("""{"sections":[{"id":"s1","facts":[{"t":"Chhath has a 36 hours fast.","src":[1]},{"t":"Chhath lasts 72 hours.","src":[1]},{"t":"No source here at all.","src":[]}],"gap":""}]}""", plan, srcs)!!
         assertEquals(1, sheet.total)
