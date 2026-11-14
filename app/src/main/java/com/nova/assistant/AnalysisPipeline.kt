@@ -41,6 +41,8 @@ object AnalysisPipeline {
         fun callTextWith(json: String, readMs: Long, deadlineMs: Long): Pair<Int, String> = Pair(0, "")
         /** v7.58 13C: one key-less public GET (WebBrowsers.httpGet); null on any failure. Worker thread only. */
         fun webGet(url: String, ms: Int): String? = null
+        /** v7.176 MATCH LIVE: a text-only answer from the free provider chain (when Gemini is blocked / cooling). null = nothing usable. Worker thread only. */
+        fun callFreeText(system: String, user: String): String? = null
     }
 
     /** v7.59 13D: told ONCE when a run that was started by voice / chat ends: (ok, plain report text or the honest failure sentence, short speech summary). Never called for a run started by the ANALYSE button. */

@@ -125,20 +125,29 @@ object AutopilotMedia {
             val latch = CountDownLatch(1)
             val code = AtomicInteger(0)   // 0 = running, 1 = done, 2 = error
             val why = arrayOf("")
-            val transformer = Transformer.Builder(app)
-                .setTransformationRequest(request)
-                .addListener(object : Transformer.Listener {
-                    override fun onCompleted(composition: androidx.media3.transformer.Composition, exportResult: androidx.media3.transformer.ExportResult) {
-                        code.set(1); latch.countDown()
-                    }
-                    override fun onError(composition: androidx.media3.transformer.Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
-                        why[0] = exportException.message ?: "export fail"; code.set(2); latch.countDown()
-                    }
-                })
-                .build()
-            transformer.start(item, out.absolutePath)
+            // v7.174: Media3 insists on ONE application thread. This function runs on the worker thread (no Looper), so the
+            // Transformer is built, started and cancelled on the MAIN looper; the worker only waits on the latch.
+            val holder = arrayOfNulls<Transformer>(1)
+            val mainH = android.os.Handler(android.os.Looper.getMainLooper())
+            mainH.post {
+                try {
+                    val tr = Transformer.Builder(app)
+                        .setTransformationRequest(request)
+                        .addListener(object : Transformer.Listener {
+                            override fun onCompleted(composition: androidx.media3.transformer.Composition, exportResult: androidx.media3.transformer.ExportResult) {
+                                code.set(1); latch.countDown()
+                            }
+                            override fun onError(composition: androidx.media3.transformer.Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
+                                why[0] = exportException.message ?: "export fail"; code.set(2); latch.countDown()
+                            }
+                        })
+                        .build()
+                    holder[0] = tr
+                    tr.start(item, out.absolutePath)
+                } catch (e: Throwable) { why[0] = e.javaClass.simpleName; code.set(2); latch.countDown() }
+            }
             if (!latch.await(REENCODE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                try { transformer.cancel() } catch (e: Throwable) { }
+                mainH.post { try { holder[0]?.cancel() } catch (e: Throwable) { } }
                 out.delete()
                 return Reencode(false, null, "re-encode ka time nikal gaya")
             }

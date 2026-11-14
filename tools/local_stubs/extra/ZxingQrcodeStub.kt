@@ -10,3 +10,4 @@ class QRCodeReader {
     fun decode(image: com.google.zxing.BinaryBitmap): com.google.zxing.Result =
         throw UnsupportedOperationException("zxing sandbox stub")
 }
+

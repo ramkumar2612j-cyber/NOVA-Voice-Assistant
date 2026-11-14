@@ -618,6 +618,7 @@ class NovaService : Service() {
         WifiKit.Guard.stop()   // v7.153 WIFI KIT: the guard tick dies with the service
         try { mediaObserver?.let { contentResolver.unregisterContentObserver(it) } } catch (e: Exception) { }   // v7.158
         mediaObserver = null
+        matchLiveCancel = true   // v7.176: the live match analysis ends with the service
         if (agentRunning) {
             agentCancel = true
             agentTaskId?.let { try { AgentTaskLedger(this).transition(it, AgentTaskRules.State.CANCELLED, "NOVA service stopped") } catch (e: Exception) { ErrLog.add("NovaService", e.toString()) } }
@@ -736,8 +737,9 @@ class NovaService : Service() {
         JarvisSpeaker.stop()                               // v7.129: ... and the old Jarvis audio
         if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return true
         if (startJarvisLocal(t, spoken, id)) return true   // v7.138
-        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return true
-        val r = try { t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
+        val voiceText = HindiSpeak.forVoice(spoken)   // v7.159: Hinglish -> Devanagari so the Hindi voice pronounces it properly (chat / HUD text stay unchanged)
+        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return true
+        val r = try { t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id) } catch (e: Exception) { TextToSpeech.ERROR }
         if (r != TextToSpeech.SUCCESS) {
             ttsActive = false
             if (confirm) answerWindow = true
@@ -892,8 +894,9 @@ class NovaService : Service() {
                 try {
                     cfg.applyVoice(t)
                     if (startJarvisLocal(t, spoken, id)) return@Thread   // v7.138
-                    if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
-                    val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                    val voiceText = HindiSpeak.forVoice(spoken)   // v7.159
+                    if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return@Thread
+                    val r = t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id)
                     if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                 } catch (e: Throwable) { utteranceEnded(id, false) }
             } else {
@@ -932,8 +935,9 @@ class NovaService : Service() {
                         cfg.applyVoice(t)
                         if (JarvisSpeaker.eligible(this, cfg, spoken) && startJarvis(t, spoken, id)) return@Thread
                         if (startJarvisLocal(t, spoken, id)) return@Thread
-                        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, spoken, id)) return@Thread
-                        val r = t.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)
+                        val voiceText = HindiSpeak.forVoice(spoken)   // v7.159
+                        if (cfg.ultronVoice && spoken.length <= 700 && startUltron(t, voiceText, id)) return@Thread
+                        val r = t.speak(voiceText, TextToSpeech.QUEUE_FLUSH, null, id)
                         if (r != TextToSpeech.SUCCESS) utteranceEnded(id, false)
                     }
                 } catch (e: Throwable) { utteranceEnded(id, false) }
@@ -2174,7 +2178,14 @@ class NovaService : Service() {
         announceIfIdle(text)
     }
 
+    /** Language flag for GmailAlert / PayKit (they have no cfg). v7.170 added a second identical copy: removed in v7.175 (duplicate = compile error "conflicting overloads"). */
     fun isEnglish(): Boolean = cfg.lang == "en"
+
+    /** v7.170 PAYMENT CHECK: a credit alert / timeout. Spoken when idle; when NOVA is busy or locked it still shows in the chat. */
+    fun onPayAlert(text: String) {
+        if (!alive) return
+        if (!announceIfIdle(text)) emit("ai", ChatText.clean(text))
+    }
 
     fun onBizUrgent(sender: String, text: String) {
         if (!alive) return
@@ -2377,6 +2388,13 @@ class NovaService : Service() {
             GmailStore.notifyPhone(this, tr("NOVA: business lead", "NOVA: business lead"),
                 tr("$who ne wholesale / collab jaisi baat poochi hai. LeadStore me save kar di - jawab aap dena.", "$who asked about wholesale / collaboration. Saved in the lead store."))
         } catch (e: Throwable) { }
+    }
+
+    /** v7.169: a lead-finder result or a delivery that is due - one short owner line + phone notification. */
+    fun onBizNote(msg: String) {
+        if (!alive || msg.isBlank()) return
+        announceIfIdle(msg)
+        try { GmailStore.notifyPhone(this, "NOVA", msg) } catch (e: Throwable) { }
     }
 
     /** A customer asked about their order and nothing was stored - the owner is told once. */
@@ -2949,6 +2967,18 @@ class NovaService : Service() {
                 return LastMovieRules.answer(lm, cfg.lang == "en")
             }
         }
+        // v7.176 (c) APP BUILDER: "nova chhath calendar app banao": deep research -> verified facts -> app -> GitHub build -> install (narrow grammar: needs an app word + a make word).
+        val appCmd = if (text.isBlank()) null else AppBuilderRules.parse(text)
+        if (appCmd != null) {
+            lastTurnLocal = true; lastKind = "media"
+            return appBuilderRoute(appCmd)
+        }
+        // v7.176 MATCH LIVE ANALYSIS: "is match me kaun jeetega / predict karo": read the screen, search, then keep updating while the owner watches.
+        val matchLive = if (text.isBlank()) null else MatchLiveRules.parse(text)
+        if (matchLive != null) {
+            lastTurnLocal = true; lastKind = "media"
+            return if (matchLive.ask == MatchLiveRules.Ask.STOP) stopMatchLive() else startMatchLive(matchLive.speak)
+        }
         if (text.isNotBlank() && MovieScanRules.parse(text) == MovieScanRules.Ask.MOVIE) {
             lastTurnLocal = true; lastKind = "media"
             return startMovieScan()   // v7.64 PART 14B-2: real live screen capture (frames in memory only); the name guess comes in 14B-3
@@ -3164,6 +3194,12 @@ class NovaService : Service() {
             lastTurnLocal = true
             lastKind = "gmail"
             return gmailRun(gmCmd)
+        }
+        // v7.175 INSTAGRAM DM by voice ("instagram pe rahul ko hello bhejo"): strict parse, then the existing screen agent does the typing (no public send API exists).
+        InstagramDmRules.parse(text)?.let { dm ->
+            lastTurnLocal = false
+            lastKind = "agent"
+            return agentBegin(InstagramDmRules.task(dm))
         }
         // v7.83: "aaj whatsapp pe koi naya message aaya?" is answered on the phone (read-only), never sent to the AI as a guess.
         unreadQueryReply(text)?.let { return it }
@@ -3490,6 +3526,10 @@ class NovaService : Service() {
             // v7.97: switch is ON but Android did not bind the reader: open the Notification access page so the owner can flip it OFF / ON (the usual fix)
             try { DrivingBridge.openListenerSettings(this) } catch (e: Throwable) { ErrLog.add("NovaService", e.toString()) }
             return UnreadQueryRules.notReadyText(en)
+        }
+        if (req.mode == UnreadQueryRules.MODE_SHOW) {   // v7.175: "dikhao" = the full list as a chat card (not spoken), the spoken answer stays short
+            val card = UnreadQueryRules.screenText(items, req, en)
+            if (card.isNotBlank()) emit("ai", ChatText.clean(card))
         }
         return UnreadQueryRules.reply(items, req, en)
     }
@@ -3828,7 +3868,7 @@ class NovaService : Service() {
             turns = fallbackTurns(),   // v6.70: a backup AI continues the same conversation, not a lone sentence
             rich = rich,
             hedge = true,   // v7.4: voice answers ask the top 2 providers at once; v7.126: long typed answers too, but the 2nd one only joins after 2.5 s
-            hedgeStaggerMs = if (rich) 6000L else 0L,   // v7.151: long typed answers give the GLM 5.3 brain 6 s before Groq joins (was 2.5 s)
+            hedgeStaggerMs = if (rich) 2500L else 0L,   // v7.166: faster Groq join (was 6 s);   // v7.151: long typed answers give the GLM 5.3 brain 6 s before Groq joins (was 2.5 s)
             glmFirst = ExtCfg.glmAll(this)   // v7.154: owner opt-in - GLM 5.3 Flash first for every chat answer (default OFF = v7.151 order)
         ) { p, _, body, key -> rankedCall(p, body, key) }
         }
@@ -4190,6 +4230,38 @@ class NovaService : Service() {
                 }
             }
             JarvisDeepRules.K_DEEP_STATUS -> JarvisDeepRules.replyDeepStatus(en, ExtCfg.jarvisDeep(this), JarvisDeepVoice.ready(this))
+            // ---------------------------------------------------------------- v7.169 BIZ (profile, lead finder, advance payment)
+            BizRules.K_BIZ_SET -> {
+                val r = BizRules.apply(BizStore.profile(this), c.arg, en)
+                if (r.first != BizStore.profile(this)) BizStore.saveProfile(this, r.first)
+                r.second
+            }
+            BizRules.K_BIZ_STATUS -> BizRules.statusLine(BizStore.profile(this), en) +
+                (if (LeadFinder.hasKey(this)) "" else (if (en) " Google Places key: not saved." else " Google Places key: save nahi."))
+            BizRules.K_BIZ_KEY -> if (SecureStore.saveSlot(this, BizStore.SLOT_PLACES, c.arg))
+                tr("Google Places key save ho gayi (encrypted). Chat se ye line delete kar dena.", "Google Places key saved (encrypted). Please delete this line from the chat.")
+            else tr("Key save nahi ho payi.", "Could not save the key.")
+            BizRules.K_BIZ_LEADS_ONOFF -> {
+                val on = c.arg == "on"
+                val prof = BizStore.profile(this)
+                val miss = BizRules.missingForLeads(prof)
+                if (on && (miss.isNotEmpty() || !LeadFinder.hasKey(this)))
+                    tr("Pehle ye bharo: ", "First set: ") + (miss + (if (LeadFinder.hasKey(this)) emptyList() else listOf("placeskey"))).joinToString(", ")
+                else { BizStore.saveProfile(this, prof.copy(leadsOn = on)); if (on) tr("Roz ${prof.perDay} leads ON. Aap approve karoge tabhi message jayega.", "Daily ${prof.perDay} leads ON. Nothing is sent until you approve.") else tr("Daily leads OFF.", "Daily leads OFF.") }
+            }
+            BizRules.K_BIZ_LEADS_NOW -> {
+                Thread {
+                    val r = LeadFinder.run(this, en, true)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { announceIfIdle(r.message) }
+                }.apply { name = "nova-biz-leads"; isDaemon = true }.start()
+                tr("Google Maps se leads dhundh rahi hoon...", "Searching Google Maps for leads...")
+            }
+            // ---------------------------------------------------------------- v7.170 PAYMENT QR + PAYMENT CHECK
+            PayRules.K_PAY_QR -> PayKit.cmdQr(this, c.arg, en)
+            PayRules.K_PAY_STATUS -> PayKit.statusText(this, en)
+            PayRules.K_PAY_WATCH -> PayKit.cmdWatch(this, c.arg == "on", en)
+            VideoStudioRules.K_STUDIO_OPEN -> { VideoStudio.openScreen(); tr("Video Studio khol diya. VIDEO CHUNO dabao, 2 se 8 video chuno, phir EDIT KARO.", "Opened Video Studio. Tap pick videos (2 to 8), then edit.") }
+            PayRules.K_PAY_SCREEN -> { PayKit.openScreen(); tr("Payment QR screen khol di.", "Opened the payment QR screen.") }
             // ---------------------------------------------------------------- v7.158 AUTOPILOT voice (task H)
             AutopilotVoiceRules.K_AP_ON -> autopilotVoiceOn(true)
             AutopilotVoiceRules.K_AP_OFF -> autopilotVoiceOn(false)
@@ -7963,6 +8035,64 @@ class NovaService : Service() {
         return startMovieScan(kind)
     }
 
+    // ---------------------------------------------------------------- v7.176 (c) APP BUILDER
+    private fun appBuilderRoute(c: Logic.Cmd): String {
+        val en = cfg.lang == "en"
+        return when (c.kind) {
+            AppBuilderRules.K_APP_BUILD -> AppBuilder.start(this, c.arg, analysisBrain(), en)
+            AppBuilderRules.K_APP_STOP -> AppBuilder.stop(en)
+            AppBuilderRules.K_APP_SCREEN -> { AppBuilder.openScreen(); AppBuilderRules.screenText(en) }
+            AppBuilderRules.K_APP_INSTALL -> AppBuilder.install(this, en)
+            else -> ""
+        }
+    }
+
+    // ---------------------------------------------------------------- v7.176 MATCH LIVE ANALYSIS
+    @Volatile private var matchLiveRunning = false
+    @Volatile private var matchLiveCancel = false
+
+    private fun stopMatchLive(): String {
+        val en = cfg.lang == "en"
+        if (!matchLiveRunning) return MatchLiveRules.idleStopText(en)
+        matchLiveCancel = true
+        return MatchLiveRules.stoppedText(en)
+    }
+
+    /** Voice / chat start. A generic STOP (silence NOVA) does not end it on purpose: only "match analysis band" does. No laser overlay: the match must stay visible. */
+    private fun startMatchLive(speakIt: Boolean): String {
+        val en = cfg.lang == "en"
+        if (matchLiveRunning) return MatchLiveRules.alreadyText(en)
+        if (!NovaAccessibilityService.isEnabled(this) || NovaAccessibilityService.instance == null) return accNeedMsg("Match analysis nahi ho sakta", "I cannot analyse the match")
+        matchLiveRunning = true; matchLiveCancel = false
+        Thread {
+            try {
+                val src = object : MovieScanCapture.Source {
+                    override fun foregroundProtected(): Boolean? = NovaAccessibilityService.movieProtected()
+                    override fun shot(): ByteArray? = NovaAccessibilityService.movieShot()
+                    override fun cancelled(): Boolean = matchLiveCancel
+                    override fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (e: InterruptedException) { matchLiveCancel = true } }
+                    override fun supported(): Boolean = android.os.Build.VERSION.SDK_INT >= 30
+                }
+                val end = MatchLivePipeline.run(
+                    src,
+                    { try { NovaAccessibilityService.readScreen(false)?.lines?.joinToString("\n") ?: "" } catch (e: Throwable) { "" } },
+                    analysisBrain(),
+                    { text, speech ->
+                        try {
+                            emit("ai", ChatText.clean(text))
+                            h.post { hud?.setReply(text.lines().take(3).joinToString("\n").take(160)) }
+                            if (speakIt && speech.isNotBlank()) speak(speech, false, false)
+                        } catch (e: Throwable) { ErrLog.add("matchLive", "say") }
+                    },
+                    { }
+                )
+                ErrLog.addOnce("quiet:matchLive", "end $end")
+            } catch (e: Throwable) { ErrLog.add("matchLive", "run") }
+            finally { matchLiveRunning = false }
+        }.start()
+        return MatchLiveRules.startedText(en)
+    }
+
     private fun startMovieScan(kind: ScreenIdRules.Kind? = null): String {
         val en = cfg.lang == "en"
         if (movieScanRunning) return if (en) "A screen scan is already running." else "Screen scan pehle se chal raha hai."
@@ -8089,6 +8219,7 @@ class NovaService : Service() {
             return if (code in 200..299) Pair(code, candidateText(resp)) else Pair(code, "")
         }
         override fun webGet(url: String, ms: Int): String? = try { WebBrowsers.httpGet(url, ms) } catch (e: Throwable) { null }
+        override fun callFreeText(system: String, user: String): String? = try { if (agentChainReady()) agentChain(system, user) else null } catch (e: Throwable) { null }   // v7.176 MATCH LIVE
         // v7.54 PART 13B-2a: free vision fallback. Same switch (ExtCfg.freeChain), same keys, same cooldowns (freeCooldowns) and ApiUsage counting (FreeHttp) as the text chain.
         private fun freeKey(name: String): String = when (name) {
             "groq" -> SecureStore.getGroq(this@NovaService)

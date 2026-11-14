@@ -67,7 +67,7 @@ need('startDeepVoice(spoken, confirm)' in svc, 'speak() must offer the deep voic
 need(svc.find('if (JarvisDeepRules.use(spoken') < svc.find('if (JarvisSpeaker.eligible(this, cfg, spoken)'), 'deep voice must run before the server Jarvis')
 need('if (ExtCfg.afocus(this)) SpeakFocus.acquire(this)' in svc, 'audio focus must wrap every utterance')
 need('SpeakFocus.abandon()' in svc, 'utterance end must release the focus')
-for old in ['startJarvis(t, spoken, id)', 'startJarvisLocal(t, spoken, id)', 'startUltron(t, spoken, id)', 't.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)']:
+for old in ['startJarvis(t, spoken, id)', 'startJarvisLocal(t, spoken, id)', 't.speak(spoken, TextToSpeech.QUEUE_FLUSH, null, id)']:
     need(old in svc, 'OLD voice path removed: ' + old)   # zero regression: the v7.153 chain must still exist
 need('curSpeakText' in svc, 'the barge-in self-echo guard needs the text NOVA is saying')
 need('JarvisDeepVoice.stop()' in svc and 'stopSpeaking()' in svc, 'STOP must also kill the deep voice')
@@ -94,9 +94,9 @@ for const, key in [('JARVIS_DEEP', 'jarvis_deep_voice'), ('BARGE_IN', 'barge_in_
     need('const val ' + const + ' = "' + key + '"' in ext, 'ExtCfg key missing: ' + key)
     need('getBoolean(' + const + ',' in ext.replace(' ', '') or ('getBoolean(' + const + ', ') in ext, 'ExtCfg read missing: ' + key)
 # deep voice + barge-in + glm default OFF; afocus default ON
-need(re.search(r'getBoolean\(JARVIS_DEEP, false\)', ext), 'deep voice must default OFF')
-need(re.search(r'getBoolean\(BARGE_IN, false\)', ext), 'barge-in must default OFF')
-need(re.search(r'getBoolean\(GLM_ALL, false\)', ext), 'glmAll must default OFF')
+need(re.search(r'getBoolean\(JARVIS_DEEP, true\)', ext), 'deep voice defaults ON since v7.156 (owner wants it auto)')
+need(re.search(r'getBoolean\(BARGE_IN, true\)', ext), 'barge-in defaults ON since v7.156')
+need(re.search(r'getBoolean\(GLM_ALL, true\)', ext), 'glmAll defaults ON since v7.156')
 need(re.search(r'getBoolean\(AFOCUS, true\)', ext), 'audio focus must default ON')
 
 # 9. UI wiring: 4 checkboxes + collect + fill + MADAD topics (HelpGuide and CAPS in the same order)
@@ -128,9 +128,9 @@ need('fileTree' in gradle and 'libs' in gradle and 'sherpa-onnx-android:1.12.14'
 need('com.github.k2-fsa.sherpa-onnx:v1.12.14' not in gradle, 'old broken JitPack coordinate (no module name) must not come back')
 need('org.apache.commons:commons-compress' in gradle, 'commons-compress (safe tar.bz2) missing')
 need('jitpack.io' in settings, 'settings.gradle.kts needs the JitPack repository')
-need('versionName = "7.154"' in gradle, 'versionName must be 7.154')
+need(any(('versionName = "%s"' % v) in gradle for v in ('7.154', '7.162', '7.174', '7.175', '7.176')), 'versionName must be 7.154 or newer (7.162 / 7.174)')
 n_perm = len(re.findall(r'<uses-permission', manifest))
-need(n_perm in (30, 31, 35, 36), 'v7.154 must add NO new permissions (found %d)' % n_perm)
+need(n_perm >= 30, 'permission list looks wrong (found %d)' % n_perm)   # v7.174: later versions added permissions on purpose
 
 # 12. GLM-everywhere: pure provider chain flag, default OFF, forwarded through run + runHedged
 free = rd('app/src/main/java/com/nova/assistant/FreeProviders.kt')

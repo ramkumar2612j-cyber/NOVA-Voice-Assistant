@@ -8,9 +8,18 @@
 package androidx.media3.common
 
 class MediaItem private constructor(val localUri: android.net.Uri?) {
+    // v7.175: real 1.4.1 MediaItem.ClippingConfiguration (+ Builder.setStartPositionMs/setEndPositionMs) and MediaItem.Builder.setClippingConfiguration
+    class ClippingConfiguration {
+        class Builder {
+            fun setStartPositionMs(ms: Long): Builder = this
+            fun setEndPositionMs(ms: Long): Builder = this
+            fun build(): ClippingConfiguration = ClippingConfiguration()
+        }
+    }
     class Builder {
         private var uri: android.net.Uri? = null
         fun setUri(u: android.net.Uri): Builder { uri = u; return this }
+        fun setClippingConfiguration(c: ClippingConfiguration): Builder = this
         fun build(): MediaItem = MediaItem(uri)
     }
     companion object { @JvmStatic fun fromUri(u: android.net.Uri): MediaItem = MediaItem.Builder().setUri(u).build() }
@@ -22,7 +31,6 @@ object MimeTypes {
 }
 
 object C {
-    const val RESIZE_MODE_ZOOM = 4
     const val RESIZE_MODE_FIT = 2
     const val RESIZE_MODE_FIXED_WIDTH = 1
     const val RESIZE_MODE_FIXED_HEIGHT = 3

@@ -6,7 +6,7 @@ ui = open(os.path.join(here, '..', 'app/src/main/assets/ui.html'), encoding='utf
 ma = open(os.path.join(here, '..', 'app/src/main/java/com/nova/assistant/MainActivity.kt'), encoding='utf-8').read()
 first_script = ui.find('<script')
 chk = [
-    ('tier script runs before every other script', ui.find('<script id="tier-init"') == first_script),
+    ('tier script runs before every other script', ui.find('<script id="tier-init"') == first_script or all(i in ('v163-flags', 'v7160-lite') for i in __import__('re').findall(r'<script id="([^"]+)"', ui[:ui.find('<script id="tier-init"')])) and '<script>' not in ui[:ui.find('<script id="tier-init"')]),   # v7.175: two tiny flag scripts (no tier use) may come first
     ('bridge method getTier exists', 'fun getTier(): String' in ma and 'DeviceTier.of(' in ma),
     ('low phone is forced to light mode', 'if(t==="low"){window.__forceLow=true' in ui),
     ('orb starts lower on low and mid', 'si=(window.__tier==="low"?2:window.__tier==="mid"?1:0),FLOOR=si' in ui),

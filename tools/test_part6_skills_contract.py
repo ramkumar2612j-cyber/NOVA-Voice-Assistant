@@ -19,6 +19,9 @@ MAP.update({'agentscore':'Kaam ka hisaab (agent score)','screenid':'Ye kaun sa g
 MAP.update({'aibrain':'GLM 5.3 Flash brain'})   # v7.152: NOVA ka cloud brain (Settings switch LIGHT POPUP bhi Skills me hai: 'Light popup (halka card)')
 MAP.update({'wifi':'WiFi Kit (scan, switch, QR'})   # v7.153: WIFI KIT (Skills entry 'WiFi Kit (scan, switch, QR, doctor)')
 MAP.update({'jdeep':'JARVIS deep voice (offline neural awaaz)','barge':'Bol ke rokna (barge-in)','afocus':'Audio focus (gaana dheema ho jata hai)','provcheck':'AI provider check (abhi ka haal)','glmall':'GLM 5.3 sab jagah (option)'})   # v7.154: JARVIS UPGRADE (deep voice + barge-in + focus + provider check + glm in Skills)
+MAP.update({'matchlive':'MATCH LIVE ANALYSIS (kaun jeetega)'})   # v7.176
+MAP.update({'appbuilder':'APP BUILDER (research + app + install)'})   # v7.176 (c)
+MAP.update({'studio':'VIDEO STUDIO (auto edit)','payqr':'PAYMENT QR + payment check'})   # v7.175: v7.170 / v7.173 topics
 MAP.update({'autopilot':'AUTOPILOT (group se website + Instagram + YouTube)'})   # v7.158 Part 4: AUTOPILOT (Skills screen, COMM section)
 bad=[]
 for t in topics:

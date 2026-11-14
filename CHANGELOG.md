@@ -1,3 +1,115 @@
+## v7.176 (b) MATCH PREDICTION = RESEARCH, NOT THE SCREEN (owner request)
+- The screen now only identifies the match and its live state. The prediction is built from 4 web searches (recent form of both teams, head-to-head, venue / pitch / weather / toss, team news + injuries + standings); the AI is told the screen alone is never a reason, every reason must name its factor and a numbered web fact [n], and with fewer than 2 supporting facts the chances stay near even and it says "search se kaafi data nahi mila" (never a fake confident number).
+- The first answer lists its sources (title + site). While the match runs, fresh web facts (live score, commentary, toss, lineups) are fetched again every 5 minutes and used together with the screen state (score, overs / minute, wickets, target, required rate) for each LIVE update.
+- Tests: 3 new (research prompt, thin-search wording, sources list). Phone / real match NOT TESTED.
+
+
+## v7.176 (c) APP BUILDER (owner video: assistant writes, builds and installs an app by itself)
+- Say "nova chhath calendar app banao" (or type it in APP BUILDER, Home card / Skills entry). Steps shown live in a terminal-style screen (PLAN > RESEARCH > FACTS > CODE > PUSH > BUILD > DOWNLOAD) with a STOP button that stops only the build.
+- DEEP RESEARCH FIRST (owner order: every app, no detail missed, nothing fake): the AI plans 5-8 sections the app must cover, one web search per section (same search engine as movie / match analysis), the top pages are read, then a FACT SHEET is made where every fact names its sources. A fact with no valid source, or with a number that no cited source contains, is thrown away and counted. If a fact topic has fewer than 6 verified facts or 2 sources the app is NOT built (honest message). Gaps are shown in the app as "not verified", never filled.
+- The app is one HTML app inside a fixed Android WebView shell (offline), with a SOURCES screen and the research date. A checker flags years, phone numbers, e-mails and links that are not in the fact sheet, repairs once, and anything left is reported to the owner.
+- Build: project pushed to a new public repo in the owner's GitHub (token header only), GitHub Actions (dispatch-only workflow) builds the debug APK and publishes it as a release; NOVA downloads it (allow-listed hosts), checks the package id, then opens the Android installer (asks once for "install unknown apps").
+- MODERN + COMPLETE (owner 2026-11-14, not technical): the planner also returns a 8-14 item FEATURE LIST and a look-and-feel line; the app prompt requires a modern UI (design tokens, accent colour + gradient bar, rounded cards, bottom tabs with SVG icons, sheets, toasts, empty states, light + dark theme, Android Back via hash routing) and fully working features (add / edit / delete with undo, search, settings, persistence). The checker flags too-small apps, placeholder text, missing theme / transitions / safe-area / localStorage and sends up to 2 repair passes.
+- Files: AppBuilderRules.kt (pure), AppBuilder.kt, ui.html screen, MainActivity bridge x4, NovaService early route, HelpGuide + MADAD topic "appbuilder", nova_file_paths.xml (built_apps), SiteGen.requestHtml private -> internal. Tests: AppBuilderRulesTest.kt, tools/test_app_builder_contract.py. Not compiled as a whole here and not phone tested.
+## v7.176 MATCH LIVE ANALYSIS (add-only)
+- Say while watching: "nova is match me kaun jeetega" / "predict karo" / "match search karke analysis karo". NOVA (1) reads the SCREEN to find the match (teams, tournament, score, time) with the same vision chain as the movie scan (Gemini, then free vision), (2) searches the web (only team names + tournament leave the phone) for form / head-to-head / team news, (3) gives win chances in % with 2-3 reasons (from the screen or numbered web facts) and speaks a short line, (4) while the owner keeps watching it re-reads the screen every ~30 s and speaks / writes a short LIVE update when the score changes (min 20 s apart; a quiet 3 min gives one pulse). Ends: "nova match analysis band", the match leaves the screen (3 reads), 4 h, or the AI fails 3 times in a row. A different match on screen restarts the analysis.
+- Files: MatchLiveRules.kt (pure: phrases, prompts, JSON reading, % normalising, swing limit 25 points per update, wording), MatchLivePipeline.kt (loop), NovaService hook (startMatchLive / stopMatchLive, route before the movie scan), AnalysisPipeline.Brain.callFreeText (free text chain when Gemini is blocked), HelpGuide topic "matchlive", Skills entry, tests MatchLiveRulesTest (13) + MatchLivePipelineTest (7).
+- Safety / honesty: estimate only, not a guarantee, not betting advice (said in the first answer); private screens (bank, OTP, chat) are never captured or sent; no person is named from a face; no laser overlay (the match stays visible); frames stay in memory. A generic STOP (silence) does not end it on purpose, only "match analysis band".
+- Limits: needs Accessibility ON, Android 11+, an AI key; every read costs one vision call (about 120 / hour: free Gemini limits can pause it, it then says so); apps that block screenshots give "no frames"; NOVA speaking over the match audio can be picked up by the mic. Compile 0 errors, JUnit 1875 OK, phone NOT TESTED, a real match NOT TESTED.
+
+## v7.175 (c) INSTAGRAM DM BY VOICE (add-only)
+- "nova instagram pe rahul ko hello bhejo" / "insta dm priya ko happy birthday likho" / "rahul ko instagram pe hi bhejo": InstagramDmRules.kt (pure, strict: Instagram word + "ko" + send verb + name + message; WhatsApp / mail / question phrases are left alone) builds ONE plain job for the existing screen agent (Accessibility): open Instagram, open that one chat, type the text. Hook in NovaService before the unread-message question. InstagramDmRulesTest (8 tests).
+- Honest limit: Instagram has no public send API, so this is screen automation: it needs Accessibility ON, an unlocked phone, and may fail if the name matches several chats (agent then says so). Compile 0 errors, JUnit 1855 OK. Phone NOT TESTED.
+- build.yml read, not changed (it already runs checks, unit tests, assembleDebug, emulator smoke). GitHub Actions NOT RUN by me.
+
+## v7.175 (b) COMPILE + CHECKS FINISHED (remaining work of the MSGCHECK zip)
+- FIRST REAL KOTLIN COMPILE since v7.170 (kotlinc 1.9.24, android-34 jar, real org.json + JUnit; tools/local_compile_check.sh). Found ONE real build breaker: `NovaService.isEnglish()` was declared twice (v7.170 copy) = "conflicting overloads" in Gradle. Second copy removed (the doc comment kept on the first). main + test compile: 0 errors.
+- Harness stubs completed (tools/local_stubs/extra, sandbox only, never shipped in the APK): media3 ClippingConfiguration / setClippingConfiguration / setRemoveAudio / Contrast / MatrixTransformation, zxing ErrorCorrectionLevel, NotificationManagerCompat.getEnabledListenerPackages.
+- JUnit: UnreadQueryRulesTest.many_messages_are_counted_by_sender expected "Mummy 3" but the English text is "Mummy (3)": test fixed (code unchanged).
+- Stale guards fixed (add-only meaning): part20 (CHANGELOG top may be v7.17x), HelpGuide topics studio + payqr mapped in test_part6_skills, step7 BRIDGE list (sorted now), ui tier (two tiny flag scripts may precede tier-init), NovaHud dark glass pin (0xF2480808), orb.frag comments synced with ui.html, and the two live-orb render guards (fx_render, part6_smooth) now SKIP with a printed line because v7.163 (eye hero) sets window.__noOrb=true on purpose. versionName 7.175 added to the version pins.
+- FINAL RUN: compile 0 errors, JUnit 1847 OK, run_all_checks 170 pass / 0 fail.
+- NOT DONE / honest: GitHub Actions (Gradle with real media3 / zxing / androidx jars) NOT RUN, phone NOT TESTED (message check, opening, Video Studio, Payment QR, voices). The orb render guards no longer measure anything while __noOrb is true.
+
+## v7.175 MESSAGE CHECK + OPENING (add-only edits)
+- "nova whatsapp / instagram pe naya message aaya?": answers yes/no with the count and the NAMES only (never the message text). "dikhao / dekho" = full list as a chat card on screen, "padho / sunao" = read aloud. Instagram added (likes, follows, stories are NOT counted as messages: only real DMs). Honest limit stays: only notifications still showing can be seen.
+- UnreadQueryRules.Req(app, mode), screenText(), isInstagramDm(); NovaNotificationService.snapshotMessages filters Instagram; NovaService emits the card for "dikhao". JUnit updated + 4 new tests (not run).
+- Opening: tapping can no longer skip the dialogue (voice + typed quote); canvas starts lighter on sharp-screen phones (DMAX 1 when DPR >= 2.5) and drops glow/size twice as fast on a slow phone. Kotlin NOT compiled, phone NOT tested.
+- NOT changed: sending messages by voice (existing WhatsApp flow untouched, not re-verified); Instagram DM sending by voice is not built.
+
+## v7.174 (b) ALL CHECKS PASS
+- versionName 7.174. The 11 old failing guards fixed (version pins widened, jarvis/wifi pins updated to the ON defaults, p6 BRIDGE/CB lists completed, Settings WIFI GUARD label now says default ON). run_all_checks: 0 FAIL. KNOWN_STALE_GUARDS.txt is empty.
+
+## v7.174 FIXES + REELS/SHORTS (add-only)
+- Video Studio: ONE 9:16 video for Instagram Reels AND YouTube Shorts (word "shorts" no longer means 16:9; cap 90 s); "youtube 16:9" still gives the wide one.
+- Anti-hang in Studio: file reading no longer holds the lock the page polls (page could freeze), measuring is lighter (first 90 s, 1 frame/s for clips over 30 s, short pauses).
+- FIX AutopilotMedia.reencode: Transformer now built/started/cancelled on the MAIN looper (Media3 requirement), worker only waits on the latch.
+- Kotlin NOT compiled, phone NOT tested.
+
+## v7.173 VIDEO STUDIO (add-only)
+- VideoStudioRules.kt (options from text, motion-based edit plan: best window with lead-in, slow-mo on the strongest moment, PUSH/PUNCH zoom, voice "nova video edit karo"), VideoStudio.kt (measure motion with MediaMetadataRetriever, one Media3 Transformer export per piece on the MAIN looper, join with MediaExtractor+MediaMuxer, slow-mo pieces re-timed x2 with silent AAC, save to Movies/NOVA), VideoStudioRulesTest.kt.
+- Hooks: Logic.parse, NovaService dispatch, MainActivity (REQ_STUDIO picker + studio* bridge + VideoStudio.ui), ui.html VIDEO STUDIO screen (#stuScr) + Home card + features list, HelpGuide "studio".
+- Limits: no music, titles, transitions, exact-second commands; slow-mo parts are muted; Kotlin NOT compiled, NOT phone-tested (expect a first build fix).
+- NOTE for next account: AutopilotMedia.reencode builds/starts Transformer on the worker thread; Media3 wants its application (main) looper thread - likely a latent bug, fix the same way as VideoStudio.exportSeg.
+
+## v7.172 WIFI GUARD default ON (add-only)
+- ExtCfg.wifiGuard default true: weak signal -> switch to the best of the owner's OWN saved networks (max 1 switch / 10 min). Still off-able: Settings switch or "nova wifi guard off karo". Kotlin NOT compiled, phone NOT tested.
+
+## v7.171 AUTO ON (add-only)
+- AutoSetup.startDeep: JARVIS deep voice model (20 MB) installs by itself on Wi-Fi when the voice is ON and not installed. PayStore.watch default now ON.
+- Already default ON from v7.156: deep voice, bol ke rokna (barge-in), GLM sab jagah, audio focus. Wi-Fi Guard stays OFF on purpose (it switches networks). Android permissions (Notification access, Accessibility, Overlay) cannot be switched on by an app. Kotlin NOT compiled, phone NOT tested.
+
+## v7.170 PAYMENT QR + PAYMENT CHECK (add-only)
+- PayRules.kt (voice grammar, UPI link, credit-alert parser, matching, wording), PayKit.kt (PayStore + QR image via zxing, alert watcher, status, gallery save), PayRulesTest.kt.
+- Hooks: Logic.parse (after BizRules), NovaService dispatch (pay_qr / pay_status / pay_watch / pay_screen) + isEnglish() + onPayAlert(), NovaNotificationService.onNotificationPosted -> PayKit.onNotification, MainActivity bridge (payStatus, payLastQr, payMakeQr, payWatch, payCancel, paySaveQr, payNotifAccess) + PayKit.ui.
+- ui.html: PAYMENT QR screen (#payScr, window.__payOpen / onPayEvent), Home card + features-list entry; HelpGuide topic "payqr".
+- Honest limits: reads only UPI-app / SMS credit alerts (Notification access needed); no direct bank check; SMS can be faked. Kotlin NOT compiled, phone NOT tested.
+
+## v7.169 BUSINESS AUTOMATION (3 Nov 2026)
+- NAYA (add-only): owner apna business NOVA ko ek baar bolta hai - koi bhi product/business: `nova biz product <naam>`, `price <n>`, `advance <percent>`, `upi <id>`, `payee <naam>`, `delivery 3 din`, `city <sheher>`, `category <jaise boutique>`, `leads <5-10>`, `nova biz status`.
+- LEADS: `nova biz placeskey <Google Places key>` (encrypted SecureStore slot, key chat me echo nahi) -> `nova biz leads now` ya `nova biz leads on` (roz 1 baar). Google Places (New) Text Search "<category> in <city>" -> filter: OPERATIONAL, Indian mobile number, rating >= 3.5, reviews >= 3, duplicate/pehle se lead nahi -> LeadStore me draft (owner ka pitch, "STOP" line ke saath). KUCH BHEJA NAHI JATA: purana approve -> "lead bhejo" flow (daily cap) hi bhejta hai. Roz max 5-10 (BizRules.MIN/MAX_LEADS).
+- ORDER + ADVANCE: DM order confirm (haan) hote hi, agar owner ne price + advance% + UPI id diya hai, customer ko advance rakam + UPI id + upi://pay link + "screenshot bhejo" jata hai, aur delivery time (jaise 3 din) ka promise BizStore me. Kuch missing ho to kuch nahi banta/bheja jata (kuch invent nahi).
+- DELIVERY: promise ka time aate hi owner ko ek baar alert (Autopilot 15-min pass se).
+- Files: BizRules.kt, LeadFinderRules.kt (pure), BizStore.kt, LeadFinder.kt, tests BizRulesTest/LeadFinderRulesTest. Hooks (add-only): Logic.kt (parse), NovaService.kt (when + onBizNote), Autopilot.kt (concierge + pass).
+- Evidence: asli kotlinc compile + 1829 JUnit OK (sandbox, GitHub-source harness). NOT TESTED: asli phone, asli Google Places call (key nahi mili), WhatsApp/Instagram par asli payment message, GitHub Actions.
+- HONEST LIMITS: QR IMAGE nahi bheji jati (DM sirf text) - UPI id + link jata hai (link se kisi bhi UPI app me payment). Payment aayi ya nahi AUTO verify NAHI hoti - owner khud dekhta hai. Maps se bulk scraping nahi; sirf Google Places API (owner ki apni key). WhatsApp par bina permission cold message spam hai - isliye approval zaroori.
+
+## v7.168 CLEANUP (3 Nov 2026)
+- Zip safai: 233 purane versioned docs/status/prompt/audit files + docs/ui_shots (5.8 MB purane screenshots, tests dobara bana lete hain) + docs/retired_guards hata diye. Koi app code, asset, test, build.yml, workflow nahi hata. Pehle har file check hui: koi test/build/Kotlin unka naam nahi padhta tha.
+- Baad me contract suite: 152 pass / 18 fail (11 known-stale + 7 pehle se wale) - safai se koi naya fail nahi.
+
+## v7.167 SPEED (3 Nov 2026)
+- Owner: "NOVA sochne me bahut time leti hai, jaldi karo". FreeHttp.BRAIN_READ_MS 45 s -> 10 s (GLM 5.3 ko sirf 10 s, phir agla provider). NovaService typed-chat hedge stagger 6 s -> 2.5 s (Groq jaldi join). Kotlin compile + phone: NOT TESTED; asli speed phone par measure NAHI hui. Trade-off: GLM kabhi-kabhi 10 s me nahi bolega.
+
+## v7.166 CHECKS + BRIDGE CAP (3 Nov 2026)
+- Contract suite (tools/run_all_checks.sh) chalayi. REAL gap mila: openingVoice(text) bridge me String length cap nahi tha -> MainActivity.kt me 1 line add (text.length > 400 -> return). Ab test_bridge_caps_contract PASS (115 checked, 0 uncapped).
+- test_part4_fx_render / test_part6_smooth: canvas "empty" fail - v7.165 live blocks hata kar bhi same fail aaya => purana/headless (swiftshader) issue, v7.165 ki wajah se nahi. Fix nahi kiya.
+- test_part20 = CHANGELOG version-pin (stale). Kotlin compile, GitHub Actions, asli phone, Ultron awaaz: NOT TESTED.
+- Opening video (10.5 s, 390x844) ke frames dekhe: NOVA particles se banta hai, radar + boot-log + quote typing + bars dikhe. Chhota issue: boot-log ki pehli line me "v7.165" ke baad "OK" chipak jata hai (cosmetic, nahi badla).
+
+## v7.165 LIVE OPENING (3 Nov 2026)
+- Opening ab photo jaisi nahi: photo slides dim ho gayi (hati nahi) aur unke upar ek LIVE canvas layer (#lv) chalti hai: laal digital rain, scan beam, radar (sweep + blips + NEURAL SCAN %), boot-log typing (BOOT / MIC GUARD / NEURAL LINK / VOICE ENGINE...), hex stream, aur ~700 particles jo ud kar NOVA title ban-te hain; slam par burst, finale par explode.
+- Ultron quote: bada, glow wala box + har letter par glitch flicker + caret par sparks + voice-bars (decrypt tail purani logic se). Quote text ka typing aur voice sync pehle jaisa (OpeningVoice.kt, Ultron effect) - Kotlin me KUCH BADLA NAHI.
+- Slow phone: agar Ultron voice 'start' ki khabar abhi tak nahi aayi to opening max 2 s ruk kar voice ka intezaar karti hai (taaki voice home screen par na bole). Voice band (SOUND off) ho to koi intezaar nahi.
+- 3D NOVA letters ab particles ke ban-ne ke baad (2.7 s par) slam hote hain (pehle 1.1 s par aate the).
+- Add-only: purana intro, WebGL tunnel, lite mode, skip (tap), back sab waise hi. ui.html me 2 chhote hook (window.__nvOpen read-only state, __nvOnOpen) + naya <style>/<script> end me.
+- Evidence: headless Chromium, virtual clock (30 fps frame-by-frame), 0 JS error. Video: silent (sandbox me TTS nahi). Kotlin compile / GitHub Actions / PHONE TEST: NOT DONE.
+
+## v7.162 SHOCK OPENING (3 Nov 2026)
+- Opening ab surprise-style: black screen se CRT line + shutter khulna, NOVA title slam par screen shake + shockwave, RGB glitch, quote "decrypt" effect (random chars se saaf text), side HUD tickers, scanlines.
+- Finale: white flash + shockwave + NOVA letters camera ki taraf phat kar dashboard. Naye sounds: zap (start), hit (slam). Add-only, skip/back/lite waise hi.
+- Evidence: headless Chromium frames dekhe, 0 JS error (ek cold run me ek baar canvas gradient error aaya, 7 reruns me dobara nahi aaya, NOT root-caused). Kotlin compile + phone test NOT DONE.
+
+## v7.161 OPENING (3 Nov 2026)
+- App kholte hi opening animation me 3D NOVA title (letters depth se aate hain, rotating rings, light glint) + quote typing: "Keep your friends rich and your enemies rich, and wait to find out which is which."
+- Quote Ultron voice me bolta hai (existing UltronFx pipeline, OpeningVoice.kt, apna TTS, mic kabhi nahi). Animation voice ki lambai ke hisab se ruk-ti hai, phir normal finale. Tap = skip (voice bhi band).
+- Add-only: purana intro, WebGL tunnel, lite mode, skip/back sab waise hi. Evidence: headless Chromium run, 0 JS error. Kotlin compile + phone test NOT DONE.
+
+## v7.159 FIXES (2 Nov 2026)
+- media3 1.4.1 + WorkManager 2.9.1 API calls fixed (CI build compiled red before).
+- JARVIS tab: click handler restored (was calling AP_OPEN -> 'Kuch gadbad hui').
+- Hindi voice: Hinglish no longer goes to the English-only deep voice; HindiSpeak.kt speaks Hinglish in Devanagari via the Hindi voice. Fewer heavy neural syntheses (hang suspect).
+- Sandbox stubs now match the real media3/WorkManager APIs.
+
 ## v7.158 AUTOPILOT (WhatsApp Business group -> website + Instagram + YouTube + DM concierge + viral engine + JARVIS voice + holographic HUD; 4 parts)
 - NEW AUTOPILOT: owner ke WhatsApp Business GROUP me photo/video aate hi NOVA khud (1) website par daalti hai (GitHub Pages gallery + feed, ya Vercel/Shopify/WooCommerce/Wix), (2) Instagram par POST + REEL + STORY (2-10 photo = ek CAROUSEL), (3) YouTube par SHORTS (<= 3 min; lambi video sirf YT). 90 second ke andar aayi cheezein = ek batch (ek caption pack). File-hash de-dupe: wahi file kabhi dobara post nahi hoti. Caps: 6 IG feed / 15 story / 5 YT roz + 45 min spacing (configurable). Best-time IST slots (9:00/12:30/15:30/18:30/20:30/22:00) jo khud tune hote hain (24 ghante baad asli reach se seekh kar; 3x reach = viral signal -> owner ko bolke bataya jata hai). Video ka format galat ho to Media3 Transformer 1.4.1 se re-encode - SIRF charging + WiFi par; horizontal video ke liye 9:16 blurred background; bhaiari video (>45 MB) sirf YouTube par. Photo/video ke liye vision caption (jo dikhta hai wahi likha jata hai).
 - NEW DM CONCIERGE: customer ka DM NOVA khud sambhalti hai - discount ka jawab SIRF live website offer se (nova-offer.json; website aur chat kabhi alag nahi), order machine (ITEM->SIZE->QTY->NAME->PHONE->ADDRESS->CONFIRM), business lead LeadStore me + owner ko ek baar. Confirmed order par owner ka webhook bhi fire (Zapier/n8n/Make se Google Sheet). "mera order kab aayega" ka jawab SIRF owner-store ki hui baat se - delivery date kabhi nahi banti. GROUPS kabhi answer nahi + owner ka khud ka reply AI ko side me rakhta hai.
@@ -1110,3 +1222,10 @@ FeatureVerify.kt (+ FeatureVerifyTest.kt): automatic read-only check of all unde
 - NEW tools/jarvis_server/: server.py (standard library only; real VoxCPM2 engine written from the model card's Usage example + a FAKE test engine), test_server.py, README_HINGLISH.md, requirements.txt.
 - Tests: JarvisVoiceApiTest (5: address rules, wav / English checks, wants() decision, client against a local HTTP server incl. token-host pin, stop / pause). Compile PASS, JUnit 1656 OK. Server contract test PASS (fake engine). REAL model engine: NOT TESTED (no GPU / weights). Phone: NOT TESTED.
 - v7.136 add-on: tools/jarvis_server/NOVA_Jarvis_Colab.ipynb (free Google Colab T4 + Cloudflare quick tunnel; auto token; phone recording converted to wav by ffmpeg) + EASY_STEPS_HINGLISH.md. Notebook cells 1-5 PASS in the sandbox with the FAKE engine; tunnel and real model NOT TESTED.
+
+## v7.160 (add-only; NOT compiled, NOT phone-tested)
+- ui.html: v7160-home-fix patch added (one Ultron, scrolling home, nothing blocks taps).
+- ui.html: v7160-real-look (glass/metal materials, glossy ACTIVATE, tactile press) + one post-intro finale (header drop, hero focus, stagger, light sweep) - transform/opacity only.
+- Smooth open: weak phones (<=4 cores / <=3 GB) skip the WebGL tunnel; watchdog jumps intro to finale if <20 fps for 1.5 s; intro layer GPU-contained.
+- Security: CSP meta (no object/frame/base/form), WebView mixedContent NEVER_ALLOW, WebContents debugging off.
+- v7.163: red opening, eye hero, AI-is-alive overlay, live brain panel (ui.html patch) - see NEXT_ACCOUNT_PROMPT_v7_163.md

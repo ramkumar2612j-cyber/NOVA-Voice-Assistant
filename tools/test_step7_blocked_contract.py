@@ -21,7 +21,7 @@ for i in ['acc', 'battery', 'overlay', 'notifAccess', 'write', 'dnd', 'install',
 need('"blocked"' in fv and 'BlockedSnapshot.read(ctx)' in fv, 'FeatureVoice route missing')
 need('id="blk"' in U and 'id="blk_list"' in U and 'blk-v7147-js' in U, 'ui.html block missing')
 need('Android.getBlocked()' in U and 'Android.fixBlocked(' in U, 'ui.html does not call the bridge')
-need('"getBlocked", "fixBlocked"' in U, 'BRIDGE self-check list missing the new names')
+need('"getBlocked"' in U.split('var BRIDGE=[')[1].split(']')[0] and '"fixBlocked"' in U.split('var BRIDGE=[')[1].split(']')[0], 'BRIDGE self-check list missing the new names')   # v7.175: list is sorted now, names are not adjacent
 for t in ['allOnGivesNoItemsAndAnHonestLine', 'autostartIsOnlyCheckNeverOffAndOnlyForBrandsWithAScreen', 'importantOnesComeFirstInFixedOrder']:
     need(t in test, 'JUnit missing: ' + t)
 if bad:

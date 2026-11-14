@@ -38,6 +38,8 @@ with sync_playwright() as p:
     except Exception: print('SKIP (no chromium)'); sys.exit(0)
     # 1. AUTO (control): live theme animates
     pg = boot(b, 'auto')
+    if pg and pg.evaluate('window.__noOrb===true'):   # v7.175: v7.163 eye hero sets window.__noOrb=true on purpose; the live core is never drawn, so draw counts cannot be measured
+        print('SKIP headless draw-count checks (window.__noOrb=true, eye hero)'); pg.context.close(); pg = None
     if pg:
         pg.evaluate('window.__forceLow=false;document.documentElement.classList.remove("lowfx")'); pg.wait_for_timeout(1500)
         cls = pg.evaluate('document.documentElement.className')

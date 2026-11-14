@@ -83,10 +83,10 @@ need('const val VERSION = 3' in chain, 'SetupChainRules.VERSION must be 3 (new p
 need('id="s_wguard"' in ui, 'ui.html: s_wguard checkbox missing')
 need('wifiGuard:$(\'s_wguard\').checked' in ui, 'ui.html: collect() must send wifiGuard')
 need("$('s_wguard').checked=!!S.wifiGuard" in ui, 'ui.html: fillPanel must read S.wifiGuard')
-need('default OFF' in ui.split('s_wguard')[1][:200], 'ui.html: the WIFI GUARD row must say default OFF')
+need('default ON' in ui.split('s_wguard')[1][:200], 'ui.html: the WIFI GUARD row must say default ON (v7.172)')
 need('.put("wifiGuard", ExtCfg.wifiGuard(this@MainActivity))' in ma, 'MainActivity.getSettings: wifiGuard missing')
 need('ExtCfg.setWifiGuard(this@MainActivity, o.optBoolean("wifiGuard", false))' in ma, 'MainActivity.saveSettings: wifiGuard missing (default false = opt-in kept)')
-need('fun setWifiGuard' in ext and 'getBoolean(WIFI_GUARD, false)' in ext, 'ExtCfg.wifiGuard get/set missing (default OFF)')
+need('fun setWifiGuard' in ext and 'getBoolean(WIFI_GUARD, true)' in ext, 'ExtCfg.wifiGuard get/set missing (default ON since v7.172)')
 
 # 8. Feature status + help: the wifi row, the topic in HelpGuide AND the MADAD CAPS list (equal lists)
 need('row(a, "wifi", "WiFi Kit (scan, switch, QR, doctor)"' in fs, 'FeatureStatus wifi row missing')
@@ -105,7 +105,7 @@ need('shareImageUris' in ma, 'MainActivity.shareImageUris helper missing')
 
 # 10. Gradle: zxing core for the QR work + the version bump
 need('com.google.zxing:core:3.5.3' in gradle, 'app/build.gradle.kts: zxing core missing')
-need(any(('versionName = "%s"' % v) in gradle for v in ('7.153', '7.154')), 'versionName must be 7.153 or 7.154')
+need(any(('versionName = "%s"' % v) in gradle for v in ('7.153', '7.154', '7.162', '7.174', '7.175', '7.176')), 'versionName must be 7.153 or 7.154')
 
 # 11. JUnit tests cover the rules (names pinned so future edits keep the guarantees)
 for tname in ['securityTypesAreClassified', 'scanReplySortsDedupsAndLimits', 'bestSwitchPicksStrongestCandidateWithGain',

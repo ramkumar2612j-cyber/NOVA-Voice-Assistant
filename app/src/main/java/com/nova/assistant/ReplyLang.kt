@@ -26,7 +26,10 @@ object ReplyLang {
         "chahiye", "chahta", "chahte", "milega", "mila", "mili", "bolo", "batao", "bata", "bataiye", "suno", "dekho", "dekh", "dekhna",
         "khol", "kholo", "kholta", "kholna", "khula", "chalu", "chalao", "chalo", "ruko", "ruk", "jao", "aao", "dena", "lena",
         "wala", "wali", "wale", "samajh", "samjha", "aaya", "aayi", "dobara", "dobaara", "shuru", "khatam", "bhejo", "bheja",
-        "shukriya", "dhanyawad", "namaste", "kripya", "dost", "yaar", "bhai"
+        "shukriya", "dhanyawad", "namaste", "kripya", "dost", "yaar", "bhai",
+        // v7.159: more unmistakable Hinglish words, so short replies like "battery 9 percent hai, charger laga lijiye" go to the Hindi voice
+        "lijiye", "kijiye", "dijiye", "laga", "lagao", "lagana", "neeche", "niche", "upar", "tak", "liye", "bandh", "baje", "subah", "shaam", "raat",
+        "gaana", "uthao", "hua", "hui", "hue", "hogaya", "hogya", "karein", "kariye", "dikhao", "dikha", "lagi", "lagta", "lagti", "chal", "chala", "chali", "chale"
     )
 
     fun isHindi(text: String?): Boolean {

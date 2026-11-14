@@ -16,7 +16,7 @@ object FreeHttp {
     private const val MAX_BODY = 200_000
     private const val CONNECT_MS = 6000
     private const val READ_MS = 10000
-    private const val BRAIN_READ_MS = 45000
+    private const val BRAIN_READ_MS = 10000   // v7.166: owner asked for speed - the reasoning brain gets 10 s (was 45 s), then the next provider answers
 
     fun post(p: FreeProvider, jsonBody: String, key: String, connectMs: Int = CONNECT_MS, readMs: Int = READ_MS): NetAnswer {
         var conn: HttpURLConnection? = null

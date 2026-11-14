@@ -263,7 +263,7 @@ object SiteGen {
     }
 
     /** Same configured provider sequence as before; first complete HTML response wins. */
-    private fun requestHtml(ctx: Context, system: String, prompt: String, start: Long, clean: (String) -> String? = { cleanHtml(it) }): String? {
+    internal fun requestHtml(ctx: Context, system: String, prompt: String, start: Long, clean: (String) -> String? = { cleanHtml(it) }): String? {   // v7.177: internal (was private) so AppBuilder reuses the same provider chain
         val gKeys = SecureStore.getKeys(ctx)
             .ifEmpty { listOf(SecureStore.getKey(ctx)).filter { it.isNotBlank() } }
             .distinct()

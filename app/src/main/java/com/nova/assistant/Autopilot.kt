@@ -623,11 +623,20 @@ object Autopilot {
             val order = AutopilotStore.orderFor(app, chat) ?: AutopilotRules.Order("o" + System.currentTimeMillis().toString(36).take(10), chat, appPkg)
             val r = AutopilotRules.step(order, text)
             if (r.save) { order.updated = System.currentTimeMillis(); AutopilotStore.saveOrder(app, order) }
+            var reply = r.reply
             if (r.done) {
                 NovaService.instance?.onAutopilotOrder(order)
                 fireOrderHook(app, order)
+                // v7.169: the owner's advance (UPI id + link) and the delivery promise - only when he set them (nothing invented)
+                try {
+                    val bp = BizStore.profile(app)
+                    val pay = BizRules.paymentMessage(bp, order.qty, order.id, false)
+                    if (pay != null) reply = reply + " " + pay
+                    val due = BizRules.deliveryDue(bp, System.currentTimeMillis())
+                    if (due != null) BizStore.addDelivery(app, BizStore.Delivery(order.id, chat, order.name, order.phone, order.item, due, false))
+                } catch (e: Throwable) { ErrLog.add("Autopilot", "biz: $e") }
             }
-            return Concierge(r.reply, r.save, r.done)
+            return Concierge(reply, r.save, r.done)
         } catch (e: Throwable) {
             ErrLog.add("Autopilot", "concierge: $e")
             return null
@@ -1148,6 +1157,11 @@ object Autopilot {
             val brief = morningBrief(app)
             if (brief != null) NovaService.instance?.onAutopilotBrief(brief)
         } catch (e: Throwable) { ErrLog.add("Autopilot", "brief: $e") }
+        try { LeadFinder.dailyTick(app) } catch (e: Throwable) { ErrLog.add("Autopilot", "leadtick: $e") }   // v7.169
+        try {   // v7.169: delivery promises whose time has come -> the owner is told once
+            for (d in BizStore.takeDue(app, System.currentTimeMillis()))
+                NovaService.instance?.onBizNote("Sir, delivery due: ${d.item} - ${d.name} (${d.phone}). Bhej do / update bata do.")
+        } catch (e: Throwable) { ErrLog.add("Autopilot", "due: $e") }
         val found = scan(app)
         if (found.isNotEmpty()) enqueue(app, found)
         return pump(app)

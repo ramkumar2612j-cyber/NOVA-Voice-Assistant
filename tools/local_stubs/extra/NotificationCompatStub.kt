@@ -8,3 +8,8 @@ class NotificationCompat {
         fun build(): android.app.Notification = android.app.Notification()
     }
 }
+
+// v7.175: PayKit.listenerOn
+class NotificationManagerCompat {
+    companion object { @JvmStatic fun getEnabledListenerPackages(c: android.content.Context): Set<String> = emptySet() }
+}

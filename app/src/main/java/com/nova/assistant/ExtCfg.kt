@@ -102,7 +102,7 @@ object ExtCfg {
 
     /** v7.153 WIFI KIT: optional auto-switch among the OWNER'S OWN saved networks when the Wi-Fi gets very weak or drops. Default OFF (opt-in). */
     fun wifiGuard(ctx: Context): Boolean = try {
-        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(WIFI_GUARD, false)
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(WIFI_GUARD, true)   // v7.172: default ON (only the owner's own saved networks, max 1 switch / 10 min)
     } catch (e: Exception) { false }
 
     fun setWifiGuard(ctx: Context, on: Boolean) {

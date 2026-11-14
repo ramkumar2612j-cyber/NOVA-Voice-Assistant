@@ -64,6 +64,7 @@ class NovaNotificationService : NotificationListenerService() {
                     val ex = n.extras ?: continue
                     val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
                     val body = (ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT))?.toString() ?: ""
+                    if (pkg == "com.instagram.android" && !UnreadQueryRules.isInstagramDm(n.category, ex.getString(Notification.EXTRA_TEMPLATE), title, body)) continue   // v7.175: likes / follows are not messages
                     val m = Driving.makeMsg(sbn.key ?: "$pkg:${sbn.id}", pkg, title, body, sbn.postTime, false) ?: continue
                     out.add(m)
                 }
@@ -135,6 +136,8 @@ class NovaNotificationService : NotificationListenerService() {
             try { if (WaBiz.active(System.currentTimeMillis())) handleBiz(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "biz: $e") }
             // v7.158 AUTOPILOT: the watched group's media notifications only set a timestamp mark (O(1), no I/O,
             // never blocks this thread); the scan itself runs on the AutopilotWorker.
+            // v7.170 PAYMENT CHECK: only UPI-app / SMS credit alerts, only while the owner has auto check ON; isolated like every helper here.
+            try { PayKit.onNotification(this, sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "pay: $e") }
             try { markGroupMedia(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "apmark: $e") }
             try { if (sbn.packageName == GmailStore.GMAIL_PKG) handleGmail(sbn) } catch (e: Throwable) { ErrLog.add("NotifListener", "gmail: $e") }
             try { if (sbn.packageName == "com.instagram.android") ReelRunner.onNotification(this, sbn) { p -> NovaService.reelWatchFire(p) } } catch (e: Throwable) { ErrLog.add("NotifListener", "reelwatch: $e") }   // v7.114: a watched friend posted

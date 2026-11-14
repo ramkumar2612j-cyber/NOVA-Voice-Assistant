@@ -20,7 +20,7 @@ check("setup popup returns: once per launch, only when something needed is missi
 check("popup waits for the opening animation", "classList.contains('ready')" in UI.split("function ucStartup")[1].split("var ucBootTimer")[0])
 check("popup does not grant anything itself (only opens the Setup Center)", "ucOpen(true)" in UI.split("function ucStartup")[1].split("var ucBootTimer")[0] and "Android.requestBasics" not in UI.split("function ucStartup")[1].split("var ucBootTimer")[0])
 check("no live blur anywhere (smoothness)", "backdrop-filter:none!important" in UI)
-check("intro canvas degrades by itself on slow frames", "SBK*" in UI and "EMA>22" in UI and "DMAX=1" in UI)
+check("intro canvas degrades by itself on slow frames", "SBK*" in UI and ("EMA>22" in UI or "EMA>20" in UI) and "DMAX=1" in UI)   # v7.175: reacts faster (EMA>20)
 check("heavy blur keyframes replaced", "@keyframes novaSheetIn{0%{opacity:0;transform:translateY(60px) scale(.96)}" in UI)
 NS = open(os.path.join(R, "java/com/nova/assistant/NovaService.kt"), encoding="utf-8").read()
 check("Auto-Heal watchdog runs every 30 s from onCreate", "h.postDelayed(healRun, 25_000L)" in NS and "h.postDelayed(this, 30_000L)" in NS.split("private val healRun")[1][:300])

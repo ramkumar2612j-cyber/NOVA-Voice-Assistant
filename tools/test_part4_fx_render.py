@@ -30,6 +30,8 @@ with sync_playwright() as p:
         pg.evaluate('window.__forceLow=false;document.documentElement.classList.remove("lowfx")')
         pg.wait_for_timeout(1200)
         tag = '%dx%d' % (w, h)
+        if pg.evaluate('window.__noOrb===true'):   # v7.175: since v7.163 (eye hero) ui.html sets window.__noOrb=true on purpose: the live NOVA core / star canvases are never drawn, so there is nothing to measure
+            print('SKIP %s: live core canvas checks (window.__noOrb=true, eye hero)' % tag); ctx.close(); continue
         # elements + DPR sizes
         sz = pg.evaluate('(function(){var a=document.getElementById("p4_core"),s=document.getElementById("p4_stars");return a&&s?[a.width,a.height,s.width,s.height,innerWidth,innerHeight]:null})()')
         if not sz: bad.append(tag + ' p4 canvases missing'); continue
@@ -81,9 +83,10 @@ with sync_playwright() as p:
     pg = ctx.new_page(); pg.add_init_script('try{localStorage.setItem("nova_q_mig1","1");localStorage.setItem("nova_q","auto")}catch(e){}'); pg.add_init_script(BR); pg.on('pageerror', lambda e: bad.append('js error: ' + str(e)[:150]))
     pg.goto('file://' + os.path.abspath(UI)); pg.wait_for_function('document.body.classList.contains("ready")', timeout=25000)
     pg.evaluate('window.__forceLow=false;document.documentElement.classList.remove("lowfx")'); pg.wait_for_timeout(1200)
-    if count(pg, 'p4_core') < 200 or count(pg, 'p4_stars') < 20: bad.append('reduced-motion: canvases empty')
+    if pg.evaluate('window.__noOrb===true'): print('SKIP reduced-motion canvas checks (window.__noOrb=true, eye hero)')   # v7.175
+    elif count(pg, 'p4_core') < 200 or count(pg, 'p4_stars') < 20: bad.append('reduced-motion: canvases empty')
     y0 = pg.evaluate('window.__p4.stars()[3].by'); pg.wait_for_timeout(600)
-    if abs(pg.evaluate('window.__p4.stars()[3].by') - y0) > .01: bad.append('reduced-motion: stars still drifting')
+    if not pg.evaluate('window.__noOrb===true') and abs(pg.evaluate('window.__p4.stars()[3].by') - y0) > .01: bad.append('reduced-motion: stars still drifting')
     ctx.close(); b.close()
 if bad:
     print('FAIL'); [print(' -', x) for x in bad]; sys.exit(1)

@@ -28,6 +28,7 @@ object AutoSetup {
     /** Called when the mic service is running (permissions given). Safe to call again: only one runner exists. */
     fun start(ctx: Context) {
         startQwen(ctx.applicationContext)   // v6.33: the offline brain has its own runner, it no longer waits behind the other tasks
+        JarvisDeepAuto.start(ctx.applicationContext, { stopFlag })   // v7.171: the 20 MB JARVIS deep voice model installs by itself (Wi-Fi only)
         startPack(ctx.applicationContext)   // v6.96: five more offline AI models, one after another, Wi-Fi only
         if (!started.compareAndSet(false, true)) { stopFlag = false; return }   // already running (maybe about to stop): keep it
         stopFlag = false
