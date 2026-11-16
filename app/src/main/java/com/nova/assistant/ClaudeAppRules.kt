@@ -18,10 +18,14 @@ internal object ClaudeAppRules {
     /** true if the sentence asks to use the Claude app. */
     fun isRoute(said: String): Boolean = TRIGGER.containsMatchIn(said.trim())
 
+    private val FILLER = setOf("do", "karo", "dijiye", "kar do", "please", "plz", "de do", "")
+
     /** The question after the trigger words (may be empty, e.g. "claude khol do"). */
     fun questionOf(said: String): String {
         val m = TRIGGER.find(said.trim()) ?: return ""
-        return said.trim().substring(m.range.last + 1).trimStart(' ', ':', ',', '-', '.').trim().take(800)
+        val rest = said.trim().substring(m.range.last + 1).trimStart(' ', ':', ',', '-', '.').trim().take(800)
+        // "claude khol do" / "claude khol dijiye": these only open the app, the rest is a filler, not a question
+        return if (rest.lowercase() in FILLER) "" else rest
     }
 
     /** Refuse payment / secret questions (same owner rule as everywhere else). */
