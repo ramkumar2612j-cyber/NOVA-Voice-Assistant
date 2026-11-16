@@ -101,7 +101,7 @@ class PersonalMemoryTest {
             Pair("my api key is abc", "key"),
             Pair("gemini ka token yaad rakh", "key"),
             Pair("github token ghp abc", "key"),
-            Pair("AIzaSyD4kLm9Q2xR7vB3nT8pW1zY6uH0", "key"),
+            Pair("AIza" + "0".repeat(35), "key"),
             Pair("k9f3a7b2c1d8e5f4a6b7c8d9e0", "key"),
             Pair("mera seed phrase yaad rakh", "key"),
             Pair("supercalifragilisticexpialidocious", null),

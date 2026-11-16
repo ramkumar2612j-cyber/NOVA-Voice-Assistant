@@ -74,7 +74,7 @@ REFUSE = [
     ("my api key is abc", "key"),
     ("gemini ka token yaad rakh", "key"),
     ("github token ghp abc", "key"),
-    ("AIzaSyD4kLm9Q2xR7vB3nT8pW1zY6uH0", "key"),
+    ("AIza" + "0"*35, "key"),
     ("k9f3a7b2c1d8e5f4a6b7c8d9e0", "key"),
     ("mera seed phrase yaad rakh", "key"),
     ("supercalifragilisticexpialidocious", None),

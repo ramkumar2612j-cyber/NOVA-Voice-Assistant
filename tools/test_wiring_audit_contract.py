@@ -23,7 +23,7 @@ kinds = set(re.findall(r'Cmd\(\s*"([a-z_]+)"', lg)) | set(re.findall(r'kind\s*=\
 for n in sorted(kinds):
     if '"%s" ->' % n not in svc and ('"%s"' % n) not in svc: bad.append('command kind with no executor: ' + n)
 srcs = '\n'.join(open(f, encoding='utf8').read() for f in glob.glob(J + '/*.kt'))
-for nm in re.findall(r'<(?:activity|service|receiver)\b[^>]*?android:name="([^"]+)"', man):
+for nm in re.findall(r'<(?:activity|service|receiver)(?![\w-])[^>]*?android:name="([^"]+)"', man):
     short = nm.split('.')[-1]
     if nm.startswith('.') or nm.startswith('com.nova.assistant'):
         if not re.search(r'\b(class|object)\s+' + short + r'\b', srcs): bad.append('manifest class missing: ' + nm)

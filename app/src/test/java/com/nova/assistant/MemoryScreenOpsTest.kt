@@ -13,12 +13,12 @@ class MemoryScreenOpsTest {
 
     @Test fun keysAndTokensAreRefusedInRawText() {
         val rows = listOf(
-            "AIzaSyD4kLm9Q2xR7vB3nT8pW1zY6uH0",
+            "AIza" + "0".repeat(35),
             "sk-proj-abc123def456ghi789",
-            "ghp_abcdefghijklmnopqrstuv1234",
+            "ghp_" + "0".repeat(30),
             "gsk_abcdefghijklmnop1234",
             "hf_abcdefghijklmnopqrst1234",
-            "github_pat_abcdefghijklmnopqrst",
+            "github_pat_" + "0".repeat(20),
             "xoxb-1234-abcd-efgh-ijkl",
             "meri openrouter api key sk-or-v1-abcdef123456",
             "mera token yaad rakh"
@@ -46,7 +46,7 @@ class MemoryScreenOpsTest {
     }
 
     @Test fun refusedFactsNeverReachAModelPrompt() {
-        val facts = listOf("mera api key sk-abc123def456ghi789", "meri car blue hai", "mera token abc")
+        val facts = listOf("mera api key sk-" + "0".repeat(20), "meri car blue hai", "mera token abc")
         assertEquals(listOf("meri car blue hai"), PersonalMemory.relevant(facts, "meri car ka colour kya hai"))
         assertEquals(emptyList<String>(), PersonalMemory.relevant(facts, "mera api key kya hai"))
     }
@@ -94,7 +94,7 @@ class MemoryScreenOpsTest {
     }
 
     @Test fun importedFileIsData_secretsAndKeysAreRefused() {
-        val file = "\uFEFF# JARVIS memory export v1\n# note\nnayi baat ek\nmera otp 4821\nsk-abc123def456ghi789xyz\nmy card number is 4111 1111 1111 1111\nnayi baat do\nab\nmeri car blue hai\n"
+        val file = "\uFEFF# JARVIS memory export v1\n# note\nnayi baat ek\nmera otp 4821\nsk-" + "0".repeat(20) + "\nmy card number is 4111 1111 1111 1111\nnayi baat do\nab\nmeri car blue hai\n"
         val r = PersonalMemory.importText(base, file)!!
         assertEquals(2, r.added)
         assertEquals(1, r.dup)

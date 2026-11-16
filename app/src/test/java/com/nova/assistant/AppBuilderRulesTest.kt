@@ -29,6 +29,11 @@ class AppBuilderRulesTest {
         assertEquals(2, sheet.dropped)
         assertEquals("facts", A.notEnough(plan, sheet, 1).let { if (it == "sources") "facts" else it })
     }
+    @Test fun personal_scheduler_needs_no_facts() {
+        val plan = AppBuilderRules.Plan("T", true, listOf(AppBuilderRules.Section("s1", "Reminders", "q")))
+        assertEquals(false, A.forcePersonal(plan, "Nhi manas ke liya shyduled assistant app jo yaad dikhae kab booking h").needsFacts)
+        assertEquals(true, A.forcePersonal(plan, "chhath puja rules calendar app").needsFacts)
+    }
     @Test fun checker_flags_unsourced_years_phones_mails_links() {
         val bad = "<html><head></head><body>Chhath 2022 call 9876543210 mail a@b.com https://evil.test/x</body></html>"
         val p = A.checkHtml(bad, "chhath 2026", false, emptyList())

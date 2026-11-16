@@ -12,7 +12,7 @@ class BizRulesTest {
         assertEquals(BizRules.K_BIZ_STATUS, BizRules.parse("jarvis biz status")?.kind)
         assertEquals("on", BizRules.parse("jarvis biz leads on")?.arg)
         assertEquals(BizRules.K_BIZ_LEADS_NOW, BizRules.parse("jarvis biz leads now")?.kind)
-        assertEquals(BizRules.K_BIZ_KEY, BizRules.parse("jarvis biz placeskey AIzaSyA1234567890abcdefghijk")?.kind)
+        assertEquals(BizRules.K_BIZ_KEY, BizRules.parse("jarvis biz placeskey AIza" + "0".repeat(35) + "")?.kind)
         assertNull(BizRules.parse("mera business kaisa chal raha hai"))
         assertNull(BizRules.parse("jarvis biz price"))
         assertNull(BizRules.parse("jarvis biz colour red"))

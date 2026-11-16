@@ -175,10 +175,70 @@ object GitHubSelfBuild {
         val conclusion = run.optString("conclusion")
         when {
             st != "completed" -> setPhase(SelfBuildRules.RUNNING, "Build chal raha hai ($st)")
-            conclusion == "success" -> setPhase(SelfBuildRules.GREEN, "Build GREEN. \"apk install karo\" bolo ya Test Center mein INSTALL dabao.")
-            else -> setPhase(SelfBuildRules.RED, "Build RED. GitHub Actions ki failed step ki sirf laal lines bhejo.")
+            conclusion == "success" -> {
+                setPhase(SelfBuildRules.GREEN, "Build GREEN. \"apk install karo\" bolo ya Test Center mein INSTALL dabao.")
+                prefs2(ctx).edit().putInt(FIX_STREAK, 0).apply()   // v7.203: green -> red streak reset
+                autoInstallIfAllowed(ctx)   // v7.202: green build par JARVIS khud install shuru karta hai (owner se nahi poochta). Android ka confirm screen aata hai.
+            }
+            else -> {
+                setPhase(SelfBuildRules.RED, "Build RED. GitHub Actions ki failed step ki sirf laal lines bhejo.")
+                autoFixIfAllowed(ctx, run.optLong("id"))   // v7.203: red build ko JARVIS khud dekhe, fix kare (cap ke andar)
+            }
         }
         return Out(snapshot().first == SelfBuildRules.GREEN, snapshot().second)
+    }
+
+    private const val FIX_KEY = "auto_fix_stamps"
+    private const val FIX_STREAK = "auto_fix_streak"
+    private const val FIX_ON = "auto_fix_on"
+    private fun prefs2(ctx: Context) = ctx.applicationContext.getSharedPreferences("selfbuild", Context.MODE_PRIVATE)
+    fun autoFixEnabled(ctx: Context): Boolean = try { prefs2(ctx).getBoolean(FIX_ON, true) } catch (e: Throwable) { true }
+
+    /** v7.203: RED -> Actions ke failed steps padho -> existing self-patch ko wish do (cap ke andar). Build dobara chalega jab patch main par push hoga. */
+    private fun autoFixIfAllowed(ctx: Context, runId: Long) {
+        try {
+            val app = ctx.applicationContext
+            val p = prefs2(app)
+            val stamps = (p.getString(FIX_KEY, "") ?: "").split(",").mapNotNull { it.toLongOrNull() }
+            val now = System.currentTimeMillis()
+            val today = stamps.count { now - it < 24L * 3600_000L }
+            val streak = p.getInt(FIX_STREAK, 0)
+            val busy = try { org.json.JSONObject(GitHubSelfPatch.statusJson(app)).optString("phase") == SelfPatchRules.WRITING } catch (e: Throwable) { true }   // only a patch still being written counts as busy
+            val d = AutoFixRules.decide(phase, streak, today, busy, autoFixEnabled(app))
+            if (!d.go) {
+                if (streak >= AutoFixRules.MAX_STREAK) UpdateManager.notifyUser(app, "JARVIS build red: 3 koshish ke baad ruka. Aap dekho.", null)
+                return
+            }
+            val token = SecureStore.getSlot(app, GitHubPublish.SLOT)
+            val jobs = if (token.isEmpty() || runId == 0L) "" else call(token, "GET", "/repos/${repo()}/actions/runs/$runId/jobs", null).second
+            val wish = AutoFixRules.wishFor(AutoFixRules.failedSteps(jobs))
+            p.edit().putString(FIX_KEY, (stamps + now).takeLast(10).joinToString(",")).putInt(FIX_STREAK, streak + 1).apply()
+            val out = GitHubSelfPatch.start(app, wish)
+            UpdateManager.notifyUser(app, "JARVIS red build dekh raha hai: " + out.msg.take(120), null)
+        } catch (e: Throwable) { ErrLog.add("GitHubSelfBuild", e.toString()) }
+    }
+
+    private const val AUTO_KEY = "auto_release_stamps"
+    private const val AUTO_ON = "auto_release_on"
+    /** v7.202: owner ne band na kiya ho to auto-install on hai (default ON, owner ki maangi hui baat). */
+    fun autoEnabled(ctx: Context): Boolean = try { ctx.applicationContext.getSharedPreferences("selfbuild", Context.MODE_PRIVATE).getBoolean(AUTO_ON, true) } catch (e: Throwable) { true }
+    fun setAutoEnabled(ctx: Context, on: Boolean) { try { ctx.applicationContext.getSharedPreferences("selfbuild", Context.MODE_PRIVATE).edit().putBoolean(AUTO_ON, on).apply() } catch (e: Throwable) { } }
+
+    private fun autoInstallIfAllowed(ctx: Context) {
+        try {
+            val app = ctx.applicationContext
+            val prefs = app.getSharedPreferences("selfbuild", Context.MODE_PRIVATE)
+            val stamps = (prefs.getString(AUTO_KEY, "") ?: "").split(",").mapNotNull { it.toLongOrNull() }
+            val now = System.currentTimeMillis()
+            val locked = try { app.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true } catch (e: Throwable) { false }
+            val d = AutoReleaseRules.shouldAutoInstall(
+                phase = phase, lastAutoAt = stamps.maxOrNull() ?: 0L,
+                todayCount = AutoReleaseRules.countToday(stamps, now), now = now,
+                locked = locked, inCall = false, busy = false, enabled = autoEnabled(app))
+            if (!d.go) return
+            prefs.edit().putString(AUTO_KEY, (stamps + now).takeLast(10).joinToString(",")).apply()
+            install(app) { ok, msg -> UpdateManager.notifyUser(app, (if (ok) "JARVIS auto-install: " else "JARVIS auto-install ruka: ") + msg, null) }
+        } catch (e: Throwable) { ErrLog.add("GitHubSelfBuild", e.toString()) }
     }
 
     /** After GREEN: download the release asset CI published, verify its sha256, then the normal verified-install path. */

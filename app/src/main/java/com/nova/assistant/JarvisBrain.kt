@@ -28,6 +28,13 @@ object JarvisBrain {
         return t.split(Regex("\\s+")).count { it.isNotBlank() } >= MIN_WORDS
     }
 
+    /** v7.198 UNDERSTAND-FIRST: a long, casual sentence (7+ words) is read by the brain BEFORE the fixed word-patterns, so a misheard filler word cannot trigger a wrong set command. Short direct commands (torch, volume, call) keep the instant local road. */
+    fun longNatural(said: String): Boolean {
+        val t = said.trim()
+        if (t.length < 28 || t.length > MAX_CHARS) return false
+        return t.split(Regex("\\s+")).count { it.isNotBlank() } >= 7
+    }
+
     fun system(): String = """You are the understanding brain of JARVIS, a Jarvis-like assistant on the owner's Android phone. The owner speaks Hindi, Hinglish or English, casually, long, with filler words or hints instead of commands. The text may contain small speech-recognition mistakes: read the MEANING of the whole sentence, not single words.
 Pick ONE road for what the owner wants:
 "answer" = he wants information, an explanation, advice, a calculation, news, a price, or just a talk. No phone action is needed.

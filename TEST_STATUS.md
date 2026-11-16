@@ -40,6 +40,13 @@ Status: `PASS` (owner ne phone par chalaya, chala) / `FAIL` (chala nahi, note li
 | 30 | v7.194 launcher ANIMATED home (launcher.html WebView: rings, gauges, orb, apps grid, icons, taps) | NOT REPORTED | - | - | Kotlin COMPILE NAHI hua, phone par NOT RUN. GitHub Actions build pehle chalao. |
 | 33 | v7.197 SELF PATCH ("jarvis khud code likho: ..." / Test Center box "JARVIS KHUD CODE LIKHE": AI ek Kotlin file likhe -> seedha main -> RED build par auto-revert) | NOT REPORTED | - | - | SelfPatchRules asli Kotlin compiler se chala (machine PASS). GitHubSelfPatch.kt network part kabhi asli GitHub / Gemini ke saath nahi chala: NOT RUN. Kotlin full compile NOT RUN. Phone par NOT RUN. |
 
+| 34 | v7.197 launcher: JARVIS Home screen ka aana (Default home app me JARVIS chunna) | **FAIL** | installed build (SELF_PATCH_4 ke baad, version owner ne nahi bataya) | 2026-11-16 | Owner: "Launcher nhi aarha h abhi bhi". Code me koi button/prompt nahi tha jo JARVIS ko Home banata; sirf manifest me HOME category thi. v7.198 me: app-drawer me "Jarvis Home" icon + launcher khulte hi "JARVIS ko Home banao?" popup (RoleManager). Naya fix phone par NOT RUN. Agar naye APK me bhi JARVIS list me na dikhe to batao: pehle check karo GitHub build GREEN hai aur naya APK install hua hai (L1-L4 kabhi compile nahi hue the). |
+| 35 | App Builder: "Manas ke liya scheduled assistant app jo yaad dikhae kab booking h" | **FAIL** | installed build | 2026-11-16 | Screenshot: research 0 facts, "Is topic par sirf 1 pakki detail ... isliye app nahi banayi". Karan: planner ne personal scheduler ko bhi needs_facts=true diya, to 6-facts gate ne rok diya. v7.198: scheduler/reminder/booking/tracker jaise personal app par gate band (forcePersonal). Phone par NOT RUN. |
+
+| 36 | v7.198 UNDERSTAND-FIRST: lambi (7+ shabd) baat pehle AI brain samjhe, phir tool chale (\"samajh kar kaam\", set pattern nahi) | NOT REPORTED | - | - | Owner ne 2026-11-16 ko ye maanga. Kotlin COMPILE NAHI hua, JUnit NOT RUN, phone par NOT RUN. Test: bolo \"instagram open karo aur is lucky id ko search karo guru\" (row 20 wali baat) - ab \"Samjha: ...\" dikhna chahiye. AI key / internet chahiye; na ho to purana raasta. |
+
+| 37 | v7.198 JARVIS baat + kaam + agent chunna: (a) \"kaun sa agent kab kaam aayega\" ka jawab, (b) lambi baat -> sahi agent (WhatsApp / Gmail / Music / website...) -> kaam ke baad \"Kaam poora\" ya \"Poora nahi hua\" line | NOT REPORTED | - | - | Kotlin COMPILE NAHI hua, JUnit NOT RUN, phone par NOT RUN. Test bolo: \"rahul ko bata dena main late aaunga\", \"arijit ke gaane laga do yaar\", \"kaun sa agent kab kaam aayega\". Specialist chain dobara chalana (handle(...) recursion) pehli baar hai: koi atak / double reply dikhe to batao. |
+
 ## GitHub build (owner ne screenshot bheja)
 | Zip / Version | Test | Status | Tareekh | Note |
 |---------------|------|--------|---------|------|
@@ -177,3 +184,7 @@ Status: `PASS` (owner ne phone par chalaya, chala) / `FAIL` (chala nahi, note li
 
 - Fix ke baad poora suite dobara: 185 PASS, 0 FAIL.
 - Self-patch add-on ke baad: poore suite me sirf 1 FAIL aaya (mera apna comment bug, syntax test ne pakda), fix ke baad wo + self_patch + self_build contract PASS. Poora suite us ke baad dobara nahi chalaya.
+
+## Machine check (v7.198, 2026-11-16)
+- tools/test_app_builder_contract.py: PASS. tools/test_android_runtime_contract.py (exported count 9 -> 9 ya 10): PASS.
+- Brain/TaskManager se jude contract scripts: 0 FAIL. tools/test_kotlin_syntax_contract.py: SKIPPED (is machine par Kotlin compiler nahi). Kotlin compile + AppBuilderRulesTest.personal_scheduler_needs_no_facts + launcher popup: NOT RUN. GitHub Actions build pehle chalao.

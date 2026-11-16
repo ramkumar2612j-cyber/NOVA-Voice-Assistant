@@ -90,6 +90,7 @@ class LauncherActivity : Activity() {
     private lateinit var dock: LinearLayout
     private lateinit var orb: TextView
     private var torchOn = false
+    private var askedHome = false   // v7.198: ask "make me Home" once per opening
     private var web: android.webkit.WebView? = null   // v7.194: animated home (launcher.html); native views stay underneath as fallback
     private val dockPins = listOf("com.google.android.youtube" to "YouTube", "com.google.android.googlequicksearchbox" to "Google", "com.android.vending" to "Play Store",
         "com.instagram.android" to "Instagram", "com.whatsapp" to "WhatsApp")
@@ -266,9 +267,45 @@ class LauncherActivity : Activity() {
         max = 100; layoutParams = LinearLayout.LayoutParams(-1, dp(8))
     }
 
+    /** v7.198: is JARVIS the phone's current default home app? */
+    private fun isDefaultHome(): Boolean = try {
+        val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        packageManager.resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == packageName
+    } catch (e: Throwable) { false }
+
+    /** v7.198: ask ONCE per opening (not forced): "JARVIS ko Home banao?" -> system chooser (Android 10+ RoleManager, else Home settings). */
+    private fun askDefaultHome() {
+        if (askedHome || isDefaultHome()) return
+        askedHome = true
+        try {
+            AlertDialog.Builder(this)
+                .setTitle("JARVIS ko Home screen banao?")
+                .setMessage("Abhi aapka purana launcher Home hai. HAAN dabao, phir phone jo list dikhaye usme JARVIS chuno aur \"Hamesha\" / \"Always\" dabao. Wapas purana launcher kabhi bhi Settings me se chun sakte ho.")
+                .setPositiveButton("HAAN") { _, _ -> openHomeChooser() }
+                .setNegativeButton("ABHI NAHI", null)
+                .show()
+        } catch (e: Throwable) { }
+    }
+
+    private fun openHomeChooser() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                val rm = getSystemService(android.app.role.RoleManager::class.java)
+                if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) && !rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                    startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 7198)
+                    return
+                }
+            }
+            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        } catch (e: Throwable) {
+            try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (e2: Throwable) { }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         loadApps(); buildDock(); refreshStatus(); loadWeather()
+        askDefaultHome()
         try { registerReceiver(batRx, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (e: Throwable) { }
         ui.postDelayed(tick, 5000L)
     }
@@ -442,7 +479,7 @@ class LauncherActivity : Activity() {
     private fun loadApps() {
         val q = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val list = try { packageManager.queryIntentActivities(q, 0) } catch (e: Throwable) { emptyList() }
-        all = LauncherRules.sorted(list.map { LauncherRules.AppItem(it.loadLabel(packageManager).toString(), it.activityInfo.packageName) })
+        all = LauncherRules.sorted(list.filter { it.activityInfo.name != "com.nova.assistant.LauncherEntry" }.map { LauncherRules.AppItem(it.loadLabel(packageManager).toString(), it.activityInfo.packageName) })
         shown = LauncherRules.filter(all, search.text?.toString() ?: ""); adapter.notifyDataSetChanged()
     }
 

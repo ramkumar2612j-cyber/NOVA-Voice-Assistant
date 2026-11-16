@@ -1,3 +1,27 @@
+## v7.206 TERMUX ROUTE (owner: JARVIS kaam phone ke Termux terminal se kare)
+- "jarvis terminal me <cmd>": read-only (pwd, ls, date, uptime, df -h, git status) bina poochhe; baaki command dikhegi, "haan run karo" (5 min) par hi chalegi; rm/sudo/curl/pipes/secret wale hamesha band. Naya TermuxRules.kt, manifest me com.termux.permission.RUN_COMMAND, tools/test_termux_contract.py, 4 JUnit. Termux me allow-external-apps ON hona chahiye. Output Termux me dikhega, JARVIS wapas nahi padhta. Kotlin compile + phone: NOT RUN.
+
+## v7.205 CLAUDE APP ROUTE (owner: phone par Claude app khol kar sawal wahan le jao)
+- "jarvis claude se poochho: <sawal>" -> Claude app normal tarah khulti hai, sawal clipboard par, JARVIS khud kuch send nahi karta. Paisa/secret sawal refuse. Naya ClaudeAppRules.kt, tools/test_claude_app_contract.py, 3 JUnit. Abhi NOT: Claude app ke andar auto-type/send (Accessibility), API key wala Claude. Kotlin compile + phone: NOT RUN.
+
+## v7.204 MEDIA WAKE GUARD (owner: reels ki awaaz se bina bulaye jaag jaata tha)
+- Porcupine wake: jab phone par media baj raha ho (AudioManager.isMusicActive) to 2.5x loudness aur 2x cooldown. Naya MediaWakeGuard.kt, tools/test_media_wake_contract.py, 3 JUnit. Vosk path par ye guard nahi laga. Porcupine sensitivity (0.5) abhi nahi badli. Kotlin compile + phone: NOT RUN.
+
+## v7.203 AUTO FIX LOOP (owner: red ho to JARVIS dekhe, fix kare, green hone tak build; roz khud)
+- AutoFixRules.kt + GitHubSelfBuild RED hook: failed steps padhta hai, existing self-patch ko wish deta hai. Caps: 3 koshish per red streak, 3 per din, ek patch ek time par, protected files nahi, HARD DENY nahi. Green par streak reset, auto install (v7.202). Naya tools/test_auto_fix_contract.py, 4 JUnit. NOT wired: patch ke baad build ka auto re-poll (owner ya timer 'apk status' se chalta hai), roz ka alarm. Kotlin compile + phone: NOT RUN.
+
+## v7.202 AUTO RELEASE (owner: green build par JARVIS khud install shuru kare, owner se na poochhe)
+- AutoReleaseRules.kt + GitHubSelfBuild hook: green build par auto install (Android confirm screen hamesha). Lock/call/kaam chal raha ho to ruk. 6 ghante gap, din me max 3. Switch default ON. Naya tools/test_auto_release_contract.py, 5 JUnit. Abhi NOT wired: build ka auto TRIGGER (self-patch ke baad) aur roz ka alarm. InstallTap (v6.33) abhi bhi system screen par Install dabata hai; ye owner ke confirm ke saath dekhna. Kotlin compile + phone: NOT RUN.
+
+## v7.201 BLUE NEON theme (owner: poster wala blue JARVIS, effects + animation)
+- ui.html: naya <style id=v201-blue-neon> sabse aakhir me: blue palette variables, glow buttons, scanline, halka pulse. Reduced-motion par animation nahi. Naya tools/test_blue_theme_contract.py. Phone par rang dekha nahi gaya; purane hardcoded red rules jo variables nahi use karte abhi bhi red ho sakte hain.
+
+## v7.200 DAILY CHECK (owner: roz khud behtar, roz report, kharab feature fix)
+- DailyCheckRules.kt + DailyChangeLog.kt: "roz ki report" voice command = feature check (voice, access, AI key, mic), aaj kya bana, haal ki galtiyan. Fix sirf owner ke "haan fix karo" par (cap 5/din). Naya tools/test_daily_check_contract.py, 4 JUnit. Roz AUTO-run (alarm) abhi wired NAHI hai. Red theme aur JARVIS awaaz pehle se code me the (c1 #ff0000, pitch 0.85), badle nahi. Kotlin compile + phone: NOT RUN.
+
+## v7.199 CHAIN (owner: "jarvis baat samjhe, sahi agent chune, kaam poora kare")
+- Ek kaam me kai agents ek ke baad ek (website -> publish -> WhatsApp): TaskManagerRules.parseSteps + JarvisService.runChain, lambe kaam ke baad ruk kar "aage badho". Fail step = chain ruk jata, kabhi poora nahi likhta. HARD DENY har step me. Naya tools/test_task_chain_contract.py, 9 naye JUnit. wiring_audit ka .LauncherEntry alias bug theek. Kotlin compile + JUnit + phone: NOT RUN. Dekho PART_STATUS_v7_199_CHAIN.md.
+
 ## v7.197 add-on SELF PATCH (owner: "seedha main par, bina puche")
 - Naya: SelfPatchRules.kt (pure, asli compile+run), GitHubSelfPatch.kt (AI se ek .kt file -> main -> RED par auto-revert), voice "jarvis khud code likho: ...", "code status", "code wapas karo", Test Center box, SelfPatchRulesTest.kt, tools/test_self_patch_contract.py. GitHub/Gemini network part NOT RUN.
 

@@ -130,8 +130,20 @@ object AppBuilderRules {
         "{\"title\":\"app name, 2 to 4 words\",\"needs_facts\":true,\"style\":\"look and feel in one line: accent colour, mood\",\"features\":[\"one concrete feature\"],\"sections\":[{\"id\":\"s1\",\"name\":\"what the app must cover\",\"query\":\"one specific web search query\"}]}. " +
         "features = 8 to 14 concrete things the finished app does so that a non-technical owner needs nothing more (every screen, every list with add / edit / delete / search, reminders or counters, settings with light and dark theme, share or copy buttons, empty states). " +
         "5 to 8 sections that together cover EVERYTHING a complete, accurate app on this topic needs: meanings, rules, steps, dates, numbers, names, prices, " +
-        "official sources, common mistakes, safety notes, frequent questions. needs_facts is false ONLY for a pure tool with no factual content (calculator, timer, notes, simple game). " +
+        "official sources, common mistakes, safety notes, frequent questions. needs_facts is false for any tool that only manages the owner's OWN data and needs no outside facts (calculator, timer, notes, to-do, scheduler, appointment or booking reminder, tracker, diary, ledger, simple game); true only when the app must teach or state real-world facts (rules, dates, prices, meanings). " +
         "Each query is specific, 3 to 12 words, in the language that finds the best sources, and never contains personal data."
+
+    private val PERSONAL_TOOL = Regex(L + "(?:schedul\\w*|shyduled|sheduled|reminder|remind|yaad|appointment|booking|bookings|tracker|track|to-?do|todo|diary|notes?|hisaab|hisab|ledger|calculator|timer|planner|organi[sz]er)" + R)
+    private val FACT_TOPIC = Regex(L + "(?:rules?|niyam|vidhi|puja|pooja|recipe|guide|history|itihas|meaning|matlab|festival|tyohar|law|kanoon|syllabus|prices?|rates?)" + R)
+
+    /** A personal organiser (scheduler / reminder / booking tracker ...) holds the owner's own data: it needs NO web facts, so the 6-facts gate must not block it. */
+    fun isPersonalTool(idea: String): Boolean {
+        val low = idea.lowercase()
+        return PERSONAL_TOOL.containsMatchIn(low) && !FACT_TOPIC.containsMatchIn(low)
+    }
+
+    fun forcePersonal(plan: Plan, idea: String): Plan =
+        if (plan.needsFacts && isPersonalTool(idea)) Plan(plan.title, false, plan.sections, plan.features, plan.style) else plan
 
     fun planPrompt(idea: String, today: String): String =
         "Today's date: $today\nOwner's request for the app: ${idea.take(MAX_IDEA)}\nPlan the research."

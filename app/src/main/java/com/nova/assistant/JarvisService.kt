@@ -1709,7 +1709,10 @@ class JarvisService : Service() {
                         // v7.100: Porcupine gets the same self-tuning as the Vosk path: a faint sound or a hit right after a false wake does not wake JARVIS (no popup out of nowhere).
                         val nowMs = System.currentTimeMillis()
                         val needLoud = maxOf(700.0, noise * 3.0) * WakeAdapt.scale(wakeMiss, wakeMissAt, nowMs)
-                        if (hit && peak >= needLoud && nowMs - lastCaptureEnd >= Logic.WAKE_COOLDOWN_MS * (1 + minOf(wakeMiss, 3))) {
+                        // v7.204: media (reels / music) chal raha ho to wake ke liye zyada loud awaaz + double cooldown (bina bulaye na jaage)
+                        val mediaOnW = MediaWakeGuard.mediaActive(this, nowMs)
+                        val cooldownW = Logic.WAKE_COOLDOWN_MS * (1 + minOf(wakeMiss, 3)) * MediaWakeGuard.cooldownMultiplier(mediaOnW)
+                        if (hit && MediaWakeGuard.allowWake(peak, needLoud, mediaOnW) && nowMs - lastCaptureEnd >= cooldownW) {
                             wakeCount++
                             followCount = 0
                             followCap = false
@@ -3514,6 +3517,34 @@ class JarvisService : Service() {
                 if (pending != null) ContextMemory.clear()
             }
         }
+        // v7.198 UNDERSTAND-FIRST (owner: "JARVIS samajh kar kaam kare, set kiya hua nahi"): a long casual sentence goes to the brain BEFORE the fixed patterns.
+        // The brain names the tool and rewrites the sentence; the existing tested tool runs it (same safety rules, same HARD DENY). Any failure / unclear answer = old road.
+        var brainTried = false
+        if (text.isNotBlank() && !turnIsFollow && TaskManagerRules.isGuideQuestion(text)) return TaskManagerRules.guideText(cfg.lang == "en")
+        if (text.isNotBlank() && !turnIsFollow && !rewriting && DailyCheckRules.isReportQuestion(text)) return dailyReportText()   // v7.200 daily check (no AI call)
+        if (text.isNotBlank() && !turnIsFollow && !rewriting && ClaudeAppRules.isRoute(text)) return claudeAppRoute(text)
+        if (text.isNotBlank() && !turnIsFollow && !rewriting && TermuxRules.isRoute(text)) return termuxRoute(text)   // v7.206 Termux terminal route (read-only auto, rest needs owner's yes)
+        if (text.isNotBlank() && !turnIsFollow && !rewriting && TermuxRules.isConfirm(text)) { val pc = termuxPendingCmd(); if (pc.isNotEmpty()) return termuxRun(pc) }   // v7.205 Claude app (owner's own phone, no hidden send)
+        if (text.isNotBlank() && !turnIsFollow && !rewriting && TaskManagerRules.isContinue(text)) { val pend = TaskManagerStore.pending(this); if (pend.isNotEmpty()) return runChain(pend, "") }   // v7.199: "aage badho" runs the paused rest
+        if (text.isNotBlank() && !rewriting && !turnIsFollow && pending == null && JarvisBrain.longNatural(text) && !Logic.isJunk(text) && agentChainReady()) {
+            brainTried = true
+            val uraw = try { agentChain(JarvisBrain.system() + TaskManagerRules.catalogForAi(), JarvisBrain.user(text)) } catch (t: Throwable) { null }
+            val ud = try { JarvisBrain.parse(uraw) } catch (t: Throwable) { null }
+            val up = try { TaskManagerRules.parsePlan(uraw, text) } catch (t: Throwable) { null }
+            if (up != null && up.denied) return TaskManagerRules.denyReply(cfg.lang == "en")
+            val ust = try { TaskManagerRules.parseSteps(uraw, text) } catch (t: Throwable) { null }   // v7.199 CHAIN: several tools in order
+            if (ust != null) { if (ust.any { it.denied }) return TaskManagerRules.denyReply(cfg.lang == "en"); return runChain(ust, ud?.understood.orEmpty()) }
+            if (up != null) {
+                val rr = runRewritten(up, ud?.understood.orEmpty())
+                if (rr != null) return rr
+            }
+            if (ud != null && ud.mode == JarvisBrain.Mode.AGENT) {
+                if (ud.understood.isNotBlank()) agentNote(tr("Samjha: ", "Understood: ") + ud.understood)
+                lastTurnLocal = false
+                lastKind = "agent"
+                return agentBegin(text)
+            }
+        }
         val c0 = if (text.isBlank()) null else Understand.classify(text)   // v32: long / casual sentences too ("mere mobile ko turant lock kar do")
         val sk = if (c0 == null && text.isNotBlank()) brain.resolve(text) else null   // Layer 1: shortcuts + fuzzy match
         var c: Logic.Cmd? = c0 ?: sk?.let { skillCmd(it) }
@@ -3674,24 +3705,21 @@ class JarvisService : Service() {
         // v7.186 JARVIS BRAIN: a sentence no local command took is UNDERSTOOD by one short AI call first. A real multi-step job goes to the task agent
         // (plan, act, verify, retry); a question or a simple phone action keeps the old road. Any failure here changes nothing (old path runs).
         // v7.191 L3 KAAM-MANAGER: "tum kya kya kar sakte ho" is answered from the registry at once (no AI call).
+        if (!junk && !turnIsFollow && text.isNotBlank() && TaskManagerRules.isGuideQuestion(said)) return TaskManagerRules.guideText(cfg.lang == "en")
+        if (!junk && !turnIsFollow && !rewriting && text.isNotBlank() && TaskManagerRules.isContinue(said)) { val pend2 = TaskManagerStore.pending(this); if (pend2.isNotEmpty()) return runChain(pend2, "") }
         if (!junk && !turnIsFollow && text.isNotBlank() && TaskManagerRules.isDirectoryQuestion(said)) return TaskManagerRules.directoryText(cfg.lang == "en")
-        if (!junk && !turnIsFollow && text.isNotBlank() && JarvisBrain.worthAsking(said) && agentChainReady()) {
+        if (!junk && !turnIsFollow && !brainTried && !rewriting && text.isNotBlank() && JarvisBrain.worthAsking(said) && agentChainReady()) {
             val jraw = try { agentChain(JarvisBrain.system() + TaskManagerRules.catalogForAi(), JarvisBrain.user(said)) } catch (t: Throwable) { null }
             val jd = try { JarvisBrain.parse(jraw) } catch (t: Throwable) { null }
             // v7.191 L3: the brain also names the right tool and rewrites the sentence in that tool's style. Run it through the normal local command path (no extra
             // approval question; the tool's own safety rules stay). Payment / bank / password / OTP / PIN / CVV are refused. Anything unclear falls to the old road.
             val plan = try { TaskManagerRules.parsePlan(jraw, said) } catch (t: Throwable) { null }
             if (plan != null && plan.denied) return TaskManagerRules.denyReply(cfg.lang == "en")
+            val jst = try { TaskManagerRules.parseSteps(jraw, said) } catch (t: Throwable) { null }   // v7.199 CHAIN
+            if (jst != null) { if (jst.any { it.denied }) return TaskManagerRules.denyReply(cfg.lang == "en"); return runChain(jst, jd?.understood.orEmpty()) }
             if (plan != null) {
-                val pc = try { Logic.classify(plan.say) } catch (t: Throwable) { null }
-                if (pc != null) {
-                    val ent = TaskManagerRules.byId(plan.agentId)
-                    if (ent != null) TaskManagerStore.note(this, ent.name + (if (jd != null && jd.understood.isNotBlank()) ": " + jd.understood else ""))
-                    if (jd != null && jd.understood.isNotBlank()) agentNote(tr("Samjha: ", "Understood: ") + jd.understood)
-                    lastTurnLocal = false
-                    lastKind = pc.kind
-                    return runCommand(pc)
-                }
+                val rr = runRewritten(plan, jd?.understood.orEmpty())
+                if (rr != null) return rr
             }
             if (jd != null && jd.mode == JarvisBrain.Mode.AGENT) {
                 if (jd.understood.isNotBlank()) agentNote(tr("Samjha: ", "Understood: ") + jd.understood)
@@ -5798,6 +5826,133 @@ class JarvisService : Service() {
     private fun accNeedMsg(need: String, needEn: String): String {
         val st = AccessHintRules.state(JarvisAccessibilityService.isEnabled(this), JarvisAccessibilityService.instance != null)
         return AccessHintRules.message(st, need, needEn, cfg.lang == "en")
+    }
+
+    @Volatile private var rewriting = false   // v7.198: true while a brain-rewritten sentence runs through the normal pipeline (no second brain call)
+
+    /** v7.198: the brain picked an agent and rewrote the sentence. Run it through the real pipeline (local tool first, then every specialist: WhatsApp, Gmail, music, website...),
+     *  then say honestly whether the job is complete. Null = nothing usable, the caller keeps the old road. HARD DENY words were already refused by parsePlan. */
+    private fun runRewritten(plan: TaskManagerRules.Plan, understood: String): String? {
+        val en = cfg.lang == "en"
+        val ent = TaskManagerRules.byId(plan.agentId) ?: return null
+        TaskManagerStore.note(this, ent.name + (if (understood.isNotBlank()) ": " + understood else ""))
+        if (understood.isNotBlank()) agentNote(tr("Samjha: ", "Understood: ") + understood)
+        lastTurnLocal = false
+        val cmd = try { Logic.classify(plan.say) } catch (t: Throwable) { null }
+        val out: String? = if (cmd != null) { lastKind = cmd.kind; runCommand(cmd) }
+            else if (!rewriting) { rewriting = true; try { handle(ByteArray(0), plan.say) } catch (t: Throwable) { null } finally { rewriting = false } }
+            else null
+        if (out == null) return null
+        if (out.isBlank()) return out
+        return out + "\n" + TaskManagerRules.doneLine(ent.name, understood, out, en)
+    }
+
+    private fun termuxPendingCmd(): String {
+        val p = getSharedPreferences("termux_route", MODE_PRIVATE)
+        return if (TermuxRules.pendingLive(p.getLong("at", 0L), System.currentTimeMillis())) p.getString("cmd", "") ?: "" else ""
+    }
+
+    /** v7.206: classify the command. Allowed = run now. NeedsConfirm = show it, wait for owner's yes. Denied = refuse. */
+    private fun termuxRoute(said: String): String {
+        val en = cfg.lang == "en"
+        val cmd = TermuxRules.commandOf(said)
+        return when (val v = TermuxRules.classify(cmd)) {
+            is TermuxRules.Verdict.Denied -> tr("Ye nahi chalega: ${v.why}.", "Not running this: ${v.why}.")
+            is TermuxRules.Verdict.Allowed -> termuxRun(cmd)
+            is TermuxRules.Verdict.NeedsConfirm -> {
+                getSharedPreferences("termux_route", MODE_PRIVATE).edit().putString("cmd", v.cmd).putLong("at", System.currentTimeMillis()).apply()
+                tr("Ye command chalani hai: ${v.cmd}. 'haan run karo' bolo to chalegi (5 minute tak).", "This command would run: ${v.cmd}. Say 'haan run karo' to run it (valid 5 minutes).")
+            }
+        }
+    }
+
+    private fun termuxRun(cmd: String): String = try {
+        val i = Intent().setClassName(TermuxRules.PACKAGE, "com.termux.app.RunCommandService")
+            .setAction("com.termux.RUN_COMMAND")
+            .putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash")
+            .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arrayOf("-lc", cmd))
+            .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+        startService(i)
+        getSharedPreferences("termux_route", MODE_PRIVATE).edit().remove("cmd").remove("at").apply()
+        tr("Terminal me chala diya: $cmd. Output Termux me dikhega.", "Sent to the terminal: $cmd. The output shows in Termux.")
+    } catch (e: Throwable) {
+        ErrLog.add("JarvisService", e.toString())
+        tr("Termux nahi chal paaya. Termux install hai aur uski permission di hai?", "Termux did not start. Is Termux installed and permission granted?")
+    }
+
+    /** v7.205: opens the Claude app on the owner's phone and copies the question. Nothing is sent by JARVIS. */
+    private fun claudeAppRoute(said: String): String {
+        val en = cfg.lang == "en"
+        val q = ClaudeAppRules.questionOf(said)
+        if (ClaudeAppRules.isDenied(q)) return ClaudeAppRules.denyReply(en)
+        return try {
+            val li = packageManager.getLaunchIntentForPackage(ClaudeAppRules.PACKAGE)
+            if (li == null) return tr("Claude app is phone par nahi mili. Play Store se install karo.", "Claude app is not installed on this phone. Install it from the Play Store.")
+            if (q.isNotBlank()) {
+                val cm = getSystemService(android.content.ClipboardManager::class.java)
+                cm?.setPrimaryClip(android.content.ClipData.newPlainText("jarvis", q))
+            }
+            li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(li)
+            ClaudeAppRules.openedText(q, en)
+        } catch (e: Throwable) {
+            ErrLog.add("JarvisService", e.toString())
+            tr("Claude app nahi khul paayi.", "I could not open the Claude app.")
+        }
+    }
+
+    /** v7.200 DAILY CHECK: real status of the phone features + what was built today + recent errors. Fix only after owner's yes. */
+    private fun dailyReportText(): String {
+        val en = cfg.lang == "en"
+        val probes = DailyCheckRules.probesFrom(
+            ttsReady = tts != null,
+            accessibilityOn = JarvisAccessibilityService.isEnabled(this) && JarvisAccessibilityService.instance != null,
+            aiKeyReady = agentChainReady(),
+            micReady = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+            en = en)
+        val errs = try { ErrLog.dump().lines().filter { it.isNotBlank() }.takeLast(3) } catch (t: Throwable) { emptyList() }
+        return DailyCheckRules.report(probes, DailyChangeLog.today(this), errs, en)
+    }
+
+    /** v7.199 CHAIN: run one plan sentence through the real pipeline (local tool first, then every specialist). Null = nothing took it. */
+    private fun runPlanText(plan: TaskManagerRules.Plan): String? {
+        lastTurnLocal = false
+        val cmd = try { Logic.classify(plan.say) } catch (t: Throwable) { null }
+        return if (cmd != null) { lastKind = cmd.kind; runCommand(cmd) }
+            else if (!rewriting) { rewriting = true; try { handle(ByteArray(0), plan.say) } catch (t: Throwable) { null } finally { rewriting = false } }
+            else null
+    }
+
+    /** v7.199 CHAIN: a job that needs several tools in order. Runs the steps one after another and reports each honestly. A failed step stops the chain (never called complete).
+     *  After a long background tool (website, leads, app build...) the chain pauses and keeps the rest; "aage badho" runs it. HARD DENY words were refused by parseSteps / decodeSteps. */
+    private fun runChain(steps: List<TaskManagerRules.Plan>, understood: String): String {
+        val en = cfg.lang == "en"
+        val total = steps.size
+        if (understood.isNotBlank()) agentNote(tr("Samjha: ", "Understood: ") + understood)
+        TaskManagerStore.note(this, steps.joinToString(" > ") { TaskManagerRules.byId(it.agentId)?.name ?: it.agentId })
+        TaskManagerStore.savePending(this, emptyList())
+        val lines = ArrayList<String>()
+        var done = 0
+        var failed = false
+        var paused = false
+        var i = 0
+        while (i < total) {
+            val st = steps[i]
+            val ent = TaskManagerRules.byId(st.agentId)
+            if (ent == null || TaskManagerRules.isDenied(st.say)) { failed = true; break }
+            val out = try { runPlanText(st) } catch (t: Throwable) { null }
+            i++
+            if (TaskManagerRules.stepFailed(out)) { lines.add(ent.name + ": " + tr("poora nahi hua", "not complete")); failed = true; break }
+            done++
+            lines.add(ent.name + ": " + (out ?: "").trim().take(160))
+            if (i < total && TaskManagerRules.isBackground(st.agentId)) {
+                TaskManagerStore.savePending(this, steps.subList(i, total))
+                paused = true
+                break
+            }
+        }
+        lines.add(TaskManagerRules.chainLine(done, total, paused, failed, en))
+        return lines.joinToString("\n")
     }
 
     private fun agentBegin(raw: String): String {

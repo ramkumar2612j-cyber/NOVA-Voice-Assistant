@@ -145,7 +145,7 @@ object AppBuilder {
         log(g, "cmd", "jarvis plan --idea \"" + idea.take(70) + "\"")
         val aiPlan = AppBuilderRules.parsePlan(ai(ctx, AppBuilderRules.PLAN_SYSTEM, AppBuilderRules.planPrompt(idea, today)))
         if (aiPlan == null) log(g, "info", "AI plan nahi mila: standard research plan use ho raha hai")
-        val plan: AppBuilderRules.Plan = aiPlan ?: AppBuilderRules.defaultPlan(idea)
+        val plan: AppBuilderRules.Plan = AppBuilderRules.forcePersonal(aiPlan ?: AppBuilderRules.defaultPlan(idea), idea)
         if (!alive(g)) return
         val name = AppBuilderRules.appName(idea).ifEmpty { plan.title }.ifEmpty { "My App" }
         appName = name

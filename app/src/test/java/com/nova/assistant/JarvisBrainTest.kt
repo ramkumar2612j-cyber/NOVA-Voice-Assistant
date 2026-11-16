@@ -33,4 +33,11 @@ class JarvisBrainTest {
         assertNull(JarvisBrain.parse("sorry I cannot"))
         assertNull(JarvisBrain.parse("{\"mode\":\"fly\",\"understood\":\"x\"}"))
     }
+
+    @Test fun longNaturalSentenceGoesToBrainFirst() {
+        assertTrue(JarvisBrain.longNatural("instagram open karo aur is lucky id ko search karo guru"))
+        assertFalse(JarvisBrain.longNatural("torch on karo"))
+        assertFalse(JarvisBrain.longNatural("volume badhao"))
+        assertFalse(JarvisBrain.longNatural(""))
+    }
 }

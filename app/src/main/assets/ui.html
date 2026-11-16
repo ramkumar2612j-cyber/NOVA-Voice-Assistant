@@ -8062,4 +8062,32 @@ setTimeout(function(){apply(read())},2700);
 }catch(e){try{console.error('v197selfpatch',e)}catch(_){}}})();
 </script>
 
+<style id="v201-blue-neon">
+/* v7.201 BLUE NEON JARVIS theme (owner's poster colours). Loads last, so it wins over the older red blocks.
+   Colours via variables; glow + soft animation; reduced-motion users get no animation. */
+:root{
+  --c1:#1aa3ff;--c2:#7fd6ff;--ured:#2f8bff;--bg:#02060f;--bg2:#06142a;--ink:#e8f6ff;--mut:#8fb8d9;
+  --line:rgba(40,160,255,.26);--line2:rgba(60,190,255,.6);--edge:rgba(60,190,255,.34);
+  --grad:linear-gradient(90deg,#0a6cff,#34c8ff 70%);
+  --ds-neon:#2fb8ff;--ds-neon2:#8fe2ff;--ds-glass:rgba(6,22,48,.6);--ds-glass2:rgba(40,160,255,.08);
+  --ds-line:rgba(40,160,255,.4);--ds-glow:0 0 16px rgba(40,170,255,.35);
+  --v76-ink:#e8f6ff;--v76-mut:#9ec3e0;--v76-line:rgba(60,180,255,.38);--v76-acc:#2fa8ff;--v76-warn:#ffd66b;
+  --rl-hi:rgba(190,230,255,.18);--rl-lo:rgba(0,0,0,.6);--rl-edge:rgba(60,180,255,.34)
+}
+:root{color-scheme:dark}
+html,body{background:radial-gradient(ellipse at 50% -10%,#0b2a55 0%,#02060f 55%,#000 100%)!important;color:var(--ink)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,rgba(60,170,255,.035) 0 1px,transparent 1px 3px)}
+button,.box,.f,#panel .box,.card{box-shadow:0 0 0 1px rgba(60,180,255,.22),0 0 18px rgba(30,150,255,.18)!important}
+button:hover,button:focus-visible{box-shadow:0 0 0 1px #7fd6ff,0 0 26px rgba(60,190,255,.55)!important;outline:none}
+@keyframes v201Pulse{0%,100%{box-shadow:0 0 12px rgba(40,170,255,.35)}50%{box-shadow:0 0 26px rgba(60,200,255,.7)}}
+@keyframes v201Scan{0%{background-position:0 -100%}100%{background-position:0 200%}}
+@media (prefers-reduced-motion:no-preference){
+  #btn,.mic,.orb,[class*="orb"]{animation:v201Pulse 2.6s ease-in-out infinite}
+  body::after{content:"";position:fixed;left:0;right:0;height:40%;top:-40%;pointer-events:none;z-index:0;
+    background:linear-gradient(180deg,transparent,rgba(80,200,255,.06),transparent);animation:v201Scan 6s linear infinite}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+img,canvas,svg{image-rendering:auto}
+</style>
 </body></html>
