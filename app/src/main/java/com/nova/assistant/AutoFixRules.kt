@@ -30,22 +30,28 @@ internal object AutoFixRules {
     }
 
     /** Names of the failed steps from GitHub's jobs JSON, e.g. "unit tests: Run tests". Empty if unknown. */
-    fun failedSteps(jobsJson: String): List<String> = try {
-        val out = ArrayList<String>()
-        val jobs = JSONObject(jobsJson).optJSONArray("jobs") ?: return emptyList()
-        for (i in 0 until jobs.length()) {
-            val j = jobs.optJSONObject(i) ?: continue
-            if (j.optString("conclusion") != "failure") continue
-            val steps = j.optJSONArray("steps") ?: continue
-            var found = false
-            for (k in 0 until steps.length()) {
-                val st = steps.optJSONObject(k) ?: continue
-                if (st.optString("conclusion") == "failure") { out.add(j.optString("name") + ": " + st.optString("name")); found = true; break }
+    fun failedSteps(jobsJson: String): List<String> {
+        return try {
+            val out = ArrayList<String>()
+            val jobs = JSONObject(jobsJson).optJSONArray("jobs")
+            if (jobs == null) emptyList() else {
+                for (i in 0 until jobs.length()) {
+                    val j = jobs.optJSONObject(i) ?: continue
+                    if (j.optString("conclusion") != "failure") continue
+                    val steps = j.optJSONArray("steps")
+                    var found = false
+                    if (steps != null) {
+                        for (k in 0 until steps.length()) {
+                            val st = steps.optJSONObject(k) ?: continue
+                            if (st.optString("conclusion") == "failure") { out.add(j.optString("name") + ": " + st.optString("name")); found = true; break }
+                        }
+                    }
+                    if (!found) out.add(j.optString("name"))
+                }
+                out
             }
-            if (!found) out.add(j.optString("name"))
-        }
-        out
-    } catch (e: Throwable) { emptyList() }
+        } catch (e: Throwable) { emptyList() }
+    }
 
     /** The wish given to the existing self-patch. Only names of failed steps, never secrets. */
     fun wishFor(steps: List<String>): String {
