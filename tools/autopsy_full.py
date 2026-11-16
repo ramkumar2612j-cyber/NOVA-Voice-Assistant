@@ -137,7 +137,8 @@ for m in re.finditer(r'android:name="(\.?[\w.]+)"', MANIFEST):
         mf.add(n[1:])
     elif n.startswith('com.nova.assistant.'):
         mf.add(n.split('.')[-1])
-mmiss = sorted(n for n in mf if ('class ' + n) not in allkt and ('object ' + n) not in allkt)
+alias_names = set(re.findall(r'<activity-alias\b[^>]*?android:name="\.?([\w.]+)"', MANIFEST))
+mmiss = sorted(n for n in mf if ('class ' + n) not in allkt and ('object ' + n) not in allkt and n not in alias_names)
 add('H_manifest_class_missing_in_kotlin', mmiss, True)
 comp = set(re.findall(r'class\s+(\w+)[^{\n]*:\s*[^{\n]*\b(?:Service|BroadcastReceiver|Activity|AppCompatActivity|NotificationListenerService|AccessibilityService|VoiceInteractionService|VoiceInteractionSessionService|RecognitionService|FileProvider|Worker|CoroutineWorker)\b', allkt))
 add('H2_component_classes_not_in_manifest', sorted(c for c in comp if c not in mf and not c.endswith('Worker')))

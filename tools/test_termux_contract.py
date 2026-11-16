@@ -14,7 +14,7 @@ ck('ALLOW = setOf("pwd", "ls", "date", "uptime", "df -h", "git status")' in r, "
 ck("CONFIRM_MS = 5L" in r, "owner yes expires in 5 minutes")
 ck("termuxRoute(text)" in svc and "private fun termuxRoute" in svc, "voice route wired")
 ck("RUN_COMMAND_BACKGROUND" in svc and "com.termux.RUN_COMMAND" in svc, "Termux RUN_COMMAND intent used")
-ck("com.termux.permission.RUN_COMMAND" in man, "manifest asks for Termux permission")
+ck("com.termux.permission.RUN_COMMAND" not in man, "manifest does NOT add a new permission (permission guard); Termux needs the owner to grant it by hand")
 ck("TermuxRules.isConfirm(text)" in svc and "termuxPendingCmd()" in svc, "owner yes runs only the pending command")
 ck("Verdict.Denied" in svc[svc.index("private fun termuxRoute"):svc.index("private fun termuxRoute")+500], "denied commands never run")
 for t in ("readOnlyIsAllowed", "otherCommandsNeedOwnerYes", "dangerousAlwaysDenied", "routeAndConfirm"):
