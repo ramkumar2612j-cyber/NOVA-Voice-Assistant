@@ -1,0 +1,63 @@
+// UNCOMPILED DRAFT (v7.178) - rename to LaptopLink.kt in app/src/main/java/com/nova/assistant/ ONLY when the owner asks, then build on GitHub.
+// Phone side of the laptop link. Wire format MUST match desktop/link.js (tests there):
+//  key   = base64url(32 bytes) from the laptop code "NOVA-LINK:<key>"
+//  topic = "nova-" + hex(sha256("<l2p|p2l>:" + key)).take(40)   (laptop->phone = l2p, phone->laptop = p2l)
+//  env   = base64url( iv(12) || AES-256-GCM ciphertext || tag(16) ), AAD = topic bytes, plaintext = JSON {id, ts, type, text, re}
+//  types: "cmd" (run this on the receiver), "ask" (laptop asks the phone's AI; phone replies with type "reply", re = id), "reply"
+//  relay: POST https://ntfy.sh/<topic> (body = env); stream GET https://ntfy.sh/<topic>/json?since=<unix> (lines with event=="message", field "message")
+// Keys (Gemini / Groq ...) stay in the phone's SecureStore. The laptop never receives one.
+package com.nova.assistant
+
+import android.util.Base64
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+
+object LaptopLink {
+    private const val SKEW_MS = 120_000L
+    private fun b64u(b: ByteArray) = Base64.encodeToString(b, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+    private fun unb64u(s: String) = Base64.decode(s, Base64.URL_SAFE or Base64.NO_WRAP)
+
+    fun topic(key: String, dir: String): String =
+        "nova-" + MessageDigest.getInstance("SHA-256").digest("$dir:$key".toByteArray()).joinToString("") { "%02x".format(it) }.take(40)
+
+    fun seal(key: String, topic: String, type: String, text: String, re: String = ""): String {
+        val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
+        val c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(unb64u(key), "AES"), GCMParameterSpec(128, iv)); c.updateAAD(topic.toByteArray())
+        val id = b64u(ByteArray(9).also { SecureRandom().nextBytes(it) })
+        val body = JSONObject().put("id", id).put("ts", System.currentTimeMillis()).put("type", type).put("text", text.take(1500)).put("re", re).toString()
+        return b64u(iv + c.doFinal(body.toByteArray()))   // GCM output already ends with the 16-byte tag
+    }
+    /** null = tampered / wrong key / stale. */
+    fun open(key: String, topic: String, env: String): JSONObject? = try {
+        val raw = unb64u(env); if (raw.size < 29) null else {
+            val c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE, SecretKeySpec(unb64u(key), "AES"), GCMParameterSpec(128, raw.copyOfRange(0, 12))); c.updateAAD(topic.toByteArray())
+            val m = JSONObject(String(c.doFinal(raw.copyOfRange(12, raw.size))))
+            if (Math.abs(System.currentTimeMillis() - m.getLong("ts")) > SKEW_MS) null else m
+        }
+    } catch (e: Exception) { null }
+
+    fun publish(base: String, topic: String, env: String): Boolean = try {
+        val u = URL("$base/$topic"); val h = u.openConnection() as HttpURLConnection
+        h.requestMethod = "POST"; h.doOutput = true; h.connectTimeout = 8000; h.readTimeout = 8000; h.outputStream.use { it.write(env.toByteArray()) }; h.responseCode in 200..299
+    } catch (e: Exception) { false }
+
+    /** Blocking stream loop: run on a background thread inside the foreground NovaService. onEnv gets each raw envelope. Returns when stop() is true. */
+    fun listen(base: String, topic: String, stop: () -> Boolean, onEnv: (String) -> Unit) {
+        while (!stop()) {
+            try {
+                val h = URL("$base/$topic/json?since=${System.currentTimeMillis() / 1000 - 90}").openConnection() as HttpURLConnection
+                h.connectTimeout = 10000; h.readTimeout = 0
+                h.inputStream.bufferedReader().useLines { ls -> for (l in ls) { if (stop()) break; try { val j = JSONObject(l); if (j.optString("event") == "message") onEnv(j.getString("message")) } catch (e: Exception) {} } }
+            } catch (e: Exception) {}
+            try { Thread.sleep(4000) } catch (e: InterruptedException) { return }
+        }
+    }
+}
+// WIRING (next account): 1) Settings > LAPTOP LINK: paste field -> store key in SecureStore (never in logs). 2) NovaService: start listen(l2p) thread. 3) type "cmd" -> same path as typed(text) (confirmations for risky tasks stay); type "ask" -> existing AI reply path, send "reply" with re=id on p2l.
+// 4) Phone "laptop par <cmd>" -> publish type "cmd" on l2p; show the laptop "reply" in chat. 5) Add to MADAD/HelpGuide/aiFacts. 6) Dedupe by id (Set, 5 min), same as desktop/link.js.

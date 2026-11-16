@@ -1,0 +1,79 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+// Offline Vosk model is fetched automatically before every build (no manual download step).
+apply(from = rootProject.file("gradle/vosk-model.gradle.kts"))
+// Fixed signing key (step B). CI passes the keystore through environment variables; without them the normal
+// throwaway debug key is used (local builds, pull requests from forks). An in-app APK update only works when
+// the installed app and the new APK are signed with the SAME key.
+val jarvisKsPath: String? = System.getenv("NOVA_KEYSTORE_PATH")
+val jarvisKsPass: String? = System.getenv("NOVA_KEYSTORE_PASSWORD")
+val jarvisKsAlias: String? = System.getenv("NOVA_KEY_ALIAS")
+val jarvisKeyPass: String? = System.getenv("NOVA_KEY_PASSWORD") ?: jarvisKsPass
+val haveJarvisKeystore: Boolean =
+    !jarvisKsPath.isNullOrBlank() && file(jarvisKsPath).exists() &&
+        !jarvisKsPass.isNullOrBlank() && !jarvisKsAlias.isNullOrBlank()
+
+android {
+    namespace = "com.nova.assistant"
+    compileSdk = 34
+    defaultConfig {
+        applicationId = "com.nova.assistant"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = (System.getenv("JARVIS_VERSION_CODE") ?: "40").toIntOrNull() ?: 40
+        // v7.186: JARVIS BRAIN + app renamed JARVIS -> Jarvis (label, icon, wake word). Old versionName line had a stray
+        // "#" after the string, which is not a valid Kotlin token outside a string literal and would fail compile.
+        versionName = "7.195"
+        // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    }
+    signingConfigs {
+        if (haveJarvisKeystore) {
+            create("jarvis") {
+                storeFile = file(jarvisKsPath ?: "")
+                storePassword = jarvisKsPass
+                keyAlias = jarvisKsAlias
+                keyPassword = jarvisKeyPass
+            }
+        }
+    }
+    buildTypes {
+        getByName("debug") {
+            if (haveJarvisKeystore) signingConfig = signingConfigs.getByName("jarvis")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = "17" }
+}
+// Some transitive libraries pull androidx.core 1.15.0, which needs compileSdk 35. This project is on compileSdk 34 (AGP 8.5.2),
+// so keep every androidx.core artifact on 1.13.1.
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core:1.13.1", "androidx.core:core-ktx:1.13.1")
+    }
+}
+dependencies {
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    implementation("com.alphacephei:vosk-android:0.3.47")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("io.github.ljcamargo:llamacpp-kotlin:0.1.0")
+    implementation("ai.picovoice:porcupine-android:3.0.2")   // v6.56: optional better wake word (needs the owner's AccessKey + jarvis.ppn); Vosk stays as fallback
+    implementation("com.google.zxing:core:3.5.3")   // v7.153 WIFI KIT: Wi-Fi QR make/read (pure Java, offline, no permissions)
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))   // v7.155b: sherpa-onnx 1.12.14 Maven par nahi tha; tools/fetch_sherpa.sh GitHub release se laata h (package com.k2fsa.sherpa.onnx)
+    implementation("org.apache.commons:commons-compress:1.26.2")   // v7.154: safe .tar.bz2 extraction of the voice model (TarBz.kt)
+    implementation("androidx.fragment:fragment:1.6.2")
+    implementation("androidx.core:core:1.13.1")
+    implementation("androidx.work:work-runtime:2.9.1")
+    // v7.158 AUTOPILOT task C: reel re-encode (H.264/AAC) + 9:16 blurred background. 1.4.1 is the last line
+    // that compiles against compileSdk 34 (1.5+ wants 35). API verified against the real AARs.
+    implementation("androidx.media3:media3-transformer:1.4.1")
+    implementation("androidx.media3:media3-common:1.4.1")
+    implementation("androidx.media3:media3-effect:1.4.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")   // v6.86: the real org.json for unit tests (the android.jar one only has stubs that throw)
+}

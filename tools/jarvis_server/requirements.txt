@@ -1,0 +1,4 @@
+# The web part uses only the Python standard library. Real engine only (not needed for JARVIS_FAKE=1):
+soundfile
+huggingface_hub
+# voxcpm  -> a VoxCPM2-compatible runtime (the model card names upstream revision f772e498a45fbb5fb8e13fbf9b9c48be9fe33e69)

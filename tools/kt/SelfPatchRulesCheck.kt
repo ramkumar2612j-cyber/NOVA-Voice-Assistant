@@ -1,0 +1,43 @@
+import com.nova.assistant.SelfPatchRules as R
+var f = 0
+fun ck(c: Boolean, l: String) { println((if (c) "PASS " else "FAIL ") + l); if (!c) f++ }
+val GOOD = "package com.nova.assistant\n\n// ok\nobject GenQuote {\n    private val Q = listOf(\"a\", \"b { c\", \"d }\")\n    fun pick(i: Int): String = if (i >= 0) Q[i % Q.size] else \"\"\n    /* block { comment */\n    val ch = '{'\n    val raw = \"\"\"x { y\"\"\"\n}\n"
+fun main() {
+    ck(R.isTrigger("jarvis khud code likho foo.kt me kuch"), "trigger phrase")
+    ck(!R.isTrigger("apk banao") && !R.isTrigger("gaana bajao"), "other phrases are not triggers")
+    ck(R.isStatus("code status") && R.isUndo("jarvis code wapas karo"), "status + undo phrases")
+    ck(R.parseWish("jarvis khud code likho foo kt me quote", "Jarvis khud code likho: Foo.kt me quote jodo") == "Foo.kt me quote jodo", "wish keeps capitals after trigger")
+    ck(R.parseWish("jarvis khud code likho", "jarvis khud code likho") == null, "too-short wish -> null")
+    ck(R.wishBlocked("upi pin bhejne wala code") && R.wishBlocked("password save karo") && R.wishBlocked("build.yml badlo") && R.wishBlocked("github token padho"), "HARD DENY / secrets wishes blocked")
+    ck(R.wishBlocked("otp padh ke bharo"), "otp blocked")
+    ck(!R.wishBlocked("Foo.kt me quote of the day jodo"), "normal wish allowed")
+    ck(R.targetName("HelpGuide.kt me topic jodo") == "HelpGuide" && R.targetName("naya quote function") == null, "target file name parsing")
+    ck(R.isAllowedPath(R.DIR + "GenQuote.kt"), "normal path allowed")
+    ck(!R.isAllowedPath(R.DIR + "SecureStore.kt") && !R.isAllowedPath(R.DIR + "UpdateManager.kt") && !R.isAllowedPath(R.DIR + "GitHubSelfPatch.kt") && !R.isAllowedPath(R.DIR + "SelfPatchRules.kt"), "protected files refused")
+    ck(!R.isAllowedPath(".github/workflows/build.yml") && !R.isAllowedPath("app/build.gradle.kts") && !R.isAllowedPath(R.DIR + "../Evil.kt") && !R.isAllowedPath("app/src/main/AndroidManifest.xml") && !R.isAllowedPath(R.DIR + "sub/Evil.kt"), "workflow / gradle / manifest / traversal refused")
+    ck(R.balanced(GOOD), "balanced: braces inside strings / char / comments ignored")
+    ck(!R.balanced("package x\nobject A {\n fun f() {\n}\n") && !R.balanced("fun f( { )}") && !R.balanced("object A }"), "unbalanced detected")
+    val reply = "Here you go\nPATH: " + R.DIR + "GenQuote.kt\nSUMMARY: quote function\n<<<CODE\n```kotlin\n" + GOOD + "```\nCODE>>>\n"
+    val p = R.parseReply(reply)
+    ck(p != null && p.path == R.DIR + "GenQuote.kt" && p.summary == "quote function", "parseReply path + summary")
+    ck(p != null && p.code.startsWith("package com.nova.assistant") && !p.code.contains("```"), "parseReply strips code fences")
+    ck(R.parseReply("no markers here") == null && R.parseReply(null) == null && R.parseReply("PATH: x\n<<<CODE\nabc") == null, "parseReply rejects bad format")
+    ck(p != null && R.validate(p, null, 0) == null, "valid patch accepted")
+    ck(p != null && R.validate(p, R.DIR + "Other.kt", 0) != null, "wrong file vs requested -> rejected")
+    ck(R.validate(R.Patch(R.DIR + "SecureStore.kt", "x", GOOD), null, 0) != null, "protected path rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", "object A { }\n".repeat(20)), null, 0) != null, "no package line rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", GOOD + "}\n"), null, 0) != null, "unbalanced rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", GOOD + "val t = SecureStore.getKey(ctx)\n"), null, 0) != null, "SecureStore use rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", GOOD + "val r = Runtime.getRuntime()\n"), null, 0) != null, "shell exec rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", "package com.nova.assistant\nobject A\n"), null, 0) != null, "too short rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", GOOD), null, 10000) != null, "far shorter than original = truncated -> rejected")
+    ck(R.validate(R.Patch(R.DIR + "GenA.kt", "x", GOOD), null, GOOD.length) == null, "same-size edit accepted")
+    ck(R.underCap(0) && R.underCap(4) && !R.underCap(5), "daily cap 5")
+    ck(R.dayKey(86_400_000L * 3 + 5) == 3L, "dayKey")
+    ck(R.commitMessage("a\nb").startsWith("JARVIS self-code: ") && !R.commitMessage("a\nb").contains("\n"), "commit message single line")
+    ck(R.balanced(R.STUB) && R.STUB.startsWith("package com.nova.assistant"), "revert stub compiles as a file")
+    val ph = listOf(R.IDLE, R.WRITING, R.PUSHED, R.OK, R.REVERTED, R.UNDONE, R.ERROR)
+    ck(ph.all { R.phaseLabel(it).isNotEmpty() }, "every phase has a label")
+    ck(R.userPrompt("w", R.DIR + "A.kt", "old").contains("--- current file ---") && !R.userPrompt("w", null, null).contains("current file"), "prompts: edit vs new")
+    println(if (f == 0) "ALL KT RULE CHECKS PASS" else "KT FAILS: $f")
+}

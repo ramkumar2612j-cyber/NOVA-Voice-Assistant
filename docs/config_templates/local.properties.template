@@ -1,0 +1,6 @@
+## Copy to ./local.properties (project root). Do not commit.
+## Linux/macOS example:
+sdk.dir=<ABSOLUTE_PATH_TO_ANDROID_SDK>
+## Windows example (escape backslashes):
+## sdk.dir=C\:\\Users\\<USER>\\AppData\\Local\\Android\\Sdk
+## The SDK needs: platforms;android-34 and build-tools;34.0.0

@@ -1,0 +1,5 @@
+# NEXT ACCOUNT PROMPT - v7.175 (finish)
+Ab tak: v7.170-175 (Payment QR, Video Studio, Message check, Opening) + is round me asli compile (0 error), 1 duplicate-function bug fix, stale guards theek.
+Sandbox recipe: `curl` kotlinc 1.9.24 zip from github.com releases, `git clone --depth 1 --filter=blob:none --sparse https://github.com/Reginer/aosp-android-jar` (set android-34) -> android.jar, then `bash /ABSOLUTE/PATH/tools/local_compile_check.sh /some/workdir` (path ABSOLUTE, script cd's). Harness stubs: tools/local_stubs/extra.
+Baaki: (00) MATCH LIVE ANALYSIS asli match par test (poll 30 s, speech vs match audio, Gemini limit), (0) Instagram DM voice phone par test (InstagramDmRules + agent), (1) GitHub Actions build (real media3 1.4.1 / zxing jars: Video Studio + PayKit API check), (2) asli phone test (message check, Instagram DM filter, Video Studio export, Payment QR + UPI alert, opening), (3) AutopilotMedia.reencode ki thread fix phone par, (4) orb render guards sirf tab wapas chalao jab window.__noOrb hataya jaye.
+Rules: add-only, build.yml mat chhuo, fake success claim nahi, GitHub push owner ke kehne par.

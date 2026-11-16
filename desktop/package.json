@@ -1,0 +1,21 @@
+{
+  "name": "jarvis-desktop",
+  "version": "0.1.0",
+  "description": "JARVIS laptop assistant (Part 1: shell + commands). UI is the same ui.html as the phone app.",
+  "main": "main.js",
+  "scripts": {
+    "sync-ui": "node sync-ui.js",
+    "start": "node sync-ui.js && electron .",
+    "test": "node --test test/*.test.js",
+    "dist:win": "node sync-ui.js && electron-builder --win portable --publish never",
+    "dist:linux": "node sync-ui.js && electron-builder --linux AppImage --publish never"
+  },
+  "devDependencies": { "electron": "33.2.1", "electron-builder": "25.1.8" },
+  "build": {
+    "appId": "com.nova.desktop",
+    "productName": "JARVIS",
+    "files": ["main.js", "preload.js", "commands.js", "actions.js", "link.js", "brain.js", "hudinfo.js", "hud-inject.js", "boot.html", "voice.js", "voice-main.js", "ui/**/*", "package.json"],
+    "win": { "target": "portable" },
+    "linux": { "target": "AppImage", "category": "Utility" }
+  }
+}

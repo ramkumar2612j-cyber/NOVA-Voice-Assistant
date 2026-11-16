@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_icon_vec">
+    <target android:name="ring_out" android:animation="@animator/splash_spin_cw"/>
+    <target android:name="ring_in" android:animation="@animator/splash_spin_ccw"/>
+</animated-vector>

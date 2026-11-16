@@ -1,0 +1,4 @@
+# JUnit tests written for the OTHER code line. Kept (add-only). Real run (v7.22, kotlinc 1.9.24 + real org.json): 1077 run, these 3 fail, 0 others.
+PhoneVoiceRulesTest.part2DoesNotStealOtherCommands   (expects Logic.classify("awaaz band karo")=volume; repo does that in Understand.classify -> PhoneVoiceRepoRulesTest + Part8RulesTest cover it)
+PhoneVoiceRulesTest.part2ScreenshotRingerRotation    (expects arg off/on; repo uses auto_off/auto_on; screenshot now routed in v7.22 -> Part8RulesTest)
+SocialReplyRulesTest.twoMessagesPerPersonPerHour     (expects 2/hour; repo rule is 3/hour + 10 min cooldown -> Part8RulesTest.gate*)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v7.186: JARVIS foreground. Same orb/ring motif as the original icon, only the letter glyph changed N -> J. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M30.24,37.37 A29,29 0 0 1 77.76,37.37 M77.76,70.63 A29,29 0 0 1 30.24,70.63"
+        android:strokeColor="#FFFF8A5B" android:strokeWidth="1.8" android:fillColor="#00000000"/>
+    <path android:pathData="M66.62,35.98 A22,22 0 0 1 66.62,72.02 M41.38,72.02 A22,22 0 0 1 41.38,35.98"
+        android:strokeColor="#FFFFAE85" android:strokeWidth="1.8" android:fillColor="#00000000"/>
+    <path android:pathData="M40,54 A14,14 0 1,1 68,54 A14,14 0 1,1 40,54 Z"
+        android:strokeColor="#FFFFE7D6" android:strokeWidth="2" android:fillColor="#00000000"/>
+    <path android:pathData="M51.5,47 L60.5,47 M56,47 L56,59 A6,6 0 0 1 46.5,60.5"
+        android:strokeColor="#FFFFF3E8" android:strokeWidth="2.6"
+        android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+</vector>

@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>JARVIS</title>
+<style>
+html,body{margin:0;height:100%;background:#02060c;color:#7fe9ff;font-family:Consolas,Menlo,monospace;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#t{position:fixed;left:16px;right:16px;bottom:22px;font-size:12px;line-height:1.6;color:#46c8e8;text-shadow:0 0 6px #0cf;white-space:pre-wrap;max-height:34vh;overflow:hidden}
+#ttl{position:fixed;top:9vh;width:100%;text-align:center;letter-spacing:.5em;font-size:18px;color:#bff6ff;text-shadow:0 0 14px #0cf}
+#sub{position:fixed;top:calc(9vh + 28px);width:100%;text-align:center;font-size:11px;letter-spacing:.3em;color:#3aa9c4}
+#skip{position:fixed;top:10px;right:12px;font-size:11px;color:#2d7a8e;cursor:pointer;border:1px solid #1d4d5b;padding:3px 8px;border-radius:4px;background:none;font-family:inherit}
+</style></head><body>
+<canvas id="c"></canvas><div id="ttl">N.O.V.A</div><div id="sub">NEURAL OPERATING VOICE ASSISTANT</div><div id="t"></div><button id="skip">SKIP ▸</button>
+<script>
+(function () {
+  var cv = document.getElementById('c'), cx = cv.getContext('2d'), W, H, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  function size() { W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0); } size(); addEventListener('resize', size);
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, N = reduce ? 90 : 220, P = [], i;
+  for (i = 0; i < N; i++) { var u = Math.random() * 2 - 1, a = Math.random() * 6.2832, r = Math.sqrt(1 - u * u); P.push([r * Math.cos(a), u, r * Math.sin(a)]); }
+  var t0 = performance.now(), done = false, last = 0;
+  function go() { if (done) return; done = true; try { location.replace('ui/ui.html'); } catch (e) { location.href = 'ui/ui.html'; } }
+  document.getElementById('skip').onclick = go; addEventListener('keydown', go); addEventListener('click', function (e) { if (e.target.id !== 'skip') go(); });
+  var lines = ['J.A.R.V.I.S-style core  v7.177', 'loading neural core ......... OK', 'voice engine ................ standby', 'phone link .................. checking', 'notes + reminders ........... OK', 'safety rules (no delete / shutdown) OK', 'AI CORE FULLY OPERATIONAL'], shown = 0, T = document.getElementById('t');
+  setInterval(function () { if (shown < lines.length) { T.textContent += '> ' + lines[shown++] + '\n'; } }, 520);
+  function frame(now) {
+    if (done) return; requestAnimationFrame(frame); if (now - last < 33) return; last = now;
+    var e = (now - t0) / 1000, k = Math.min(1, e / 1.6), cxn = W / 2, cyn = H * 0.42, R = Math.min(W, H) * 0.24 * (0.6 + 0.4 * k);
+    cx.fillStyle = 'rgba(2,6,12,0.35)'; cx.fillRect(0, 0, W, H);
+    var g = cx.createRadialGradient(cxn, cyn, 0, cxn, cyn, R * 1.5); g.addColorStop(0, 'rgba(255,190,60,' + (0.35 * k) + ')'); g.addColorStop(1, 'rgba(255,140,0,0)'); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    var ay = e * 0.7, ax = 0.35, cy = Math.cos(ay), sy = Math.sin(ay), cxx = Math.cos(ax), sx = Math.sin(ax), pr = [];
+    for (i = 0; i < N; i++) { var p = P[i], x = p[0] * cy - p[2] * sy, z = p[0] * sy + p[2] * cy, y = p[1] * cxx - z * sx, z2 = p[1] * sx + z * cxx; pr.push([cxn + x * R, cyn + y * R, z2]); }
+    cx.lineWidth = 0.6; for (i = 0; i < N; i += 2) for (var j = i + 1; j < N; j += 7) { var dx = pr[i][0] - pr[j][0], dy = pr[i][1] - pr[j][1], d = dx * dx + dy * dy; if (d < R * R * 0.16) { cx.strokeStyle = 'rgba(255,200,90,' + (0.28 * k * (1 - d / (R * R * 0.16))) + ')'; cx.beginPath(); cx.moveTo(pr[i][0], pr[i][1]); cx.lineTo(pr[j][0], pr[j][1]); cx.stroke(); } }
+    for (i = 0; i < N; i++) { cx.fillStyle = 'rgba(255,215,120,' + (0.35 + 0.5 * (pr[i][2] + 1) / 2) * k + ')'; cx.fillRect(pr[i][0] - 1, pr[i][1] - 1, 2, 2); }
+    cx.strokeStyle = 'rgba(70,200,232,' + 0.7 * k + ')'; cx.lineWidth = 1.5;
+    for (var rg = 0; rg < 3; rg++) { cx.beginPath(); cx.arc(cxn, cyn, R * (1.15 + rg * 0.12), e * (rg % 2 ? -1 : 1) * 0.8, e * (rg % 2 ? -1 : 1) * 0.8 + 2.2 + rg * 0.5); cx.stroke(); }
+    if (e > 4.6) go();
+  }
+  requestAnimationFrame(frame);
+})();
+</script></body></html>

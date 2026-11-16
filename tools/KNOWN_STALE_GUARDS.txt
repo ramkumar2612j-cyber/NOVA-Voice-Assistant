@@ -1,0 +1,1 @@
+# v7.174: all 11 former stale guards were fixed for real (version pins now accept 7.162/7.174; jarvis + wifi pins updated to the intended ON defaults; p6 bridge/callback lists completed). This list is now EMPTY: any failure is a real one.
