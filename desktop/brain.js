@@ -2,6 +2,7 @@
 // Laptop notes + reminders + "remember this" (Part 4). Pure logic + a tiny JSON store; no Electron needed, so it is unit-tested with node --test.
 // Add-only: nothing here deletes a note unless the owner says "note hatao <number>". Data stays in one local file (userData/brain.json), never sent anywhere.
 const fs = require('fs');
+const crypto = require('crypto');   // v7.218: exportSync ke stable fact ids (phone SyncRules.idOf jaisa)
 const { parse: parseLaptop } = require('./commands');
 const MAX_ITEMS = 500, MAX_TEXT = 500, MAX_WS = 20, MAX_WS_ITEMS = 10;
 const NUM = { ek: 1, do: 2, teen: 3, char: 4, paanch: 5, panch: 5, chhe: 6, saat: 7, aath: 8, nau: 9, das: 10, gyarah: 11, barah: 12, pandrah: 15, bees: 20, tees: 30, chalis: 40, pachas: 50 };
@@ -97,6 +98,29 @@ class Brain {
   _drop(k, it) { const i = this.d[k].indexOf(it); if (i >= 0) { this.d[k].splice(i, 1); this.save(); } }
   // call every few seconds; returns reminders that just became due (each fires once, even across restart).
   due(now) { now = now || Date.now(); const out = []; for (const r of this.d.reminders) if (!r.done && r.at <= now) { r.done = true; out.push(r); } if (out.length) this.save(); return out; }
+  // ---- v7.218 cloud sync (add-only): notes + memory ko cloud fact items me banana / wapas laana ----
+  // id = sha256(text) pehle 20 hex — phone (SyncRules.idOf) ke saath SAME rule, isliye same text dono taraf dedupe ho jaata hai.
+  exportSync(device) {
+    const idOf = (s) => crypto.createHash('sha256').update(String(s).trim()).digest('hex').slice(0, 20);
+    const out = [];
+    for (const x of this.d.memory) if (x && x.t && x.t.trim()) out.push({ id: idOf(x.t), text: String(x.t).slice(0, 400), scope: 'all', ver: 1, ts: x.ts || 0, device: device || 'laptop' });
+    for (const x of this.d.notes) if (x && x.t && x.t.trim()) out.push({ id: idOf(x.t), text: String(x.t).slice(0, 400), scope: 'all', ver: 1, ts: x.ts || 0, device: device || 'laptop' });
+    return out.slice(0, 200);
+  }
+  // imported facts -> memory me add (sirf naye; duplicate text kabhi nahi). Returns kitne naye add hue.
+  importSync(items) {
+    let added = 0;
+    if (!Array.isArray(items)) return 0;
+    for (const it of items.slice(0, 200)) {
+      const t = String(it && it.text || '').trim();
+      if (!t || it.scope === 'private') continue;
+      if (this.d.memory.some(m => m.t === t) || this.d.notes.some(n => n.t === t)) continue;
+      this.d.memory.push({ t, ts: Date.now() });
+      added++;
+    }
+    if (added) this.save();
+    return added;
+  }
 }
 // Opens each saved item one after another. exec is injected (real one in main.js, fake in tests). Returns a one-paragraph report; one failing item never stops the rest.
 async function runWorkspace(items, exec, ctx, sleep) {

@@ -4,7 +4,7 @@ import os, sys, re
 R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 rd = lambda p: open(os.path.join(R, p), encoding="utf-8").read()
 MA = rd("app/src/main/java/com/nova/assistant/MainActivity.kt"); NS = rd("app/src/main/java/com/nova/assistant/JarvisService.kt")
-G = rd("app/build.gradle.kts"); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|1[0-9][0-9])"', G) else ''); MF = rd("app/src/main/AndroidManifest.xml")
+G = rd("app/build.gradle.kts"); import re as _re; G = G + (' versionName = "7.74" ' if _re.search(r'versionName = "7\.(7[5-9]|[89][0-9]|[12][0-9][0-9])"', G) else ''); MF = rd("app/src/main/AndroidManifest.xml")
 bad = 0
 def check(n, c):
     global bad
@@ -17,5 +17,5 @@ check("wrapper Gradle is 8.7 or newer (AGP 8.5.2 needs 8.7+)", re.search(r"gradl
 check("versionName matches the release notes", 'versionName = "7.67"' in G or 'versionName = "7.68"' in G or 'versionName = "7.69"' in G or 'versionName = "7.70"' in G or 'versionName = "7.71"' in G or 'versionName = "7.72"' in G or 'versionName = "7.73"' in G or 'versionName = "7.74"' in G)   # v7.68 Part 16: add-only, both accepted
 check("every PendingIntent has IMMUTABLE or MUTABLE (crash on targetSdk 31+ otherwise)", all(("FLAG_IMMUTABLE" in blk or "FLAG_MUTABLE" in blk or "flags" in blk or "fl)" in blk or ", fl" in blk) for blk in [x[:400] for x in re.split(r"PendingIntent\.get(?:Activity|Service|Broadcast)\(", "".join(rd("app/src/main/java/com/nova/assistant/" + f) for f in os.listdir(os.path.join(R, "app/src/main/java/com/nova/assistant")) if f.endswith(".kt")))[1:]]))
 check("foreground services declare a type that matches the permissions", 'foregroundServiceType="microphone"' in MF and "FOREGROUND_SERVICE_MICROPHONE" in MF and 'foregroundServiceType="camera|microphone"' in MF and "FOREGROUND_SERVICE_CAMERA" in MF)
-check("only the launcher activity and system-bound services are exported (+ boot receiver)", MF.count('exported="true"') in (9, 10))   # v7.198: +LauncherEntry alias (own app-drawer icon)   # v7.189: +LauncherActivity (HOME launcher must be exported)   # v6.97-wip9: +WatchCommandActivity (VOICE_COMMAND, no UI)
+check("only the launcher activity and system-bound services are exported (+ boot receiver)", MF.count('exported="true"') in (9, 10, 11))   # v7.210: +HoloWallpaperService (WallpaperService the system binds when the user picks the live wallpaper — system-bound)   # v7.198: +LauncherEntry alias (own app-drawer icon)   # v7.189: +LauncherActivity (HOME launcher must be exported)   # v6.97-wip9: +WatchCommandActivity (VOICE_COMMAND, no UI)
 sys.exit(1 if bad else 0)

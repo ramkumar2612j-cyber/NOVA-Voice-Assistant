@@ -18,3 +18,7 @@ ipcRenderer.on('jarvis:reply', (_e, role, text) => {
   try { window.onJarvis && window.onJarvis(role, text); } catch (e) {}
   if (role === 'ai') { try { const u = new SpeechSynthesisUtterance(String(text).slice(0, 400)); u.lang = 'hi-IN'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
 });
+// v7.210: boot screen gets REAL status only (booleans). Voice = the existing stt-state answer (hasKey), nothing else.
+Promise.all([ipcRenderer.invoke('jarvis:boot-status').catch(() => ({})), ipcRenderer.invoke('jarvis:stt-state').catch(() => ({}))])
+  .then(([b, v]) => { window.JARVIS_STATUS = Object.assign({}, b, { voice: !!(v && v.hasKey === true), ai: false }); })
+  .catch(() => { window.JARVIS_STATUS = {}; });

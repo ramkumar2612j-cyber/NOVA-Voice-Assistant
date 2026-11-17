@@ -1,0 +1,41 @@
+name: JARVIS Daily Health Check
+
+# v7.221 PART 5: rozana ka automated health check. Contract suite + desktop tests + website checks
+# chala ke ek DAILY_REPORT artifact banata hai. JARVIS_BRAIN_URL + JARVIS_BRAIN_ADMIN_PASSWORD
+# secrets set hon to report backend par bhi push hota hai (admin panel me dikhta hai).
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # 07:00 IST rozana
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run the daily health check (contract + desktop + website + backend)
+        run: python3 tools/daily_health.py --ci
+      - name: Upload the daily report
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAILY_REPORT_${{ github.run_number }}
+          path: DAILY_REPORT_*.md
+          if-no-files-found: error
+      - name: Push report to the brain server (only if secrets exist)
+        env:
+          BRAIN_URL: ${{ secrets.JARVIS_BRAIN_URL }}
+          BRAIN_PW: ${{ secrets.JARVIS_BRAIN_ADMIN_PASSWORD }}
+        run: |
+          if [ -n "$BRAIN_URL" ] && [ -n "$BRAIN_PW" ]; then
+            python3 tools/daily_health.py --push "$BRAIN_URL" "$BRAIN_PW" || echo "brain push skipped (server down?)"
+          else
+            echo "brain push skipped: secrets not set (docs/DEPLOY.md)"
+          fi

@@ -17,8 +17,20 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
   var t0 = performance.now(), done = false, last = 0;
   function go() { if (done) return; done = true; try { location.replace('ui/ui.html'); } catch (e) { location.href = 'ui/ui.html'; } }
   document.getElementById('skip').onclick = go; addEventListener('keydown', go); addEventListener('click', function (e) { if (e.target.id !== 'skip') go(); });
-  var lines = ['J.A.R.V.I.S-style core  v7.177', 'loading neural core ......... OK', 'voice engine ................ standby', 'phone link .................. checking', 'notes + reminders ........... OK', 'safety rules (no delete / shutdown) OK', 'AI CORE FULLY OPERATIONAL'], shown = 0, T = document.getElementById('t');
-  setInterval(function () { if (shown < lines.length) { T.textContent += '> ' + lines[shown++] + '\n'; } }, 520);
+  /* v7.210: boot lines show ONLY real state (set by preload from the app). PENDING until known; OK only when true. No fake OK. */
+  function st(k) { var S = window.JARVIS_STATUS || {}; return S[k] === true ? 'OK' : (S[k] === false ? 'FAILED' : 'PENDING'); }
+  function buildLines() {
+    var S = window.JARVIS_STATUS || {};
+    return ['JARVIS desktop boot  v7.210',
+      'neural core ................. ' + st('core'),
+      'voice engine ................ ' + (S.voice === true ? 'OK' : 'NOT SET (add key in app)'),
+      'phone link .................. ' + (S.phone === true ? 'LINKED' : 'NOT LINKED'),
+      'notes + reminders ........... ' + st('notes'),
+      'safety rules (no delete / shutdown) ' + st('safety'),
+      'AI CORE ..................... ' + (S.ai === true ? 'ONLINE' : 'NOT VERIFIED')];
+  }
+  var shown = 0, T = document.getElementById('t'), lines = [];
+  var iv = setInterval(function () { if (!window.JARVIS_STATUS) return; if (!lines.length || shown >= lines.length) { lines = buildLines(); } if (shown < lines.length) { T.textContent += '> ' + lines[shown++] + '\n'; } }, 520);
   function frame(now) {
     if (done) return; requestAnimationFrame(frame); if (now - last < 33) return; last = now;
     var e = (now - t0) / 1000, k = Math.min(1, e / 1.6), cxn = W / 2, cyn = H * 0.42, R = Math.min(W, H) * 0.24 * (0.6 + 0.4 * k);

@@ -592,6 +592,11 @@ object Logic {
         }
         }
 
+        // v7.209: "jarvis launcher kholo / launcher lagao / launcher default karo / home screen banao" -> JARVIS Home (it offers "make default" itself).
+        if (size <= 5 && (has("launcher", "lancher", "lanchar") || (has("home") && has("screen"))) && has("kholo", "open", "lagao", "laga", "default", "banao", "set", "chalu", "activate", "karo", "do")) {
+            return Cmd("launcher", "")
+        }
+
         // v7.153 WIFI KIT: scan / best switch / open connect / QR / doctor / password store. parse() returns null for
         // plain "wifi on/off karo" and "wifi settings kholo", so the older Android-settings routes below keep working.
         WifiKitRules.parse(text)?.let { return it }

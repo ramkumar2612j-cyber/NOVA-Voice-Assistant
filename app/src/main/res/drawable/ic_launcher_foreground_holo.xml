@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v7.210: HOLO foreground: blue hologram orb (rings + sphere grid + cross core), same look as the HUD. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54,54 m-40,0 a40,40 0 1,0 80,0 a40,40 0 1,0 -80,0"
+        android:strokeColor="#FF2FB8FF" android:strokeWidth="1.2" android:strokeAlpha="0.55" android:fillColor="#00000000"/>
+    <path android:pathData="M54,54 m-34,0 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0"
+        android:strokeColor="#FF2FB8FF" android:strokeWidth="1.6" android:strokeLineCap="round"
+        android:strokeAlpha="0.85" android:fillColor="#00000000"
+        android:trimPathStart="0.05" android:trimPathEnd="0.7"/>
+    <path android:pathData="M20,54 A34,12 0 0 1 88,54 M20,54 A34,12 0 0 0 88,54"
+        android:strokeColor="#FF5FD3FF" android:strokeWidth="0.9" android:strokeAlpha="0.7" android:fillColor="#00000000"/>
+    <path android:pathData="M54,20 A12,34 0 0 1 54,88 M54,20 A12,34 0 0 0 54,88"
+        android:strokeColor="#FF5FD3FF" android:strokeWidth="0.9" android:strokeAlpha="0.7" android:fillColor="#00000000"/>
+    <path android:pathData="M30,40 A26,26 0 0 1 78,40 M30,68 A26,26 0 0 0 78,68"
+        android:strokeColor="#FFBFF6FF" android:strokeWidth="0.6" android:strokeAlpha="0.5" android:fillColor="#00000000"/>
+    <path android:pathData="M42,42 L66,66 M66,42 L42,66"
+        android:strokeColor="#FFEFFBFF" android:strokeWidth="3.2" android:strokeLineCap="round" android:fillColor="#00000000"/>
+    <path android:pathData="M54,54 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0"
+        android:strokeColor="#FFBFF6FF" android:strokeWidth="1.4" android:fillColor="#00000000"/>
+</vector>

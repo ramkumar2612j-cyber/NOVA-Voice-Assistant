@@ -24,6 +24,7 @@ MAP.update({'leadfind':'Leads dhoondho (genuine filter)'})   # v7.179: LEAD FIND
 MAP.update({'matchlive':'MATCH LIVE ANALYSIS (kaun jeetega)'})   # v7.176
 MAP.update({'appbuilder':'APP BUILDER (research + app + install)'})   # v7.176 (c)
 MAP.update({'laptoplink':'LAPTOP LINK (phone se laptop control)'})   # v7.177 LINK 2b
+MAP.update({'launcher':'JARVIS Launcher (Home screen)','care':'Phone care (security, hang, faltu cheezein)'})   # v7.221 fix: v7.192/v7.213 help topics ki Skills mapping chhoot gayi thi
 MAP.update({'studio':'VIDEO STUDIO (auto edit)','payqr':'PAYMENT QR + payment check'})   # v7.175: v7.170 / v7.173 topics
 MAP.update({'autopilot':'AUTOPILOT (group se website + Instagram + YouTube)'})   # v7.158 Part 4: AUTOPILOT (Skills screen, COMM section)
 bad=[]

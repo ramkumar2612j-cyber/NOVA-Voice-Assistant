@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS — Just A Rather Very Intelligent System</title>
+<meta name="description" content="JARVIS: owner ka apna Android voice assistant + laptop companion + central brain. Local-first, free-first, privacy-first.">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="wrap">
+    <a class="logo" href="#top"><b>J.A.R.V.I.S</b><span>JUST A RATHER VERY INTELLIGENT SYSTEM</span></a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#devices">Devices</a>
+      <a href="#status">Status</a>
+      <a href="#docs">Docs</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#contact">Contact</a>
+      <a class="btn" href="admin.html">Admin</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="reactor" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"></div></div>
+    <h1>Aapka apna <span class="cy">JARVIS</span></h1>
+    <p class="sub">Android voice assistant + laptop companion + central brain — sab ek. Hinglish samajhta hai.
+    <b>Local-first</b> (internet na ho to bhi phone ke commands chalte hain), <b>free-first</b> (koi paid dependency nahi),
+    <b>privacy-first</b> (API keys phone se kabhi bahar nahi jaate).</p>
+    <div class="cta">
+      <a class="btn big" href="#features">Features dekho</a>
+      <a class="btn big ghost" href="#docs">Setup guide</a>
+    </div>
+    <p class="fine">Ye website aur JARVIS project — dono owner ke apne hain. Koi ad, koi tracking, koi cookie nahi.</p>
+  </div>
+</header>
+
+<section id="status" class="sec">
+  <div class="wrap">
+    <h2>Live Status <span class="pill live" id="st-pill">CHECKING…</span></h2>
+    <p>Central brain server ka public status (deploy hone par yahan live dikhega):</p>
+    <div class="grid3">
+      <div class="card"><b id="st-server">—</b><span>Server</span></div>
+      <div class="card"><b id="st-devices">—</b><span>Devices online</span></div>
+      <div class="card"><b id="st-version">—</b><span>Brain version</span></div>
+    </div>
+    <p class="fine" id="st-note">Backend abhi deploy nahi hua hai to yahan "—" dikhega — website phir bhi poori chalti hai (static hai).</p>
+  </div>
+</section>
+
+<section id="features" class="sec alt">
+  <div class="wrap">
+    <h2>Features</h2>
+    <p class="sub">Har feature ka status <b>sach</b> hai: <span class="pill imp">IMPLEMENTED</span> = code poori tarah likha gaya,
+    <span class="pill plan">PLANNED</span> = abhi nahi bana. Koi dikhawa nahi.</p>
+    <h3>Phone (Android app)</h3>
+    <div class="grid2">
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Voice commands (Hinglish)</b><p>Call, WhatsApp, alarm, torch, volume, apps, gaana, raasta, screenshot — sab bolke.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Offline wake word</b><p>"jarvis" bolo — Vosk offline recognizer, internet nahi chahiye. Optional Porcupine bhi.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>AI brain + free fallback chain</b><p>Groq → Z.ai GLM → OpenRouter → Pollinations → offline llama.cpp — keys aapki apni, phone me encrypted.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>WhatsApp auto-reply + Business watch</b><p>Message aate turant jawab (aapke rules se), order bhi pakadta hai.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>JARVIS Launcher</b><p>Pura home screen: apps, mausam, business card, HUD, hologram, live wallpaper.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Business agents</b><p>Website banana, leads dhundna, call agent, autopilot, offers — sab in code.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Safety</b><p>Bank/payment/password/OTP screens par tap/type kabhi nahi. HARD DENY list. Encrypted secrets.</p></div>
+      <div class="card"><span class="pill plan">PLANNED</span><b>TV wake word</b><p>TV hardware me wake-word mic rare hai — phone hi sunega, TV ko command jayega (docs/OSCAR_TV.md).</p></div>
+    </div>
+    <h3>Laptop / Desktop (Windows)</h3>
+    <div class="grid2">
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Phone ↔ Laptop encrypted link</b><p>ntfy relay par E2E AES-256-GCM — relay ko sirf ciphertext dikhta hai. "laptop par chrome kholo".</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Laptop brain</b><p>Notes, reminders, workspaces — sab local, voice se bhi.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Cross-device sync</b><p>Cloud brain se tasks + memory sync; bina cloud ke bhi link-only sync.</p></div>
+      <div class="card"><span class="pill plan">PLANNED</span><b>macOS / Linux build</b><p>Electron app hai, build sirf Windows ke liye test hua hai.</p></div>
+    </div>
+    <h3>Central Brain (self-hosted server)</h3>
+    <div class="grid2">
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Owner-only accounts + device pairing</b><p>Ek hi admin (aap), devices one-time code se judte hain. Tokens hashed.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Task queue + claim</b><p>"laptop ko bolo X" — task cloud par, laptop claim karke chalata hai.</p></div>
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Shared memory + privacy</b><p>Facts E2E-encrypted sync; "private" fact sirf aapke device par rehta hai.</p></div>
+      <div class="card"><span class="pill plan">PLANNED</span><b>Public API for third parties</b><p>Abhi sirf aapke devices ke liye — zaroorat pade to khulega.</p></div>
+    </div>
+    <h3>TV (OSCAR)</h3>
+    <div class="grid2">
+      <div class="card"><span class="pill imp">IMPLEMENTED</span><b>Android TV / Google TV remote</b><p>Official remote protocol v2: pairing code, keys, apps (Netflix, YouTube, Hotstar...). <b>Real TV par test pending</b> (docs/OSCAR_TV.md).</p></div>
+      <div class="card"><span class="pill plan">PLANNED</span><b>Fire TV / LG / Samsung</b><p>OSCAR in brands ka ho to agle part me module (doc me options).</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="devices" class="sec">
+  <div class="wrap">
+    <h2>Supported Devices</h2>
+    <div class="grid3">
+      <div class="card"><b>📱 Android phone</b><p>Android 8+ (minSdk 26). Vosk offline wake word, accessibility automation, launcher.</p></div>
+      <div class="card"><b>💻 Windows laptop</b><p>Electron app — voice, notes, phone link, cloud sync. Windows 10/11.</p></div>
+      <div class="card"><b>📺 Android TV / Google TV</b><p>Remote protocol v2 — pairing ke baad keys + apps. (OSCAR: test pending.)</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="docs" class="sec alt">
+  <div class="wrap">
+    <h2>Docs &amp; Help</h2>
+    <div class="grid2">
+      <div class="card"><b>Android setup + APK</b><p>GitHub repo → Actions → "JARVIS Android CI" → APK download → install. Poore steps: repo me <code>OWNER_SETUP_AND_APK_STEPS.md</code>.</p></div>
+      <div class="card"><b>Backend deploy (free)</b><p>Laptop / Render free tier / fly.io / Colab — steps: repo me <code>docs/DEPLOY.md</code>. Admin password pehli baar server khud banata hai.</p></div>
+      <div class="card"><b>TV pairing</b><p><code>docs/OSCAR_TV.md</code> — TV kaunsa hai, kaise pata karein, kya chalega kya nahi (sach likha hai).</p></div>
+      <div class="card"><b>Sab kuch</b><p>Poora repo docs folder me: architecture, build, features, limits, backup. Hinglish me.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="privacy" class="sec">
+  <div class="wrap">
+    <h2>Privacy &amp; Security</h2>
+    <ul class="list">
+      <li><b>API keys phone me hi rehte hain</b> — Android Keystore (AES-256-GCM) me encrypted, kabhi kisi server par nahi jaate (tests se enforce hota hai).</li>
+      <li><b>Phone ↔ laptop baat encrypted</b> — relay (ntfy.sh) ko sirf random topic naam + ciphertext dikhta hai.</li>
+      <li><b>Cloud brain self-hosted hai</b> — data aapke apne server par; memory/tasks ka text family key se seal hota hai, server ko plaintext nahi dikhta.</li>
+      <li><b>Private facts kabhi sync nahi hote</b> — sirf un device par rehte hain jahan bane.</li>
+      <li><b>HARD DENY</b> — bank/payment/password/OTP screens par automation blocked; delete/format/shutdown jaise commands mana.</li>
+      <li><b>Ye website</b> static hai: koi tracking, koi cookie, koi ad nahi.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="contact" class="sec alt">
+  <div class="wrap">
+    <h2>Contact &amp; Support</h2>
+    <p>Ye ek personal project hai (owner: Boss). Support repo ke docs se hota hai — issue GitHub par daal sakte ho.
+    Admin panel ke liye: <a class="btn" href="admin.html">admin.html</a> (sirf owner password se).</p>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <p><b>J.A.R.V.I.S</b> — v7.221 · free &amp; open architecture · owner-controlled · no ads, no tracking</p>
+    <p class="fine">Status badges is website par "code present" ko kehte hain, "phone par owner-tested" ko nahi — wo repo ke TEST_STATUS.md me honestly track hota hai.</p>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

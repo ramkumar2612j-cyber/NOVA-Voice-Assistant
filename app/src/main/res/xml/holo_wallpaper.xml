@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v7.210: metadata for the JARVIS HOLO live wallpaper (shows in the system wallpaper picker). -->
+<wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
+    android:thumbnail="@drawable/ic_launcher_foreground_holo"
+    android:description="@string/holo_wallpaper_desc" />

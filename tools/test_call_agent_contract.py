@@ -99,9 +99,9 @@ check("ErrLog.add" in agent, "errors go to ErrLog")
 # the deny set is enforced in Rules, and the agent re-checks before dialing
 check("CallAgentRules.denied" in agent, "CallAgent re-checks denied() before dialing")
 
-# routing order: callAgentRoute BEFORE laptopRoute in process()
-m = re.search(r"callAgentRoute\(text\) \?: laptopRoute\(text\) \?: handle", service)
-check(bool(m), "JarvisService routes callAgentRoute -> laptopRoute -> handle")
+# routing order: callAgentRoute SABSE PEHLE, phir naye v7.217-219 routes (tv/handoff/stat/cloud), phir purana laptopRoute -> handle
+m = re.search(r"callAgentRoute\(text\) \?: tvRoute\(text\) \?: laptopHandoffRoute\(text\) \?: laptopStatRoute\(text\) \?: cloudRoute\(text\) \?: laptopRoute\(text\) \?: handle", service)
+check(bool(m), "JarvisService routes callAgentRoute -> (v7.217-219 routes) -> laptopRoute -> handle")
 check("wireCallAgent()" in service and "CallAgent.emitter" in service, "JarvisService wires emitter + speaker")
 check("if (CallAgent.active) CallAgent.stop(this)" in service, "STOP ends a live agent call")
 

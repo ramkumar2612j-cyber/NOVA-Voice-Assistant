@@ -52,6 +52,7 @@ selectors = set(re.findall(r"document\.getElementById\([\"']([^\"']+)[\"']\)", u
 for pat in (r"\bg\([\"']([^\"']+)[\"']\)", r"\$\([\"']([^\"']+)[\"']\)"):
     selectors.update(re.findall(pat, ui))
 missing_ids = selectors - html_ids
-check("all literal UI selectors resolve or are explicitly optional", missing_ids == {"mode", "tf"} and "if(!m)return" in ui and "if(!cv||!cv.getContext)return" in ui)
+# 'arc7215' = v7.215 arc-reactor SVG: the script itself creates it with createElementNS (id set at runtime) and first checks if(!o||document.getElementById('arc7215'))return — same explicitly-optional class as mode/tf.
+check("all literal UI selectors resolve or are explicitly optional", missing_ids == {"mode", "tf", "arc7215"} and "if(!m)return" in ui and "if(!cv||!cv.getContext)return" in ui and "document.getElementById('arc7215'))return" in ui)
 print("\n%d failed" % len(fails) if fails else "\nALL PASSED")
 raise SystemExit(1 if fails else 0)

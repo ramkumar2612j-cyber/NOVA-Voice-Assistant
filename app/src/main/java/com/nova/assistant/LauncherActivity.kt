@@ -574,6 +574,8 @@ class LauncherActivity : Activity() {
             o.put("auto", bizAuto.text.toString()); o.put("report", bizReport.text.toString()); o.put("info", bizInfo.text.toString())
             o.put("temp", weatherTemp.text.toString()); o.put("wtext", weatherText.text.toString())
             o.put("bat", batBar.progress); o.put("ram", ramBar.progress); o.put("sto", stoBar.progress)
+            o.put("cpu", HomeHud.cpu()); o.put("net", HomeHud.network(this))
+            o.put("rem", HomeHud.reminder(this)); o.put("msg", HomeHud.lastWork(this)); o.put("news", HomeHud.news(this))
             o.put("laptop", laptopTxt.text.toString())
             val d = org.json.JSONArray()
             for ((pkg, name) in dockPins) if (packageManager.getLaunchIntentForPackage(pkg) != null) d.put(org.json.JSONObject().put("p", pkg).put("n", name))

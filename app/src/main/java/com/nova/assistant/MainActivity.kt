@@ -42,7 +42,8 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(Bridge(), "Android")
         web.loadUrl(ASSET_URL)
         setContentView(web)
-        web.post { firstRunPermissions() }   // v6.38 owner request: every permission asked together on the first open
+        web.post { firstRunPermissions() }
+        web.postDelayed({ offerHomeOnce(0) }, 1500L)   // v7.209: JARVIS as the Home screen is offered automatically (one tap), no Settings visit needed   // v6.38 owner request: every permission asked together on the first open
         boostRefresh()
         // v6.32: Android Keystore work used to run here BEFORE the first frame (visible freeze on open). Same migration, now in the background.
         Thread {
@@ -487,6 +488,35 @@ class MainActivity : Activity() {
      * (overlay, write settings, battery, exact alarm, notification access, accessibility) in that dialog, so they follow
      * one after another as Settings pages, each opened at most once. Nothing is granted by JARVIS itself.
      */
+    /**
+     * v7.209: if JARVIS is not the default home app, show the system "make default" dialog by itself right after the app opens (first open after install / update included).
+     * While the permission chain is still running it waits (checks every 4 s, up to 3 minutes) so two dialogs never fight. Up to 10 offers over time, stops once JARVIS is the home app.
+     * Android never lets an app become the home app silently: the one tap on the system dialog is the only thing the owner has to do.
+     */
+    private fun offerHomeOnce(tries: Int) {
+        try {
+            if (isDestroyed || isFinishing) return
+            val prefs = getSharedPreferences("nova_perm", Context.MODE_PRIVATE)
+            val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            if (packageManager.resolveActivity(i, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == packageName) return
+            val n = prefs.getInt("home_offers", 0)
+            if (n >= 10) return
+            if (prefs.getBoolean("special_chain", false) || !hasWindowFocus()) {
+                if (tries < 45) web.postDelayed({ offerHomeOnce(tries + 1) }, 4000L)
+                return
+            }
+            prefs.edit().putInt("home_offers", n + 1).apply()
+            if (Build.VERSION.SDK_INT >= 29) {
+                val rm = getSystemService(android.app.role.RoleManager::class.java)
+                if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) && !rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                    startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 7209)
+                    return
+                }
+            }
+            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        } catch (e: Throwable) { ErrLog.addOnce("quiet:offerHome", e.toString()) }
+    }
+
     private fun firstRunPermissions() {
         val prefs = getSharedPreferences("nova_perm", Context.MODE_PRIVATE)
         // v6.84: the chain is no longer one-shot. A new SetupChainRules.VERSION (a release that adds a permission) gives every phone one more
@@ -1026,6 +1056,10 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun running() = JarvisService.running
+
+        /** v7.216 HOME HUD: naye JARVIS HOME dashboard ke REAL numbers (battery, RAM, storage, CPU, network, mausam, reminder, news). */
+        @JavascriptInterface
+        fun homeJson(): String = try { HomeHud.json(this@MainActivity) } catch (e: Exception) { "{}" }
 
         @JavascriptInterface
         fun hasKey() = SecureStore.hasKeys(this@MainActivity)
@@ -1804,6 +1838,67 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun clearLaptopLink() { SecureStore.clearSlot(this@MainActivity, LaptopLink.SLOT); JarvisService.instance?.restartLaptopLink() }
+
+        // ---- v7.217 CLOUD BRAIN (optional central server). Code admin panel se; token sirf SecureStore me, kabhi page ko nahi diya jaata. ----
+        @JavascriptInterface
+        fun saveCloudLink(raw0: String): String = try {
+            val code = if (raw0.length > 400) "" else raw0.trim()
+            when (JarvisCloud.Rules.parseCode(code) == null) {
+                true -> "invalid"
+                else -> when (JarvisCloud.register(this@MainActivity, code, "phone")) {
+                    "ok" -> { JarvisService.instance?.restartCloudSync(); "ok" }
+                    else -> "fail"
+                }
+            }
+        } catch (e: Exception) { "fail" }
+
+        @JavascriptInterface
+        fun hasCloudLink(): Boolean = JarvisCloud.saved(this@MainActivity) != null
+
+        @JavascriptInterface
+        fun clearCloudLink() { JarvisCloud.clear(this@MainActivity); JarvisService.instance?.restartCloudSync() }
+
+        @JavascriptInterface
+        fun cloudStatus(): String = try {   // ui ke liye chhota JSON (address ka host hissa — pura token kabhi nahi)
+            val s = JarvisCloud.saved(this@MainActivity)
+            if (s == null) "{\"linked\":false}"
+            else "{\"linked\":true,\"host\":\"" + s.first.substringAfter("://").take(60) + "\"}"
+        } catch (e: Exception) { "{\"linked\":false}" }
+
+        // ---- v7.219 OSCAR TV (Android TV / Google TV remote protocol v2). Pairing PIN box se; host SecureStore me. ----
+        @Volatile private var tvPin = ""
+
+        @JavascriptInterface
+        fun saveTvLink(raw0: String): String {   // TV ka IP (pehli baar) — pairing shuru hoti hai
+            val host = if (raw0.length > 100) "" else raw0.trim()
+            if (host.isEmpty() || host.contains(' ')) return "invalid"
+            tvPin = ""
+            Thread {
+                val r = TvRemote.pair(this@MainActivity, host) { if (tvPin.length == 6) tvPin else null }
+                runOnUiThread { tvPairResult = r }
+            }.start()
+            return "pairing"   // UI ab PIN maangta hai (TV par code dikh raha hoga)
+        }
+
+        @Volatile var tvPairResult: String = ""
+            private set
+
+        @JavascriptInterface
+        fun tvSetPin(raw0: String): String {   // owner ne TV wala 6-hex code dala
+            val p = if (raw0.length > 10) "" else raw0.trim().uppercase()
+            tvPin = if (p.length == 6 && p.all { it.isDigit() || it in 'A'..'F' }) p else ""
+            return if (tvPin.isEmpty()) "invalid" else "ok"
+        }
+
+        @JavascriptInterface
+        fun tvStatus(): String = try {
+            val host = TvRemote.savedHost(this@MainActivity)
+            if (host == null) "{\"linked\":false,\"pair\":\"$tvPairResult\"}"
+            else "{\"linked\":true,\"host\":\"$host\"}"
+        } catch (e: Exception) { "{\"linked\":false}" }
+
+        @JavascriptInterface
+        fun clearTvLink() { TvRemote.clear(this@MainActivity); tvPin = ""; tvPairResult = "" }
 
         // ---- v7.136 JARVIS voice (your own server). The token is written only here, never sent back to the page. ----
         @JavascriptInterface
@@ -3599,6 +3694,39 @@ class MainActivity : Activity() {
             }, "jarvis-conn-run").start()
             return "running"
         }
+
+        /** v7.209: open JARVIS Home (launcher) directly from Settings, even if it is not the default home app yet. */
+        @JavascriptInterface
+        fun openLauncher() {
+            runOnUiThread {
+                try { startActivity(Intent(this@MainActivity, LauncherActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Throwable) { }
+            }
+        }
+
+        /** v7.209: make JARVIS the default home app (Android 10+ role dialog, else the Home settings page). */
+        @JavascriptInterface
+        fun setDefaultLauncher() {
+            runOnUiThread {
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= 29) {
+                        val rm = getSystemService(android.app.role.RoleManager::class.java)
+                        if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) && !rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                            startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 7209)
+                            return@runOnUiThread
+                        }
+                    }
+                    startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+                } catch (e: Throwable) {
+                    try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (e2: Throwable) { }
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun isDefaultLauncher(): Boolean = try {
+            val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            packageManager.resolveActivity(i, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == packageName
+        } catch (e: Throwable) { false }
 
         @JavascriptInterface
         fun openAccessibility() {

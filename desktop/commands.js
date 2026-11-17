@@ -47,4 +47,4 @@ function parse(text) {
   }
   return null;
 }
-module.exports = { parse, APPS, SITES, FOLDERS };
+module.exports = { parse, APPS, SITES, FOLDERS, HARD_NO };

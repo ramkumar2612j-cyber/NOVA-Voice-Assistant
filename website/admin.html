@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS Admin — Owner Panel</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="admin">
+<nav class="nav">
+  <div class="wrap">
+    <a class="logo" href="index.html"><b>J.A.R.V.I.S</b><span>ADMIN</span></a>
+    <div class="links">
+      <a href="index.html">← Website</a>
+      <a class="btn" id="logout" style="display:none">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<!-- login -->
+<section class="sec" id="login">
+  <div class="wrap narrow">
+    <h2>Owner Login</h2>
+    <p class="sub">Sirf owner ke liye. Password server par hai (deploy ke waqt bana — <code>docs/DEPLOY.md</code> dekho).</p>
+    <div class="form">
+      <input type="password" id="pw" placeholder="Admin password" autocomplete="current-password">
+      <button class="btn big" id="loginbtn">LOGIN</button>
+      <p class="err" id="loginerr"></p>
+    </div>
+    <p class="fine">Note: backend deploy nahi hai to login nahi chalega — panel read-only demo dikhega.</p>
+  </div>
+</section>
+
+<!-- dashboard -->
+<main id="dash" style="display:none">
+  <section class="sec">
+    <div class="wrap">
+      <h2>Dashboard <span class="pill live" id="brain-pill">—</span></h2>
+      <div class="grid3">
+        <div class="card"><b id="d-devices">—</b><span>Devices</span></div>
+        <div class="card"><b id="d-online">—</b><span>Online abhi</span></div>
+        <div class="card"><b id="d-tasks">—</b><span>Tasks (total)</span></div>
+        <div class="card"><b id="d-memory">—</b><span>Memory facts</span></div>
+        <div class="card"><b id="d-version">—</b><span>Brain version</span></div>
+        <div class="card"><b id="d-uptime">—</b><span>Server uptime</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt">
+    <div class="wrap">
+      <h2>Devices</h2>
+      <div class="tablewrap"><table id="devtable">
+        <thead><tr><th>Naam</th><th>Platform</th><th>Status</th><th>Battery</th><th>JARVIS</th><th>Last seen</th></tr></thead>
+        <tbody><tr><td colspan="6" class="fine">Loading… (backend chahiye)</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <h2>Naya device jodo</h2>
+      <p class="sub">Code <b>15 minute</b> me expire hota hai, ek hi baar use hota hai. Phone: Settings > CLOUD BRAIN me paste karo. Laptop: <code>cloud jodo &lt;code&gt;</code>.</p>
+      <button class="btn big" id="pairbtn">PAIRING CODE BANAO</button>
+      <div class="codebox" id="paircode" style="display:none">
+        <code id="pairtext"></code>
+        <button class="btn" id="paircopy">COPY</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt">
+    <div class="wrap">
+      <h2>Daily Health Reports</h2>
+      <p class="sub">GitHub Actions rozana health check chalata hai (repo me <code>.github/workflows/daily-health.yml</code>) — report yahan dikhegi jab workflow backend push kare.</p>
+      <div id="reports" class="list fine">Loading…</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <h2>Version / Changelog publish</h2>
+      <div class="form">
+        <input type="text" id="v-num" placeholder="Version, jaise 7.221" maxlength="20">
+        <input type="text" id="v-date" placeholder="Date, jaise 2026-11-17" maxlength="20">
+        <textarea id="v-note" rows="4" placeholder="Is version me kya badla (changelog note)"></textarea>
+        <button class="btn big" id="v-publish">PUBLISH</button>
+        <p class="err" id="v-err"></p>
+      </div>
+      <div class="tablewrap"><table id="vtable">
+        <thead><tr><th>Version</th><th>Date</th><th>Note</th><th>Published</th></tr></thead>
+        <tbody><tr><td colspan="4" class="fine">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot"><div class="wrap"><p class="fine">JARVIS admin — sirf owner. Har login attempt rate-limited. Session 12 ghante.</p></div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

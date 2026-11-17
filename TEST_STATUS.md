@@ -188,3 +188,10 @@ Status: `PASS` (owner ne phone par chalaya, chala) / `FAIL` (chala nahi, note li
 ## Machine check (v7.198, 2026-11-16)
 - tools/test_app_builder_contract.py: PASS. tools/test_android_runtime_contract.py (exported count 9 -> 9 ya 10): PASS.
 - Brain/TaskManager se jude contract scripts: 0 FAIL. tools/test_kotlin_syntax_contract.py: SKIPPED (is machine par Kotlin compiler nahi). Kotlin compile + AppBuilderRulesTest.personal_scheduler_needs_no_facts + launcher popup: NOT RUN. GitHub Actions build pehle chalao.
+
+| 31 | v7.217 cloud brain: deploy + pairing + heartbeat (C1-C8) | NOT REPORTED | 7.221 | - | ANDROID_TEST_STEPS_v7_221.md |
+| 32 | v7.218 device sync: laptop ko bolo / laptop ka status / memory sync (D1-D4) | NOT REPORTED | 7.221 | - | ANDROID_TEST_STEPS_v7_221.md |
+| 33 | v7.219 TV: pairing + tv commands (T1-T6) | NOT REPORTED | 7.221 | - | Android TV/Google TV hone par hi; docs/OSCAR_TV.md |
+| 34 | v7.220 website: Pages live + admin login + publish (W1-W4) | NOT REPORTED | 7.221 | - | ANDROID_TEST_STEPS_v7_221.md |
+| 35 | v7.221 automation: daily health run + backup (A1-A3) | NOT REPORTED | 7.221 | - | GitHub Actions par |
+| 36 | v7.221 regression spot-check (R1-R5) | NOT REPORTED | 7.221 | - | purane features waise hi chalna chahiye |

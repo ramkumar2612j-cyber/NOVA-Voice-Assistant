@@ -71,6 +71,12 @@ object FeatureCheck {
         rec(if (orr) "PASS" else "SKIP", "Key: OpenRouter", if (orr) "hai" else "nahi hai (optional)")
         rec(if (zai) "PASS" else "SKIP", "Key: Z.ai", if (zai) "hai" else "nahi hai (optional)")
         rec(if (gh) "PASS" else "SKIP", "Key: GitHub token (publish)", if (gh) "hai" else "nahi hai (optional)")
+        // v7.209: JARVIS Launcher (Home screen). Not a failure when off: the app offers it by itself, and "jarvis launcher lagao" does it.
+        val homeOk = try {
+            val hi = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME)
+            ctx.packageManager.resolveActivity(hi, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == ctx.packageName
+        } catch (e: Throwable) { false }
+        rec(if (homeOk) "PASS" else "WARN", "JARVIS Launcher (Home screen)", if (homeOk) "JARVIS default Home app hai" else "default nahi hai: bolo 'jarvis launcher lagao' ya Settings > SAARE FEATURES > Default launcher banao")
         val brain = gemOk || groq || orr || zai
         val acc = JarvisAccessibilityService.instance != null
         feat(rec, gemOk || groq, "Website banana (voice)", "Gemini ya Groq key daalo")

@@ -229,6 +229,40 @@ class JarvisService : Service() {
         return START_NOT_STICKY
     }
 
+    /** v7.213: honest answers for CareRules. Real RAM and storage numbers only; no deletes, no fake scan. */
+    private fun careReply(kind: CareRules.Kind): String = when (kind) {
+        CareRules.Kind.SECURITY -> tr(
+            "Main poora virus scan nahi kar sakti: Android apps ko puray phone ko scan karne ki permission nahi milti. Main storage aur RAM ki haalat bata sakti hoon, aur Play Protect settings kholne mein madad kar sakti hoon. Batao kya karun?",
+            "I cannot run a full virus scan: Android apps are not allowed to scan the whole phone. I can report storage and RAM status and help you open Play Protect settings. What should I do?")
+        CareRules.Kind.HANG -> {
+            val mem = careRamMb()
+            val freeGb = careStorageFreeGb()
+            val low = mem != null && CareRules.ramIsLow(mem.first, mem.second)
+            val ramTxt = if (mem == null) tr("RAM ka pata nahi chala", "RAM unknown") else tr("RAM ${mem.first} MB khali (kul ${mem.second} MB)", "RAM ${mem.first} MB free of ${mem.second} MB")
+            val stTxt = if (freeGb < 0) tr("storage ka pata nahi chala", "storage unknown") else tr("storage ${"%.1f".format(freeGb)} GB khali", "storage ${"%.1f".format(freeGb)} GB free")
+            val tip = if (low) tr("RAM kam hai, isliye slow lag sakta hai. Jo app nahi chahiye use band karo, phir phone restart karo.", "RAM is low, so it can feel slow. Close apps you do not need, then restart the phone.")
+                else tr("RAM theek hai. Main ye nahi bata sakti ki kaunsa app bhaari hai; Settings mein Battery aur Storage se dekh sakte ho.", "RAM looks fine. I cannot tell which app is heavy; check Battery and Storage in Settings.")
+            tr("Phone ki haalat: $ramTxt, $stTxt. $tip Main kuch bhi delete nahi karungi.", "Phone status: $ramTxt, $stTxt. $tip I will not delete anything.")
+        }
+        CareRules.Kind.CLEAN -> tr(
+            "Faltu cheezein main khud delete nahi karti. Aap Settings mein Storage kholo, wahan bade files aur cache dikhte hain, aur aap khud chunkar hatao. Kholun?",
+            "I do not delete junk on my own. Open Storage in Settings to see large files and cache, and choose what to remove. Should I open it?")
+        CareRules.Kind.DELETE -> tr(
+            "Main awaaz se kuch bhi delete nahi karti, chahe kisi bhi shabd se bolo. Aap Settings mein Storage se khud chunkar delete karo. Kholun?",
+            "I never delete anything by voice, whatever words you use. Choose and delete in Settings > Storage yourself. Should I open it?")
+    }
+
+    private fun careRamMb(): Pair<Long, Long>? = try {
+        val am = getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi)
+        Pair(mi.availMem / 1048576L, mi.totalMem / 1048576L)
+    } catch (e: Throwable) { null }
+
+    private fun careStorageFreeGb(): Double = try {
+        val st = android.os.StatFs(android.os.Environment.getDataDirectory().path)
+        st.availableBytes / 1073741824.0
+    } catch (e: Throwable) { -1.0 }
+
     private fun tr(hi: String, en: String): String = if (cfg.lang == "en") en else hi
 
     /** v7.158: the IST calendar day of a timestamp (the autopilot counters and the morning brief use it). */
@@ -540,6 +574,7 @@ class JarvisService : Service() {
                 SecureStore.migrateSingleToPool(appCtx)
             } catch (e: Throwable) { ErrLog.add("JarvisService", e.toString()) }
             try { restartLaptopLink() } catch (e: Throwable) { ErrLog.add("JarvisService", e.toString()) }   // v7.177
+            try { restartCloudSync() } catch (e: Throwable) { ErrLog.add("JarvisService", e.toString()) }   // v7.217 cloud brain (optional; bina pairing ke kuch nahi karta)
             // An old in-flight UI task is never replayed after service/process restart: replay could tap/send twice.
             try {
                 val interrupted = AgentTaskLedger(appCtx).recoverInterrupted()
@@ -1135,6 +1170,29 @@ class JarvisService : Service() {
                 }.start()
             }
             "reply" -> h.post { if (alive) emit("ai", "💻 " + text) }
+            // ---- v7.218 DEVICE SYNC (Part 2): naye types — purane cmd/ask/reply upar jaise hi hain ----
+            "stat" -> h.post {   // laptop ka live stat — chat me ek line, bas
+                if (!alive) return@post
+                val s = try { org.json.JSONObject(text) } catch (e: Exception) { return@post }
+                val line = "💻 " + tr("Laptop: RAM ${s.optInt("ram", -1)}%, CPU ${s.optInt("cpu", -1)}%", "Laptop: RAM ${s.optInt("ram", -1)}%, CPU ${s.optInt("cpu", -1)}%")
+                lastLaptopStat = line
+                emit("ai", line)
+            }
+            "mem" -> {   // laptop ne memory facts bheje (link-only mode) — PersonalMemory me add, duplicate nahi
+                val items = try { org.json.JSONArray(text) } catch (e: Exception) { null } ?: return
+                val existing = PersonalMemoryStore.load(applicationContext)
+                val facts = ArrayList<SyncRules.FactItem>()
+                for (i in 0 until items.length()) {
+                    val o = items.optJSONObject(i) ?: continue
+                    facts.add(SyncRules.FactItem(o.optString("id"), o.optString("text"), o.optString("scope", "all")))
+                }
+                val merged = SyncRules.factsToMemory(facts, existing)
+                if (merged.size > existing.size) {
+                    PersonalMemoryStore.save(applicationContext, merged)
+                    val n = merged.size - existing.size
+                    h.post { if (alive) emit("ai", "💻☁ " + tr("Laptop se $n nayi baat yaad me aa gayi.", "$n new facts arrived from the laptop.")) }
+                }
+            }
         }
     }
 
@@ -1203,6 +1261,165 @@ class JarvisService : Service() {
         val sent = try { LaptopLink.publish(LaptopLink.RELAY, outTopic, LaptopLink.seal(key, outTopic, "cmd", cmd)) } catch (e: Throwable) { false }
         return if (sent) tr("Laptop ko bhej diya. Laptop chalu aur online ho to uska jawab yahan chat me aayega.", "Sent to the laptop. If it is on and online, its reply will appear here in the chat.")
         else tr("Laptop tak nahi pahunch paya (internet ya relay). Dobara try karo.", "Could not reach the laptop (internet or relay). Try again.")
+    }
+
+    // ---- v7.217 CENTRAL CLOUD BRAIN (Part 1, add-only). Optional: bina pairing ke ye thread kuch nahi karta, purane features waise hi chalte hain. ----
+    @Volatile private var cloudEpoch = 0
+    @Volatile private var cloudLastPull = 0L
+    private val cloudSeenTasks = LaptopLinkRules.Dedupe()
+
+    /** (Re)starts the device sync loop (v7.217 heartbeat/tasks + v7.218 memory). Cloud ho to cloud se; warna laptop link ho to link-only mode (stat + mem, E2E). */
+    @Synchronized fun restartCloudSync() {
+        val my = ++cloudEpoch
+        val ctx = applicationContext
+        val linked = JarvisCloud.saved(ctx) != null
+        if (!linked && LaptopLinkRules.parseCode("JARVIS-LINK:" + try { SecureStore.getSlot(ctx, LaptopLink.SLOT) } catch (e: Throwable) { "" }) == null) return   // na cloud na laptop — kuch nahi karna
+        Thread {
+            var beatAt = 0L
+            var memAt = 0L
+            while (cloudEpoch == my) {
+                try {
+                    val now = System.currentTimeMillis()
+                    val bat = HomeHud.battery(ctx); val net = HomeHud.network(ctx)
+                    if (JarvisCloud.saved(ctx) != null) {
+                        if (now - beatAt > 5 * 60_000L) { beatAt = now; JarvisCloud.sendStatus(ctx, bat, net, running) }
+                        if (now - cloudLastPull > 2 * 60_000L) {
+                            cloudLastPull = now
+                            for (t in JarvisCloud.taskPull(ctx, (now - 10 * 60_000L) / 1000)) {
+                                if (t.size >= 4 && t[3] == "open" && cloudSeenTasks.firstTime("ct-" + t[0])) {
+                                    val title = t[1].take(120)
+                                    h.post { if (alive) emit("ai", "☁ " + tr("Cloud se kaam aaya: $title", "A task arrived from the cloud: $title")) }
+                                }
+                            }
+                        }
+                        if (now - memAt > 10 * 60_000L) {   // v7.218: memory sync via cloud
+                            memAt = now
+                            syncMemoryCloud(ctx)
+                        }
+                    } else {   // v7.218 link-only mode: bina cloud ke laptop se stat + memory exchange (E2E link par)
+                        val key = try { SecureStore.getSlot(ctx, LaptopLink.SLOT) } catch (e: Throwable) { "" }
+                        if (LaptopLinkRules.parseCode("JARVIS-LINK:" + key) != null) {
+                            if (now - beatAt > 10 * 60_000L) {
+                                beatAt = now
+                                val outTopic = LaptopLink.topic(key, "p2l")
+                                LaptopLink.publish(LaptopLink.RELAY, outTopic, LaptopLink.seal(key, outTopic, "stat", org.json.JSONObject().put("bat", bat).put("net", net).put("run", running).toString()))
+                            }
+                            if (now - memAt > 10 * 60_000L) {
+                                memAt = now
+                                val facts = SyncRules.memoryToFacts(PersonalMemoryStore.load(ctx).take(50), now / 1000, "phone")
+                                if (facts.isNotEmpty()) {
+                                    val arr = org.json.JSONArray()
+                                    for (fct in facts.take(50)) arr.put(org.json.JSONObject().put("id", fct.id).put("text", fct.text).put("scope", fct.scope))
+                                    val outTopic = LaptopLink.topic(key, "p2l")
+                                    LaptopLink.publish(LaptopLink.RELAY, outTopic, LaptopLink.seal(key, outTopic, "mem", arr.toString()))
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Throwable) { ErrLog.add("cloud", e.javaClass.simpleName) }
+                try { Thread.sleep(60_000L) } catch (e: InterruptedException) { return@Thread }
+            }
+        }.apply { name = "jarvis-cloud-sync"; isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+    }
+
+    /** v7.218: phone ki memory cloud par push + wapas aaye facts merge (duplicate nahi, private kabhi upload nahi). */
+    private fun syncMemoryCloud(ctx: android.content.Context) {
+        try {
+            val existing = PersonalMemoryStore.load(ctx)
+            for (f in SyncRules.memoryToFacts(existing, System.currentTimeMillis() / 1000, "phone"))
+                JarvisCloud.memoryPush(ctx, f.id, f.text, f.scope)
+            val remote = JarvisCloud.memoryPull(ctx, (System.currentTimeMillis() - 20 * 60_000L) / 1000)
+            if (remote.isNotEmpty()) {
+                val merged = SyncRules.factsToMemory(remote.map { SyncRules.FactItem(it[0], it[1], it[2]) }, existing)
+                if (merged.size > existing.size) {
+                    PersonalMemoryStore.save(ctx, merged)
+                    val n = merged.size - existing.size
+                    h.post { if (alive) emit("ai", "☁ " + tr("Cloud se $n nayi baat yaad me aa gayi.", "$n new facts arrived from the cloud.")) }
+                }
+            }
+        } catch (e: Throwable) { ErrLog.add("cloud", e.javaClass.simpleName) }
+    }
+
+    /** v7.219 OSCAR TV: "tv <command>" / "oscar <command>" -> Android TV / Google TV remote (paired ho to). Network background me. */
+    private fun tvRoute(text: String): String? {
+        val ev = TvRules.parse(text) ?: return null
+        val ctx = applicationContext
+        val host = TvRemote.savedHost(ctx)
+            ?: return tr("TV abhi jura nahi hai. Settings > TV LINK me apne TV ka IP daalo (OSCAR Android TV / Google TV hona chahiye — details ke liye docs/OSCAR_TV.md).", "The TV is not linked yet. Enter your TV's IP in Settings > TV LINK (OSCAR must be Android TV / Google TV — see docs/OSCAR_TV.md).")
+        Thread {
+            val r = TvRemote.send(ctx, listOf(ev))
+            h.post {
+                if (!alive) return@post
+                emit("ai", "📺 " + when {
+                    r.startsWith("ok:") -> tr(ev.friendly.ifBlank { "TV ko bhej diya" }, ev.friendly.ifBlank { "Sent to the TV" })
+                    r == "connect_fail" -> tr("TV tak nahi pahuncha. TV aur phone ek hi Wi-Fi me hain? TV chalu hai?", "Could not reach the TV. Are the TV and phone on the same Wi-Fi? Is the TV on?")
+                    else -> tr("TV command nahi ja saka.", "Could not send the TV command.")
+                })
+            }
+        }.start()
+        return tr("TV ko bhej raha hoon...", "Sending to the TV...")
+    }
+
+    @Volatile private var lastLaptopStat = ""   // v7.218: laptop ka aakhra stat (link se aata hai)
+
+    /** v7.218: "laptop ka status" — link se aaya aakhra stat (nahi aaya to honest jawab). */
+    private fun laptopStatRoute(text: String): String? {
+        val t = text.trim().lowercase()
+        if (!(t.startsWith("laptop ka status") || t.startsWith("laptop ka haal") || t.startsWith("laptop status"))) return null
+        return if (lastLaptopStat.isNotBlank()) tr("Pichhla stat: ", "Last stat: ") + lastLaptopStat.removePrefix("💻 ")
+        else tr("Laptop ka stat abhi nahi aaya. Laptop par JARVIS app chalu hai? Har 10 min me stat aata hai (link-only) ya cloud se device list dekho.", "No laptop stat yet. Is the JARVIS desktop app running? A stat arrives every 10 minutes (link-only) or see the device list on the cloud.")
+    }
+
+    /** v7.218: "laptop ko bolo <kaam>" — cloud task (target windows) bana ke deti hai; laptop 2 min me claim karke chalata hai. Bina cloud ke seedha link cmd (purana raasta). */
+    private fun laptopHandoffRoute(text: String): String? {
+        val m = Regex("^(?:jarvis\\s+)?laptop\\s+(?:ko\\s+)?(?:bolo|bolo ki|bol do|kaho|keh do|se\\s+bolo|se\\s+kaho)\\s+(.+)$", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).find(text.trim()) ?: return null
+        val job = m.groupValues[1].trim()
+        if (job.isEmpty()) return null
+        val ctx = applicationContext
+        if (JarvisCloud.saved(ctx) != null) {
+            val id = "lt-" + java.util.UUID.randomUUID().toString().take(13)
+            val job2 = job.take(400)
+            Thread {   // network kabhi main thread par nahi (typed() HUD/chat dono se aa sakta hai)
+                val ok = JarvisCloud.taskPush(ctx, id, job2, "windows")
+                h.post {
+                    if (!alive) return@post
+                    emit("ai", "☁ " + if (ok) tr("Cloud par laptop ke liye kaam rakh diya. Laptop chalu ho to 2 minute me utha lega.", "Placed the job for the laptop on the cloud. If it is on it will pick it up within 2 minutes.")
+                        else tr("Cloud tak kaam nahi pahuncha (server/internet). Dobara bolo ya seedha 'laptop par <kaam>' bolo.", "Could not reach the cloud. Try again or say 'laptop par <kaam>' directly."))
+                }
+            }.start()
+            return tr("Laptop ke liye kaam rakh raha hoon...", "Placing the job for the laptop...")
+        }
+        // cloud nahi hai — purana direct link raasta hi (laptopRoute wala behaviour)
+        val key = try { SecureStore.getSlot(ctx, LaptopLink.SLOT) } catch (e: Throwable) { "" }
+        if (LaptopLinkRules.parseCode("JARVIS-LINK:" + key) == null)
+            return tr("Laptop abhi jura nahi hai. Laptop par \"phone jodo\" bolo aur code Settings me LAPTOP LINK me paste karo.", "The laptop is not linked. Say \"phone jodo\" on the laptop and paste the code in Settings, LAPTOP LINK.")
+        val outTopic = LaptopLink.topic(key, "p2l")
+        val sent = try { LaptopLink.publish(LaptopLink.RELAY, outTopic, LaptopLink.seal(key, outTopic, "cmd", job)) } catch (e: Throwable) { false }
+        return if (sent) tr("Laptop ko bhej diya (seedha link). Laptop online ho to uska jawab chat me aayega.", "Sent to the laptop (direct link). If it is online its reply will appear in the chat.")
+        else tr("Laptop tak nahi pahuncha (internet/relay). Dobara try karo.", "Could not reach the laptop (internet/relay). Try again.")
+    }
+    private fun cloudRoute(text: String): String? {
+        val t = text.trim().lowercase()
+        if (!t.startsWith("cloud") && !t.startsWith("claude")) return null   // recognizer kabhi "claude" bhi bol deta hai
+        val en = cfg.lang == "en"
+        val s = JarvisCloud.saved(applicationContext)
+            ?: return tr("Cloud brain abhi juda nahi hai. Website ke admin panel se pairing code lo aur Settings > CLOUD BRAIN me paste karo.", "The cloud brain is not linked. Get a pairing code from the website admin panel and paste it in Settings > CLOUD BRAIN.")
+        return when {
+            t.contains("jodo") || t.contains("jor") || t.contains("connect") ->
+                tr("Pairing Settings > CLOUD BRAIN box se hoti hai — admin panel ka naya code paste karo.", "Pairing happens from the Settings > CLOUD BRAIN box — paste a fresh code from the admin panel.")
+            else -> {
+                val addr = s.first
+                Thread {
+                    val st = JarvisCloud.publicStatus(addr)
+                    h.post {
+                        if (!alive) return@post
+                        emit("ai", if (st != null) "☁ " + tr("Cloud brain juda hai — server chalu, online devices: ${st.optInt("devices_online")}", "Cloud brain linked — server up, online devices: ${st.optInt("devices_online")}")
+                            else "☁ " + tr("Cloud ka address save hai par server jawab nahi de raha (band ya internet check karo).", "The cloud address is saved but the server is not answering (check if it is down or no internet)."))
+                    }
+                }.start()
+                tr("Cloud ka haal pooch raha hoon...", "Asking the cloud...")
+            }
+        }
     }
 
     fun typed(text: String): String {
@@ -1994,7 +2211,7 @@ class JarvisService : Service() {
             if (fillerOnly) {
                 emit("me", "🎤 " + text0)
                 silentFillerReply()
-            } else (callAgentRoute(text) ?: laptopRoute(text) ?: handle(pcm, text))   // v7.178: "call karke <booking>" -> call agent; v7.177: "laptop par <kaam>" -> laptop
+            } else (callAgentRoute(text) ?: tvRoute(text) ?: laptopHandoffRoute(text) ?: laptopStatRoute(text) ?: cloudRoute(text) ?: laptopRoute(text) ?: handle(pcm, text))   // v7.219: tv/oscar phrases; v7.218: laptop ko bolo / laptop ka status; v7.217: cloud status; v7.178: call agent; v7.177: laptop par
         } catch (t: Throwable) {
             turnFailed = true
             tr("Kuch gadbad ho gayi, dobara try karo", "Something went wrong, please try again")
@@ -3058,6 +3275,12 @@ class JarvisService : Service() {
             lastTurnLocal = true
             lastKind = memCmd.kind
             return runCommand(memCmd)
+        }
+        // v7.213 CARE: security scan / hang / faltu / delete. Honest answers with real numbers; nothing is ever deleted by voice.
+        val careKind = if (text.isBlank()) null else CareRules.parse(text)
+        if (careKind != null) {
+            lastTurnLocal = true; lastKind = "care_" + careKind.name.lowercase()
+            return careReply(careKind)
         }
         val recordingVoice = if (text.isBlank()) null else RecordingVoiceRules.parse(text)
         if (recordingVoice != null) {
@@ -4914,6 +5137,7 @@ class JarvisService : Service() {
                 "ringer" -> ringerTool(c.arg)
                 "rotation" -> rotationTool(c.arg)
                 "settings" -> openSettings(c.arg, c.num == 2)
+                "launcher" -> launch(Intent(this, LauncherActivity::class.java), null, "JARVIS Home")   // v7.209: LauncherActivity itself asks "make default?" when it is not the home app yet
                 "camera" -> launch(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), null, "Camera")
                 "call" -> callTool(c.arg)
                 "open_app" -> openAppOrSite(c.arg)
@@ -7929,6 +8153,7 @@ class JarvisService : Service() {
                 }
                 "camera" -> cameraTool(a.optString("mode", "photo"), a.optString("facing", "back"))
                 "settings" -> openSettings(a.optString("page", "main"), false)
+                "launcher" -> launch(Intent(this, LauncherActivity::class.java), null, "JARVIS Home")
                 "brightness" -> setBrightness(a.optInt("percent", -1))
                 "brightness_step" -> stepBrightness(a.optInt("delta", 0))
                 "media" -> media(a.optString("action"))
@@ -8711,6 +8936,7 @@ class JarvisService : Service() {
             .put("parameters", JSONObject().put("type", "OBJECT").put("properties", JSONObject()
                 .put("mode", JSONObject().put("type", "STRING").put("description", "photo or video"))
                 .put("facing", JSONObject().put("type", "STRING").put("description", "front or back")))))
+        t.put(tool("launcher", "Open JARVIS Home (JARVIS's own launcher / home screen). It offers to make JARVIS the default home app by itself"))
         t.put(tool("settings", "Open a phone settings page: wifi, bluetooth, display, sound, location, battery, airplane, apps, dnd, or main", "page" to "string"))
         t.put(tool("brightness", "Set screen brightness 0-100. May need a special permission", "percent" to "integer"))
         t.put(tool("brightness_step", "Increase or decrease brightness by a percentage delta", "delta" to "integer"))

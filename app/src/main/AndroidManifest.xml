@@ -102,6 +102,18 @@
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
+
+        <!-- v7.210 HOLO: JARVIS hologram LIVE WALLPAPER (pick it from the wallpaper settings). -->
+        <service
+            android:name=".HoloWallpaperService"
+            android:exported="true"
+            android:label="Jarvis Holo"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService"/>
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/holo_wallpaper"/>
+        </service>
         <!-- v7.189 Part L1: JARVIS as the phone HOME screen. Not forced: the owner picks it in "Default home app". -->
         <activity
             android:name=".LauncherActivity"
