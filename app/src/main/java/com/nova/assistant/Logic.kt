@@ -37,6 +37,8 @@ object Logic {
     /** Wake word: one English word, 3-12 letters. Returns null if not valid. */
     fun cleanWake(raw: String?): String? {
         val w = (raw ?: "").trim().lowercase()
+        // v7.226: "nova" is retired as a wake word. A value saved by an older build is ignored, so JARVIS answers to "jarvis" only.
+        if (w == "nova") return null
         if (w.length < 3 || w.length > 12) return null
         if (!w.all { it in 'a'..'z' }) return null
         return w

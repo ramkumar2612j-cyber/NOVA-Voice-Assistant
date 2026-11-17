@@ -1,13 +1,13 @@
 <!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <style>
-/* v7.216 JARVIS HOME L3: reference-image style HUD. AMOLED black, cyan #00F0FF + violet #9D00FF.
+/* v7.216 JARVIS HOME L3: reference-image style HUD. AMOLED black, cyan #00F0FF + violet #2AA8FF.
    Purana contract poora barkarar: LB.act kinds, LB.apps, LB.cmd, setState fields, goHome/onBack — sab same. */
-:root{--c1:#00F0FF;--c2:#2AA8FF;--c3:#9D00FF;--ink:#DFF6FF;--mut:#7FA3B5;--bg:#000;--ok:#2BE36B;--warn:#FFC53D}
+:root{--c1:#00F0FF;--c2:#2AA8FF;--c3:#2AA8FF;--ink:#DFF6FF;--mut:#7FA3B5;--bg:#000;--ok:#2BE36B;--warn:#FFC53D}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe UI",system-ui,sans-serif;overflow:hidden}
 #bg,#wp{position:fixed;inset:0;width:100%;height:100%;z-index:0}
-.aura{position:fixed;inset:0;z-index:0;background:radial-gradient(60% 35% at 88% 2%,rgba(157,0,255,.20),transparent 70%),radial-gradient(70% 45% at 4% 40%,rgba(0,240,255,.12),transparent 70%),radial-gradient(70% 40% at 70% 98%,rgba(157,0,255,.16),transparent 70%)}
+.aura{position:fixed;inset:0;z-index:0;background:radial-gradient(60% 35% at 88% 2%,rgba(42,168,255,.20),transparent 70%),radial-gradient(70% 45% at 4% 40%,rgba(0,240,255,.12),transparent 70%),radial-gradient(70% 40% at 70% 98%,rgba(42,168,255,.16),transparent 70%)}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
 @keyframes shine{to{background-position:200% 0}}
@@ -18,14 +18,14 @@ html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe
 .view::-webkit-scrollbar{display:none}
 #appsV{display:none}
 .glass{position:relative;border-radius:20px;background:rgba(6,14,28,.72);box-shadow:0 0 18px rgba(0,240,255,.13),inset 0 0 26px rgba(0,240,255,.05)}
-.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(135deg,rgba(0,240,255,.85),rgba(0,240,255,.2),rgba(157,0,255,.8));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(135deg,rgba(0,240,255,.85),rgba(0,240,255,.2),rgba(42,168,255,.8));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .tap{transition:transform .12s}.tap:active{transform:scale(.95)}
 .hud-sweep{position:relative;overflow:hidden}
 .hud-sweep::after{content:"";position:absolute;left:0;right:0;height:30%;top:-40%;background:linear-gradient(to bottom,transparent,rgba(0,240,255,.10),transparent);animation:scan2 5.5s linear infinite;pointer-events:none}
 @keyframes scan2{to{top:110%}}
 /* ---- header: JARVIS + tagline left, clock right (reference image style) */
 .bhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.bhead .bl b{display:inline-block;font-size:34px;font-style:italic;font-weight:800;letter-spacing:4px;background:linear-gradient(90deg,#fff,#7FD6FF,#C9A0FF,#fff);background-size:200% 100%;-webkit-background-clip:text;color:transparent;animation:shine 4.5s linear infinite;filter:drop-shadow(0 0 12px rgba(0,240,255,.7))}
+.bhead .bl b{display:inline-block;font-size:34px;font-style:italic;font-weight:800;letter-spacing:4px;background:linear-gradient(90deg,#fff,#7FD6FF,#7FD6FF,#fff);background-size:200% 100%;-webkit-background-clip:text;color:transparent;animation:shine 4.5s linear infinite;filter:drop-shadow(0 0 12px rgba(0,240,255,.7))}
 .bhead .bl p{font-size:9px;letter-spacing:2.2px;color:#8FB8D8;margin-top:3px}
 .clockbox{text-align:right}.clockbox .ck{font-size:26px;font-weight:200;line-height:1;color:#fff;filter:drop-shadow(0 0 10px rgba(0,240,255,.55))}
 .clockbox .ck small{font-size:11px;color:var(--c1);margin-left:3px;-webkit-text-fill-color:var(--c1)}
@@ -52,13 +52,13 @@ html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe
 .ring{position:absolute;border-radius:50%}
 .r1{inset:0;border:2px dashed rgba(0,240,255,.5);animation:spin 20s linear infinite}
 .r2{inset:20px;border:2px solid transparent;border-top-color:var(--c3);border-bottom-color:var(--c1);animation:spin 8s linear infinite reverse;filter:drop-shadow(0 0 6px var(--c1))}
-.r3{inset:46px;border:1px dotted rgba(157,0,255,.75);animation:spin 28s linear infinite}
-.gl{inset:34px;background:radial-gradient(circle,rgba(0,240,255,.35),rgba(157,0,255,.14) 55%,transparent 70%);animation:pulse 3.2s ease-in-out infinite}
+.r3{inset:46px;border:1px dotted rgba(42,168,255,.75);animation:spin 28s linear infinite}
+.gl{inset:34px;background:radial-gradient(circle,rgba(0,240,255,.35),rgba(42,168,255,.14) 55%,transparent 70%);animation:pulse 3.2s ease-in-out infinite}
 #arc{position:absolute;left:50%;top:46%;width:170px;height:170px;transform:translate(-50%,-50%);z-index:3;pointer-events:none;filter:drop-shadow(0 0 12px #00F0FF)}
 #arc .t1{transform-origin:50% 50%;animation:spin 18s linear infinite}
 #arc .t2{transform-origin:50% 50%;animation:spin 9s linear infinite reverse}
 #arc .core{transform-origin:50% 50%;animation:pulse 2.6s ease-in-out infinite}
-.hero.run #arc{filter:drop-shadow(0 0 20px #9D00FF)}
+.hero.run #arc{filter:drop-shadow(0 0 20px #2AA8FF)}
 .scan{position:absolute;left:16%;right:16%;height:2px;background:linear-gradient(90deg,transparent,var(--c1),transparent);box-shadow:0 0 16px var(--c1);animation:scan 4s ease-in-out infinite}
 /* ---- welcome + weather main card */
 .welcome{text-align:center;margin-top:2px}
@@ -79,7 +79,7 @@ html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe
 .mt{padding:12px 14px}
 .mt small{display:block;font-size:10px;letter-spacing:1.6px;color:var(--mut)}
 .mt b{font-size:21px;font-weight:600;color:var(--c1);text-shadow:0 0 10px rgba(0,240,255,.5);margin-top:2px;display:block}
-.mt.vi b{color:#C56BFF;text-shadow:0 0 10px rgba(157,0,255,.6)}
+.mt.vi b{color:#C56BFF;text-shadow:0 0 10px rgba(42,168,255,.6)}
 .mt .nbar{margin-top:8px}
 .ai{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
 .ai small{font-size:10px;letter-spacing:1.6px;color:var(--mut)}
@@ -88,7 +88,7 @@ html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe
 /* ---- recent activity cards */
 .rcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 .rc{padding:12px 10px;text-align:left}
-.rc .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(0,240,255,.28),rgba(157,0,255,.28));box-shadow:0 0 10px rgba(0,240,255,.35);color:#fff;margin-bottom:8px}
+.rc .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(0,240,255,.28),rgba(42,168,255,.28));box-shadow:0 0 10px rgba(0,240,255,.35);color:#fff;margin-bottom:8px}
 .rc .ic svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .rc small{display:block;font-size:9px;letter-spacing:1.6px;color:var(--mut)}
 .rc p{font-size:11px;color:#DFF3FF;margin-top:4px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -101,13 +101,13 @@ html,body{height:100%;background:#000;color:var(--ink);font-family:Roboto,"Segoe
 .bigring .brr{position:absolute;inset:-9px;border-radius:50%;border:2px solid transparent;border-top-color:var(--c1);border-right-color:var(--c3);animation:spin 3.2s linear infinite;filter:drop-shadow(0 0 8px var(--c1))}
 .bigring .brr.r2{inset:-20px;border-width:1px;border-top-color:rgba(0,240,255,.5);border-right-color:transparent;animation-duration:6s}
 .bigring::after{content:"";position:absolute;inset:-32px;border-radius:50%;border:1px solid rgba(0,240,255,.25);animation:pulse 2.6s ease-in-out infinite}
-.bigring.live{background:radial-gradient(circle,rgba(157,0,255,.28),rgba(10,0,20,.9) 62%);box-shadow:0 0 40px rgba(157,0,255,.65),inset 0 0 34px rgba(157,0,255,.4)}
-.bigring.live b{color:#F0DBFF;text-shadow:0 0 16px rgba(157,0,255,.9)}
+.bigring.live{background:radial-gradient(circle,rgba(42,168,255,.28),rgba(10,0,20,.9) 62%);box-shadow:0 0 40px rgba(42,168,255,.65),inset 0 0 34px rgba(42,168,255,.4)}
+.bigring.live b{color:#F0DBFF;text-shadow:0 0 16px rgba(42,168,255,.9)}
 /* ---- search / dock / cards (purane jaisa, theme ke saath) */
 .search{margin-top:16px;display:flex;align-items:center;gap:10px;padding:4px 6px 4px 16px;border-radius:28px}
 .search input{flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font-size:15px;padding:12px 0}
 .search input::placeholder{color:#6F93A8}
-.go{width:40px;height:40px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--c1),var(--c3));display:grid;place-items:center;box-shadow:0 0 14px rgba(157,0,255,.6)}
+.go{width:40px;height:40px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--c1),var(--c3));display:grid;place-items:center;box-shadow:0 0 14px rgba(42,168,255,.6)}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .dock{display:flex;gap:8px;margin-top:14px}
 .dock .t{flex:1;min-width:0;height:74px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:10px;color:#fff;text-align:center}
@@ -118,12 +118,12 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .ct .live{margin-left:auto;font-size:9px;color:var(--ok);border:1px solid rgba(43,227,107,.4);border-radius:10px;padding:2px 8px;animation:blink 2s infinite}
 .row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,240,255,.10)}
 .row:last-of-type{border:0}
-.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;color:#fff;background:linear-gradient(135deg,rgba(0,240,255,.3),rgba(157,0,255,.3));box-shadow:0 0 10px rgba(0,240,255,.35)}
+.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;color:#fff;background:linear-gradient(135deg,rgba(0,240,255,.3),rgba(42,168,255,.3));box-shadow:0 0 10px rgba(0,240,255,.35)}
 .ic svg{width:18px;height:18px}
 .row div{font-size:12px;color:var(--mut);min-width:0}.row b{display:block;font-size:14px;color:#fff;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
 .note{font-size:11px;color:var(--mut);margin-top:6px;white-space:pre-line}
 .btns{display:flex;gap:10px;margin-top:12px}
-.btn{flex:1;border:0;border-radius:14px;padding:12px 6px;font-size:12px;font-weight:600;color:#fff;background:linear-gradient(135deg,rgba(0,240,255,.4),rgba(157,0,255,.5));box-shadow:0 0 14px rgba(0,240,255,.4)}
+.btn{flex:1;border:0;border-radius:14px;padding:12px 6px;font-size:12px;font-weight:600;color:#fff;background:linear-gradient(135deg,rgba(0,240,255,.4),rgba(42,168,255,.5));box-shadow:0 0 14px rgba(0,240,255,.4)}
 .qg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
 .q{aspect-ratio:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:10px;color:#DFF0FF;background:rgba(6,14,28,.72);border:1px solid rgba(0,240,255,.28)}
 .q svg{width:23px;height:23px;color:var(--c1);filter:drop-shadow(0 0 6px var(--c1))}
@@ -139,7 +139,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .orb::before{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid transparent;border-top-color:var(--c1);border-right-color:var(--c3);animation:spin 3s linear infinite}
 .orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:1px solid rgba(0,240,255,.4);animation:pulse 2.4s ease-in-out infinite}
 .orb svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2}
-.orb.live{background:radial-gradient(circle,rgba(157,0,255,.6),rgba(20,0,40,.95) 72%);box-shadow:0 0 30px #9D00FF,inset 0 0 16px rgba(157,0,255,.6)}
+.orb.live{background:radial-gradient(circle,rgba(42,168,255,.6),rgba(2,12,24,.95) 72%);box-shadow:0 0 30px #2AA8FF,inset 0 0 16px rgba(42,168,255,.6)}
 .otag{position:fixed;left:0;right:0;bottom:calc(13px + env(safe-area-inset-bottom,0px));text-align:center;font-size:9px;letter-spacing:2px;color:#8FB8D8;z-index:7;pointer-events:none}
 /* apps page (purana jaisa) */
 .ah{display:flex;align-items:center;gap:10px}.ah .back{width:42px;height:42px;border-radius:14px;border:0;color:#fff;font-size:22px}
@@ -164,10 +164,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
  </div>
  <div class="stat" id="stat"><i></i><span>Jarvis...</span></div>
  <div class="hero" id="hero"><div class="rb"><div class="ring gl"></div><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div></div>
-  <svg id="arc" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="92" fill="none" stroke="#00F0FF" stroke-width="2" stroke-dasharray="3 7" opacity=".8"/><circle cx="100" cy="100" r="78" fill="none" stroke="#9D00FF" stroke-width="3" stroke-dasharray="60 20" class="t2" opacity=".85"/><g class="t1"><polygon points="100,34 158,134 42,134" fill="none" stroke="#00F0FF" stroke-width="2.5"/></g><polygon class="core" points="100,70 134,128 66,128" fill="rgba(0,240,255,.35)" stroke="#fff" stroke-width="2"/><circle cx="100" cy="110" r="6" fill="#fff"/></svg><div class="scan"></div></div>
+  <svg id="arc" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="92" fill="none" stroke="#00F0FF" stroke-width="2" stroke-dasharray="3 7" opacity=".8"/><circle cx="100" cy="100" r="78" fill="none" stroke="#2AA8FF" stroke-width="3" stroke-dasharray="60 20" class="t2" opacity=".85"/><g class="t1"><polygon points="100,34 158,134 42,134" fill="none" stroke="#00F0FF" stroke-width="2.5"/></g><polygon class="core" points="100,70 134,128 66,128" fill="rgba(0,240,255,.35)" stroke="#fff" stroke-width="2"/><circle cx="100" cy="110" r="6" fill="#fff"/></svg><div class="scan"></div></div>
  <div class="welcome"><b id="wword">WELCOME, BOSS</b><span id="gr">NAMASTE</span></div>
  <div class="mcard">
-  <div class="glass wxcard tap hud-sweep" onclick="LB.act('city','')"><svg class="wicon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><div style="min-width:0"><small>CURRENT WEATHER</small><b id="tp">--°</b><span id="wt">Mausam: tap karo</span></div></div>
+  <div class="glass wxcard tap hud-sweep" onclick="LB.act('city','')"><svg class="wicon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><div style="min-width:0"><small>CURRENT WEATHER</small><b id="tp">--°</b><span id="wt">Mausam: auto</span></div></div>
   <div class="glass aibadge hud-sweep" id="aibadge"><em>AI MODULE</em><i id="aiem">STANDBY</i></div>
  </div>
  <div class="mg" id="mg">
@@ -184,7 +184,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
  </div>
  <div class="actwrap">
   <button class="actsq tap" onclick="LB.act('quick','torch')" aria-label="torch"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button>
-  <button class="bigring tap" id="bigact" onclick="actTap()"><span class="brr"></span><span class="brr r2"></span><b id="bal">JARVIS,<br>ACTIVATE</b></button>
+  <div class="bigring" id="bigact"><span class="brr"></span><span class="brr r2"></span><b id="bal">JARVIS,<br>AUTO</b></div>
   <button class="actsq tap" onclick="LB.act('quick','camera')" aria-label="camera"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
  </div>
  <div class="glass search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="sq" placeholder="App ya JARVIS ka kaam likho..." enterkeyhint="go" autocomplete="off"><button class="go tap" onclick="sub()"><svg class="i" viewBox="0 0 24 24" style="stroke:#fff"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button></div>
@@ -206,11 +206,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
   <div class="btns"><button class="btn tap" onclick="lap()">Laptop par kaam bolo</button></div></div>
 </div>
 <div class="view" id="appsV"><div class="ah"><button class="glass back tap" onclick="show('home')">‹</button><input id="aq" placeholder="Apps dhundo..." autocomplete="off"></div><div class="ag" id="ag"></div></div>
-<div class="glass nav"><div class="n on" id="nh" onclick="show('home')"><svg class="i" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</div>
- <div class="n" id="na" onclick="show('apps')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Apps</div><div class="sp"></div>
- <div class="n" onclick="LB.act('quick','chat')"><svg class="i" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Chat</div>
- <div class="n" onclick="LB.act('quick','chat')"><svg class="i" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Setup</div></div>
-<button class="orb tap" id="orbBtn" onclick="actTap()"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button><div class="otag" id="ot">JARVIS CHALU KARO</div>
+<div class="glass nav"><div class="n on" id="nh" onclick="show('home')"><svg class="i" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>HOME</div><div class="n" id="na" onclick="show('apps')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>APPS</div><div class="n" onclick="LB.act('quick','chat')"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>CHAT</div><div class="n" onclick="LB.act('orb','')"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4"/></svg>MIC</div><div class="n" onclick="LB.act('quick','settings')"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>SETUP</div></div>
+<div class="orb" id="orbBtn"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
 <script>
 const $=id=>document.getElementById(id),esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const LBX=window.LB||{apps:()=>"[]",cmd:()=>false,act:()=>{}};window.LB=LBX;
@@ -275,7 +272,7 @@ window.setState=s=>{
 };
 $('dock').onclick=e=>{const d=e.target.closest('.t');if(!d)return;d.id==='mr'?show('apps'):LB.act('open',d.dataset.p)};
 (function(){const c=$('bg'),x=c.getContext('2d');let W,H,P=[];function rs(){W=c.width=innerWidth;H=c.height=innerHeight;P=Array.from({length:55},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,v:Math.random()*.25+.05,a:Math.random()}))}rs();addEventListener('resize',rs);
-function f(){if(document.hidden){requestAnimationFrame(f);return}x.clearRect(0,0,W,H);for(const p of P){p.y-=p.v;p.a+=.02;if(p.y<0){p.y=H;p.x=Math.random()*W}x.globalAlpha=.3+.3*Math.sin(p.a);x.fillStyle=p.r>1.3?'#7FD6FF':'#C9A0FF';x.beginPath();x.arc(p.x,p.y,p.r,0,6.3);x.fill()}requestAnimationFrame(f)}f()})();
+function f(){if(document.hidden){requestAnimationFrame(f);return}x.clearRect(0,0,W,H);for(const p of P){p.y-=p.v;p.a+=.02;if(p.y<0){p.y=H;p.x=Math.random()*W}x.globalAlpha=.3+.3*Math.sin(p.a);x.fillStyle=p.r>1.3?'#7FD6FF':'#7FD6FF';x.beginPath();x.arc(p.x,p.y,p.r,0,6.3);x.fill()}requestAnimationFrame(f)}f()})();
 </script>
 <script>
 /* v7.210 LIVE WALLPAPER: pulsing hex power grid + rising data streaks + energy waves (hex = reference image wala pattern). Pure canvas, hidden par paused. */
@@ -319,4 +316,129 @@ function f(){if(document.hidden){requestAnimationFrame(f);return}x.clearRect(0,0
   requestAnimationFrame(frame);
 })();
 </script>
+
+<!-- v7.223 PULL-DOWN QUICK PANEL (add-only): swipe down on the JARVIS home (or tap the top handle) opens a modern glass panel of phone shortcuts.
+     The Android system notification shade cannot be restyled by an app; this is JARVIS's own panel. Every tile just calls the existing LB.act('quick', key). -->
+<style id="v7223-qp">
+#qpH{position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);left:50%;transform:translateX(-50%);width:54px;height:20px;z-index:9998;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+#qpH i{width:36px;height:4px;border-radius:4px;background:linear-gradient(90deg,#00F0FF,#2AA8FF);box-shadow:0 0 10px rgba(0,240,255,.7);opacity:.75}
+#qpBg{position:fixed;inset:0;z-index:9998;background:rgba(0,6,14,.55);opacity:0;pointer-events:none;transition:opacity .22s}
+#qp{position:fixed;left:10px;right:10px;top:0;z-index:9999;transform:translateY(-110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);padding:calc(env(safe-area-inset-top,0px) + 14px) 14px 14px;border-radius:0 0 26px 26px;background:linear-gradient(180deg,#081426,#040A16);border:1px solid rgba(0,240,255,.28);border-top:0;box-shadow:0 14px 50px rgba(0,0,0,.65),0 0 26px rgba(0,240,255,.16),inset 0 -1px 0 rgba(42,168,255,.35);max-height:78vh;overflow-y:auto}
+#qp.on{transform:translateY(0)}#qpBg.on{opacity:1;pointer-events:auto}
+#qp .qh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#DFF6FF}
+#qp .qh b{font-size:13px;letter-spacing:3px;color:#00F0FF;text-shadow:0 0 10px rgba(0,240,255,.6)}
+#qp .qh span{font-size:10px;color:#7FA3B5;letter-spacing:1.5px}
+#qp .qg2{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+#qp .qt{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 2px 9px;border-radius:18px;background:rgba(0,240,255,.06);border:1px solid rgba(0,240,255,.2);color:#DFF6FF;font-size:10px;letter-spacing:.6px;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .12s}
+#qp .qt:active{transform:scale(.93);background:rgba(0,240,255,.2)}
+#qp .qt svg{width:24px;height:24px;fill:none;stroke:#00F0FF;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px rgba(0,240,255,.6))}
+#qp .qt.v svg{stroke:#C77BFF;filter:drop-shadow(0 0 6px rgba(42,168,255,.7))}
+#qp .qf{margin-top:12px;text-align:center;font-size:10px;color:#7FA3B5;letter-spacing:1px}
+@media (prefers-reduced-motion:reduce){#qp,#qpBg{transition:none}}
+</style>
+<div id="qpH" role="button" aria-label="Quick panel"><i></i></div><div id="qpBg"></div>
+<div id="qp" role="dialog" aria-label="Quick panel"><div class="qh"><b>JARVIS QUICK</b><span>NICHE KHICHO</span></div><div class="qg2" id="qpG"></div><div class="qf">Bahar tap karo ya upar khicho band karne ke liye</div></div>
+<script>
+(function(){
+ var T=[['wifi','WI-FI','<path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/><path d="M1.5 9a15 15 0 0 1 21 0"/>',0],
+  ['bluetooth','BLUETOOTH','<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',0],
+  ['torch','TORCH','<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',1],
+  ['dark','DISPLAY','<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',0],
+  ['sound','SOUND','<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',1],
+  ['airplane','AIRPLANE','<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>',0],
+  ['location','LOCATION','<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',0],
+  ['battery','BATTERY','<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 10v4M10 10v4"/>',1],
+  ['camera','CAMERA','<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',0],
+  ['call','CALL','<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',1],
+  ['wallpaper','WALLPAPER','<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',1],
+  ['settings','SETTINGS','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',0]];
+ var g=document.getElementById('qpG'),p=document.getElementById('qp'),bg=document.getElementById('qpBg'),h=document.getElementById('qpH');if(!g||!p)return;
+ g.innerHTML=T.map(function(t){return '<button class="qt'+(t[3]?' v':'')+'" data-k="'+t[0]+'"><svg viewBox="0 0 24 24">'+t[2]+'</svg><span>'+t[1]+'</span></button>'}).join('');
+ function open(){p.classList.add('on');bg.classList.add('on')}
+ function close(){p.classList.remove('on');bg.classList.remove('on')}
+ g.addEventListener('click',function(e){var b=e.target.closest('.qt');if(!b)return;close();try{LB.act('quick',b.getAttribute('data-k'))}catch(x){}});
+ bg.addEventListener('click',close);h.addEventListener('click',function(){p.classList.contains('on')?close():open()});
+ /* swipe down from the top part of the screen (home scrolled to top) opens; swipe up on the panel closes */
+ var y0=null,x0=0,y1=0,top0=false;
+ document.addEventListener('touchstart',function(e){var t=e.touches[0];y0=t.clientY;x0=t.clientX;y1=y0;top0=(t.clientY<window.innerHeight*0.3)&&((document.scrollingElement||document.documentElement).scrollTop<=2)},{passive:true});
+ document.addEventListener('touchmove',function(e){if(y0===null)return;y1=e.touches[0].clientY},{passive:true});
+ document.addEventListener('touchend',function(e){if(y0===null)return;var dy=y1-y0,dx=Math.abs((e.changedTouches[0]||{clientX:x0}).clientX-x0);
+  if(!p.classList.contains('on')&&top0&&dy>90&&dx<70)open();else if(p.classList.contains('on')&&dy<-60)close();y0=null},{passive:true});
+})();
+</script>
+
+<style id="v7223-orb-l">
+/* v7.223: live particle orb replaces the static ring art in the home hero (old art stays in the DOM, just hidden) */
+#hero.jorb .rb,#hero.jorb #arc{opacity:0!important;visibility:hidden}
+#hero{overflow:visible}
+</style>
+<script>/* v7.223 JARVIS LIVE ORB (add-only): a living particle-contour sphere (cyan, glowing, noise-deformed, slowly turning, with sparkles).
+   JOrbMount(host,{rgb:[r,g,b],hi:[r,g,b],mode:function(){return 0|1|2}})   mode: 0 idle, 1 listening, 2 thinking/speaking, -1 off (dim)
+   Cheap on purpose: one 2D canvas, batched rects, adaptive point count (drops itself if frames are slow), pauses when hidden, still frame if reduced-motion. */
+(function(){
+ if(window.JOrbMount)return;
+ window.JOrbMount=function(host,o){
+  try{
+   if(!host||host.__jorb)return;host.__jorb=1;o=o||{};
+   var rgb=o.rgb||[0,240,255],hi=o.hi||[200,252,255],modeFn=o.mode||function(){return 0};
+   var cv=document.createElement('canvas');cv.setAttribute('aria-hidden','true');
+   cv.style.cssText='position:absolute;left:-12px;right:-12px;top:-44px;bottom:-44px;width:calc(100% + 24px);height:calc(100% + 88px);pointer-events:none;z-index:0';
+   if(getComputedStyle(host).position==='static')host.style.position='relative';
+   host.insertBefore(cv,host.firstChild);
+   var cx=cv.getContext('2d',{alpha:true}),W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,1.5);
+   var S=68,P=170,quality=1,ts=0,seen=0,acc=0,last=0,amp=.8,spin=.25,glow=.5,running=true;
+   var reduce=false;try{reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches}catch(e){}
+   var lite=!!window.__introLite;if(lite){S=40;P=100}
+   var sp=[];for(var i=0;i<240;i++){sp.push({a:Math.random()*6.283,b:Math.acos(2*Math.random()-1),r:.55+Math.random()*1.1,s:.2+Math.random()*.6,p:Math.random()*6.283})}
+   function size(){var r=cv.getBoundingClientRect();W=Math.max(2,Math.round(r.width*dpr));H=Math.max(2,Math.round(r.height*dpr));cv.width=W;cv.height=H}
+   size();try{new ResizeObserver(size).observe(cv)}catch(e){window.addEventListener('resize',size)}
+   function next(){var f=0;try{f=o.fps?o.fps():0}catch(e){}if(f>0)setTimeout(function(){frame(performance.now())},1000/f);else requestAnimationFrame(frame)}
+   function col(c,a){return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'}
+   function frame(now){
+    if(!running)return;
+    var dt=Math.min(.06,(now-last)/1000||.016);last=now;ts+=dt;
+    /* adaptive quality: slow frames -> fewer points */
+    acc+=dt;seen++;if(seen>=40){var avg=acc/seen;if(avg>.04&&quality>.4)quality-=.15;else if(avg<.022&&quality<1)quality+=.05;acc=0;seen=0}
+    var m=0;try{m=modeFn()}catch(e){}
+    var tAmp=m<0?.55:m===0?.85:m===1?1.15+.12*Math.sin(ts*7):1.35+.18*Math.sin(ts*11),tSpin=m<0?.08:m===0?.22:m===1?.42:.7,tGlow=m<0?.28:m===0?.55:m===1?.85:1;
+    amp+=(tAmp-amp)*Math.min(1,dt*3);spin+=(tSpin-spin)*Math.min(1,dt*2);glow+=(tGlow-glow)*Math.min(1,dt*3);
+    cx.clearRect(0,0,W,H);
+    var cxp=W/2,cyp=H/2,R=Math.min(W*.5,H*.62)*.55,t=ts;
+    var g=cx.createRadialGradient(cxp,cyp,R*.1,cxp,cyp,Math.min(R*1.7,W*.49,H*.49));g.addColorStop(0,col(rgb,.22*glow));g.addColorStop(.5,col(rgb,.10*glow));g.addColorStop(1,col(rgb,0));cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    var ry=t*spin,rx=.55+.12*Math.sin(t*.3),cyr=Math.cos(ry),syr=Math.sin(ry),cxr=Math.cos(rx),sxr=Math.sin(rx);
+    var NB=6,B=[];for(var b=0;b<NB;b++)B.push([]);
+    var st=Math.max(1,Math.round(1/quality)),ps=Math.max(1,Math.round(1/quality));
+    for(var i=0;i<S;i+=1){
+     if(quality<.7&&(i&1))continue;
+     var th=(i+.5)/S*3.14159,sy=Math.cos(th),sr=Math.sin(th);
+     for(var j=0;j<P;j+=ps){
+      var ph=j/P*6.28318,x=sr*Math.cos(ph),y=sy,z=sr*Math.sin(ph);
+      var n=Math.sin(2.1*x+1.3*t)*Math.cos(1.7*y-.9*t)+.6*Math.sin(2.9*z+.7*t+1.2*x)+.35*Math.sin(3.7*y+2.3*z-1.1*t);
+      var n2=Math.sin(5.3*x-2.1*t+3*y)*Math.cos(4.7*z+1.7*t);var r=1+.12*amp*n+.04*amp*n2,px=x*r,py=y*r,pz=z*r;
+      var x1=px*cyr+pz*syr,z1=-px*syr+pz*cyr,y1=py*cxr-z1*sxr,z2=py*sxr+z1*cxr;
+      var k=2.8/(2.8-z2),sx=cxp+x1*k*R,sy2=cyp+y1*k*R;
+      var d=(z2+1.4)/2.8,ridge=(n+1.6)/3.2,v=Math.min(.999,Math.max(0,d*.62+ridge*.5));
+      var bi=Math.floor(v*NB),sz=(.55+.95*d)*dpr*(.8+.3*ridge);
+      B[bi].push(sx,sy2,sz)}}
+    for(var b=0;b<NB;b++){var arr=B[b];if(!arr.length)continue;var f=b/(NB-1),a=(.16+.8*f)*(m<0?.5:1);
+     var c=f>.82?hi:rgb;if(f>.5&&quality>.55){cx.fillStyle=col(rgb,.07*glow*(f>.82?2:1));cx.beginPath();for(var q=0;q<arr.length;q+=3){var hs=arr[q+2]*3.6;cx.rect(arr[q]-hs/2,arr[q+1]-hs/2,hs,hs)}cx.fill()}
+     cx.fillStyle=col(c,a);cx.beginPath();for(var q=0;q<arr.length;q+=3){cx.rect(arr[q]-arr[q+2]/2,arr[q+1]-arr[q+2]/2,arr[q+2],arr[q+2])}cx.fill()}
+    /* sparkles drifting around / inside the shell */
+    cx.fillStyle=col(hi,.9);cx.beginPath();
+    var ns=Math.round(sp.length*quality);
+    for(var u=0;u<ns;u++){var s=sp[u],aa=s.a+t*s.s*.4,sx0=Math.sin(s.b)*Math.cos(aa)*s.r,sz0=Math.sin(s.b)*Math.sin(aa)*s.r,sy0=Math.cos(s.b)*s.r;
+     var x2=sx0*cyr+sz0*syr,z3=-sx0*syr+sz0*cyr,y2=sy0*cxr-z3*sxr,z4=sy0*sxr+z3*cxr,kk=2.8/(2.8-z4),tw=.5+.5*Math.sin(t*2+s.p);
+     if(tw<.45)continue;var sz1=(.7+1.1*tw)*dpr;cx.rect(cxp+x2*kk*R-sz1/2,cyp+y2*kk*R-sz1/2,sz1,sz1)}
+    cx.globalAlpha=.55*(m<0?.5:1);cx.fill();cx.globalAlpha=1;
+    if(!reduce)next()}
+   document.addEventListener('visibilitychange',function(){if(document.hidden){running=false}else if(!running){running=true;last=performance.now();if(!reduce)next()}});
+   if(reduce){ts=1.5;requestAnimationFrame(frame)}else next();
+  }catch(e){}
+ };
+})();
+(function(){var n=0,t=setInterval(function(){var h=document.getElementById('hero');n++;
+ if(h&&window.JOrbMount){clearInterval(t);h.classList.add('jorb');JOrbMount(h,{rgb:[0,240,255],hi:[205,252,255],mode:function(){return h.classList.contains('run')?1:0}})}
+ else if(n>40)clearInterval(t)},250)})();
+</script>
+<style id="v225-auto">/* v7.225: JARVIS starts by itself after the one-time permission; the ring is not a button any more, so it is hidden instead of overlapping the nav */#bigact,#orbBtn{display:none!important}</style>
 </body></html>

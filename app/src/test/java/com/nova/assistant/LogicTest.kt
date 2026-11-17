@@ -382,4 +382,11 @@ class LogicTest {
         assertEquals(cmd("rotation", "landscape"), Logic.classify("screen landscape lock karo"))
         assertNull(Logic.classify("vibrate off karo"))   // never guess
     }
+
+    @Test fun wake_nova_is_retired_jarvis_answers() {
+        // v7.226: a saved "nova" from an older build must not stay the wake word.
+        assertNull(Logic.cleanWake("nova"))
+        assertNull(Logic.cleanWake(" Nova "))
+        assertEquals("jarvis", Logic.wakeOrDefault("nova"))
+    }
 }

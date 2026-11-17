@@ -304,6 +304,8 @@ class LauncherActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // v7.225: start JARVIS by itself once per launch when the mic permission is already given (no extra tap).
+        if (!autoTried) { autoTried = true; autoStartIfReady() }
         loadApps(); buildDock(); refreshStatus(); loadWeather()
         askDefaultHome()
         try { registerReceiver(batRx, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (e: Throwable) { }
@@ -353,11 +355,11 @@ class LauncherActivity : Activity() {
             setBar(stoBar, stoTxt, "Storage", LauncherRules.percent(sf.totalBytes - sf.availableBytes, sf.totalBytes), false)
             val linked = LaptopLinkRules.parseCode("JARVIS-LINK:" + SecureStore.getSlot(applicationContext, LaptopLink.SLOT)) != null
             laptopTxt.text = if (linked) "Laptop jura hua hai (online ho to kaam chalega)" else "Laptop abhi nahi jura. Laptop par \"phone jodo\" bolo."
-            status.text = if (JarvisService.running) "Jarvis chalu hai - 'Jarvis' bolo" else "Jarvis band hai - neeche JARVIS dabao"
+            status.text = if (JarvisService.running) "Jarvis chalu hai - 'Jarvis' bolo" else "Jarvis band hai - permission ke baad apne aap chalu hoga"
             val lt = TaskManagerStore.last(applicationContext)
             lastTask.text = if (lt.isBlank()) "" else "Aakhri kaam: $lt"
             refreshBusiness()
-            orb.text = if (JarvisService.running) "JARVIS  -  bolo / tap karo" else "JARVIS  -  chalu karo"
+            orb.text = if (JarvisService.running) "JARVIS  -  bolo / tap karo" else "JARVIS  -  auto"
             pushState()
         } catch (e: Throwable) { }
     }
@@ -510,6 +512,14 @@ class LauncherActivity : Activity() {
         try { startService(Intent(this, JarvisService::class.java).setAction(JarvisService.ACTION_SHOW_POPUP)) } catch (e: Throwable) { }
     }
 
+    private var autoTried = false
+
+    private fun autoStartIfReady() {
+        if (JarvisService.running) return
+        val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        if (mic) wakeJarvis()
+    }
+
     private fun wakeJarvis() {
         // The service start needs the one-time permissions the main screen already asks for: open it if anything is missing.
         try { startForegroundService(Intent(this, JarvisService::class.java)) } catch (e: Throwable) {
@@ -599,6 +609,21 @@ class LauncherActivity : Activity() {
             "dark" -> go(Intent(Settings.ACTION_DISPLAY_SETTINGS))
             "torch" -> { try { toggleTorch() } catch (e: Throwable) { Toast.makeText(this, "Torch abhi nahi chala", Toast.LENGTH_SHORT).show() } }
             "chat" -> go(Intent(this, MainActivity::class.java))
+            // v7.223: pull-down quick panel shortcuts (all just open the normal Android settings page)
+            "bluetooth" -> go(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            "sound" -> go(Intent(Settings.ACTION_SOUND_SETTINGS))
+            "airplane" -> go(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS))
+            "location" -> go(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            "battery" -> go(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+            "settings" -> go(Intent(Settings.ACTION_SETTINGS))
+            "wallpaper" -> {
+                // one tap: the system "set this live wallpaper" screen for Jarvis Holo; falls back to the wallpaper picker
+                try {
+                    go(Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+                        .putExtra(android.app.WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                            android.content.ComponentName(this, HoloWallpaperService::class.java)))
+                } catch (e: Throwable) { go(Intent(Intent.ACTION_SET_WALLPAPER)) }
+            }
         }
     }
 

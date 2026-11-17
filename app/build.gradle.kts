@@ -25,7 +25,7 @@ android {
         versionCode = (System.getenv("JARVIS_VERSION_CODE") ?: "40").toIntOrNull() ?: 40
         // v7.186: JARVIS BRAIN + app renamed JARVIS -> Jarvis (label, icon, wake word). Old versionName line had a stray
         // "#" after the string, which is not a valid Kotlin token outside a string literal and would fail compile.
-        versionName = "7.221"   // v7.221 release (JARVIS Everywhere: cloud brain, devices, TV, website, automation)
+        versionName = "7.232"   // v7.232 overlap fix (was 7.221) release (JARVIS Everywhere: cloud brain, devices, TV, website, automation)
         // The offline engine (llama.cpp) ships arm64-v8a + x86_64; real phones are arm64. Keeps the APK smaller.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

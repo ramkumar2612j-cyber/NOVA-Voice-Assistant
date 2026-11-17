@@ -31,7 +31,7 @@ ck('LB.act(\'city\',\'\')' in la and "LB.act('orb','')" in la.replace("actTap()"
 ck("LB.act('submit','aaj ki news batao')" in la, "launcher: news card real command")
 ck("window.setState" in la and "s.run" in la and "s.cpu" in la and "s.net" in la and "s.rem" in la and "s.news" in la, "launcher: setState naye real fields padhta hai")
 ck("window.goHome" in la and "window.onBack" in la, "launcher: goHome/onBack contract")
-ck("#00F0FF" in la and "#9D00FF" in la, "launcher: cyan+violet theme (no page filter here)")
+ck("#00F0FF" in la and "#9D00FF" not in la, "launcher: one cyan/blue theme, no violet (v7.226 single theme)")
 ck("prefers-reduced-motion:reduce" in la, "launcher: reduced-motion respected")
 
 # ---- ui.html: #jh layer sabse aakhir me

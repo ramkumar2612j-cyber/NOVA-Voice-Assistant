@@ -32,3 +32,15 @@ Owner ne bola: home reference mockup jaisa ho, JARVIS service se juda ho, GitHub
 - Boot animation: "v7.165"/"JARVIS 7.162" -> 7.221; "v7.1650K" overlap theek (version ke baad ` ... `).
 - Permission card: backdrop transparent, taps home tak jate hain, card chhota (44%); BAAD MEIN 3 din; first-run banner us card ke upar nahi aata.
 - Page-wide hue-rotate: NOT changed (poora UI red source + filter se blue; hatane par rang badal jata). Phone par lag ho to batao.
+
+## v7.223 (add-only, phone par NOT TESTED, Kotlin compile NOT DONE - GitHub Actions chalega)
+- launcher.html: pull-down quick panel (JARVIS QUICK): home par upar se niche khicho ya upar ke handle par tap. 12 tiles (WiFi, Bluetooth, Torch, Display, Sound, Airplane, Location, Battery, Camera, Call, Wallpaper, Settings). Android ka system notification shade app se restyle nahi ho sakta - ye JARVIS ka apna panel hai.
+- LauncherActivity.kt quick(): naye keys (bluetooth/sound/airplane/location/battery/settings/wallpaper). "wallpaper" = Jarvis Holo live wallpaper ka one-tap set screen.
+- Recents (app switcher) ka background MIUI/system wallpaper hai; use badalne ka rasta Jarvis Holo wallpaper set karna hi hai (app recents screen ko nahi chhu sakta).
+
+## v7.223b LIVE ORB (add-only, phone par NOT TESTED)
+- Naya "JARVIS live orb": noise se behta, ghoomta, dots+glow wala particle gola (canvas). Launcher home hero (#hero) aur main app ka home HUD hero (#jh_hero) dono me. Purani art DOM me hai, bas chhupi hai.
+- Launcher: rAF full speed. Main app: Smooth mode me 20 fps timer (rAF nahi - purana test_v7113 pass), Sharp/Auto me rAF.
+- Adaptive quality: frame slow ho to points khud kam. Reduced-motion me still frame. Screen band/tab hidden me ruk jata hai.
+- Tests (headless Chromium, phone nahi): smooth_default, perf_governor, home_hud, hue_blue, ui_render_smoke PASS. Poora run_all_checks.sh is session me complete nahi hua.
+- NOT done: live wallpaper (HoloWallpaperService, Kotlin) aur boot animation ko is orb se nahi badla.
